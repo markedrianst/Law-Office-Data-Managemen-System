@@ -1,5 +1,20 @@
+<script setup>
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import MainLayout from "@/layouts/Layout.vue";
+
+const route = useRoute();
+
+// Hide layout on login/register/404
+const useLayout = computed(() => {
+  const noLayoutNames = ["Login", "Register", "NotFound"];
+  return !noLayoutNames.includes(route.name);
+});
+</script>
+
 <template>
-  <div class="bg-red-500 text-white p-4">
-    test tailwindcss
-  </div>
+  <MainLayout v-if="useLayout">
+    <router-view />
+  </MainLayout>
+  <router-view v-else />
 </template>

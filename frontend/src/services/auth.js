@@ -1,8 +1,14 @@
-import api from "./api"; // your existing axios instance
+import api from "./api";
 
 export const login = async (credentials) => {
   try {
     const response = await api.post("/login", credentials);
+    
+    // Store token and user data
+    localStorage.setItem("token", response.data.token);
+    localStorage.setItem("user", JSON.stringify(response.data.user));
+    
+    // Return the full response data
     return response.data;
   } catch (error) {
     if (error.response) {
@@ -18,6 +24,10 @@ export const logout = async () => {
     await api.post("/logout");
   } catch (error) {
     console.error("Logout error:", error);
+  } finally {
+    // Always remove tokens even if API call fails
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 };
 

@@ -11,14 +11,42 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+  Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
+            $table->string('name')->unique(); // admin, clerk, lawyer
             $table->timestamps();
+        });
+
+        DB::table('roles')->insert([
+            ['name' => 'admin', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'clerk', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'lawyer', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+         Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
+            $table->string('full_name', 120);
+            $table->string('email', 120)->unique();
+            $table->string('password_hash');
+            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->dateTime('last_login')->nullable();
+            $table->timestamps();
+        });
+
+        DB::table('users')->insert([
+            ['role_id' => 1, 'full_name' => 'Admin User', 'email' => 'admin@gmail.com', 'password_hash' => bcrypt('password123'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['role_id' => 2, 'full_name' => 'Clerk User', 'email' => 'clerk@gmail.com', 'password_hash' => bcrypt('password123'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['role_id' => 3, 'full_name' => 'Lawyer User', 'email' => 'lawyer@gmail.com', 'password_hash' => bcrypt('password123'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        Schema::create('login_logs', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->string('email_attempted', 120);
+            $table->string('ip_address', 45);
+            $table->string('user_agent', 255);
+            $table->enum('status', ['success', 'failed']);
+            $table->timestamp('created_at')->useCurrent();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -42,7 +70,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('login_logs');
         Schema::dropIfExists('users');
+        Schema::dropIfExists('roles');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
     }
