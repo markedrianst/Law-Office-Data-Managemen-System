@@ -7,6 +7,11 @@
     <div class="flex items-center gap-4">
       <span v-if="isAuthenticated">Welcome</span>
 
+      <button>
+        <router-link to="/usermanagement" class="text-white">
+          User Management
+        </router-link>
+      </button>
       <button
         v-if="isAuthenticated"
         @click="logoutUser"
