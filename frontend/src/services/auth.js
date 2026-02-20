@@ -3,22 +3,21 @@ import api from "./api";
 export const login = async (credentials) => {
   try {
     const response = await api.post("/login", credentials);
-    
+
     // Store token and user data
     localStorage.setItem("token", response.data.token);
     localStorage.setItem("user", JSON.stringify(response.data.user));
-    
-    // Return the full response data
+
     return response.data;
   } catch (error) {
-    if (error.response) {
+    if (error.response && error.response.data) {
+      // Return exact backend error
       throw error.response.data;
     } else {
-      throw { message: "Network Error" };
+      throw { message: "Network Error. Please check your connection." };
     }
   }
 };
-
 export const logout = async () => {
   try {
     await api.post("/logout");

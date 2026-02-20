@@ -356,7 +356,6 @@ const sortDirection = ref('asc');
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 
-// Modal states
 const showModal = ref(false);
 const isEditing = ref(false);
 const formLoading = ref(false);
@@ -366,7 +365,6 @@ const resetPassword = ref(false);
 const showDeleteModal = ref(false);
 const userToDelete = ref(null);
 
-// Form state
 const form = reactive({
   firstName: '', middleName: '', lastName: '', address: '', contact: '', email: '', role: '', password: '', status: 'Active'
 });
@@ -375,7 +373,6 @@ const errors = reactive({
   firstName: '', lastName: '', address: '', contact: '', email: '', role: '', password: '' 
 });
 
-// Computed - filtering with last_login search & role filter
 const filteredUsers = computed(() => {
   if (!searchQuery.value && !roleFilter.value) return users.value;
 
