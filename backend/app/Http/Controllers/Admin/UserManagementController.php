@@ -192,15 +192,15 @@ class UserManagementController extends Controller
 
         if (isset($validated['password'])) {
             $updateData['password_hash'] = Hash::make($validated['password']);
-        }
 
+                $updateData['must_change_password'] = true;
+        }
         if (isset($validated['role'])) {
             $roleName = strtolower($validated['role']);
             $roleId = \DB::table('roles')->where('name', $roleName)->value('id');
             $updateData['role_id'] = $roleId;
         }
 
-        // Ready for address and contact fields
         if (isset($validated['address'])) {
             $updateData['address'] = $validated['address'];
         }

@@ -178,7 +178,7 @@
           </div>
 
           <!-- Modal Body - Scrollable -->
-          <div class="px-8 py-6 space-y-6 overflow-y-auto" @keyup.enter="submitForm">
+          <div class="px-8 py-6 space-y-6 overflow-y-auto">
             <!-- Name Row -->
             <div class="grid grid-cols-3 gap-4">
               <div v-for="(field, index) in ['firstName', 'middleName', 'lastName']" :key="field">
@@ -246,7 +246,7 @@
                 <div class="relative">
                   <input v-model="form.password" :type="showPassword ? 'text' : 'password'"
                     @keyup.enter="submitForm"
-                    :placeholder="isEditing && !resetPassword ? '•••••••• (unchanged)' : '••••••••'"
+                    :placeholder="isEditing && !resetPassword ? '•••••••• (unchanged)' : 'Enter new password'"
                     class="w-full px-4 py-3 pr-10 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#183e68]/20 focus:border-[#183e68]"
                     :class="{ 'border-red-400 ring-2 ring-red-100': errors.password }"
                     :disabled="isEditing && !resetPassword" />
@@ -257,19 +257,23 @@
                     </svg>
                   </button>
                 </div>
-                <button v-if="isEditing" @click="resetPassword = !resetPassword" type="button"
-                  class="flex items-center gap-1 px-3 py-1 mt-2 text-sm font-semibold rounded-lg"
-                  :class="resetPassword ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  <span>{{ resetPassword ? 'Cancel Reset' : 'Reset Password' }}</span>
-                </button>
+                
+                <!-- Password action buttons -->
+                <div class="flex gap-2 mt-2">
+                  <button v-if="isEditing" @click="toggleResetPassword" type="button"
+                    class="flex items-center gap-1 px-3 py-1 text-sm font-semibold rounded-lg transition-all"
+                    :class="resetPassword ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    <span>{{ resetPassword ? 'Cancel Reset' : 'Reset Password' }}</span>
+                  </button>
+                </div>
                 <p v-if="errors.password" class="text-sm text-red-500 mt-1">{{ errors.password }}</p>
               </div>
             </div>
 
-            <!-- Status - Shows in both Add and Edit modes -->
+            <!-- Status -->
             <div>
               <label class="block text-sm font-semibold text-slate-700 mb-2">Status <span class="text-red-500">*</span></label>
               <div class="flex items-center gap-4">
@@ -356,6 +360,7 @@ const sortDirection = ref('asc');
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 
+// Modal states
 const showModal = ref(false);
 const isEditing = ref(false);
 const formLoading = ref(false);
@@ -365,14 +370,17 @@ const resetPassword = ref(false);
 const showDeleteModal = ref(false);
 const userToDelete = ref(null);
 
+// Form data
 const form = reactive({
   firstName: '', middleName: '', lastName: '', address: '', contact: '', email: '', role: '', password: '', status: 'Active'
 });
 
+// Form errors
 const errors = reactive({ 
   firstName: '', lastName: '', address: '', contact: '', email: '', role: '', password: '' 
 });
 
+// Computed properties for filtered and paginated users
 const filteredUsers = computed(() => {
   if (!searchQuery.value && !roleFilter.value) return users.value;
 
@@ -426,7 +434,7 @@ onMounted(async () => {
   await loadUsers();
 });
 
-// Hot reload: watch search/filter and users
+// Watchers
 watch([searchQuery, roleFilter], () => {
   currentPage.value = 1;
 });
@@ -435,7 +443,7 @@ watch(users, () => {
   currentPage.value = 1;
 });
 
-// Optional debounce for smooth typing
+// Debounced search
 const debouncedSearch = debounce(() => {
   currentPage.value = 1;
 }, 200);
@@ -474,7 +482,6 @@ const sortBy = (field) => {
     sortDirection.value = 'asc';
   }
   
-  // Sort the users array
   users.value.sort((a, b) => {
     let aVal = a[field];
     let bVal = b[field];
@@ -527,12 +534,14 @@ const resetForm = () => {
   Object.keys(errors).forEach(k => errors[k] = '');
   editingUserId.value = null;
   resetPassword.value = false;
+  showPassword.value = false;
 };
 
 const clearErrors = () => {
   Object.keys(errors).forEach(key => errors[key] = '');
 };
 
+// Edit user
 const editUser = async (user) => {
   try {
     const response = await UserService.getUserById(user.id);
@@ -543,10 +552,21 @@ const editUser = async (user) => {
     isEditing.value = true;
     editingUserId.value = user.id;
     resetPassword.value = false;
+    form.password = ''; // Clear password field initially
     clearErrors();
     showModal.value = true;
   } catch (error) {
     apiError.value = error.message || 'Failed to load user details';
+  }
+};
+
+const toggleResetPassword = () => {
+  resetPassword.value = !resetPassword.value;
+  if (resetPassword.value) {
+    form.password = 'temppass1'; 
+  } else {
+    form.password = ''; 
+    errors.password = ''; 
   }
 };
 
@@ -584,7 +604,8 @@ const validateForm = () => {
   } else if (isEditing.value && resetPassword.value && !form.password.trim()) {
     errors.password = 'New password is required';
     valid = false;
-  } else if (form.password && form.password.length < 6) {
+  } else if (form.password && form.password.length < 6 && form.password !== 'Temp') {
+    // Allow "Temp" as a valid password even though it's 4 characters
     errors.password = 'Password must be at least 6 characters';
     valid = false;
   }

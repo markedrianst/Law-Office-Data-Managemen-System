@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password_hash',
         'status',
         'last_login',
+        'must_change_password',
     ];
 
     /**
