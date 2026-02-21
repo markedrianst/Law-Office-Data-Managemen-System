@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\LoginLog;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -23,7 +24,6 @@ class UserManagementController extends Controller
                 $q->where('name', strtolower($request->role));
             });
         } else {
-            // If no role filter, show only Lawyers and Clerks
             $query->whereHas('role', function ($q) {
                 $q->whereIn('name', ['lawyer', 'clerk']);
             });
@@ -38,20 +38,20 @@ class UserManagementController extends Controller
             });
         }
 
-        // Sorting
-        $sortField = $request->get('sort_by', 'full_name');
-        $sortDirection = $request->get('sort_direction', 'asc');
+        // Sorting - DEFAULT: created_at (newest first)
+        $sortField = $request->get('sort_by', 'created_at');
+        $sortDirection = $request->get('sort_direction', 'desc');
         
-        // Map frontend sort fields to database columns
         $fieldMap = [
             'name' => 'full_name',
             'email' => 'email',
             'role' => 'role_id',
             'status' => 'status',
-            'last_login' => 'last_login'
+            'last_login' => 'last_login',
+            'created_at' => 'created_at'
         ];
         
-        $dbField = $fieldMap[$sortField] ?? 'full_name';
+        $dbField = $fieldMap[$sortField] ?? 'created_at';
         $query->orderBy($dbField, $sortDirection);
 
         // Pagination
@@ -64,10 +64,10 @@ class UserManagementController extends Controller
                 'id' => $user->id,
                 'name' => $user->full_name,
                 'email' => $user->email,
-                'role' => ucfirst($user->role->name), // Capitalize first letter
+                'role' => ucfirst($user->role->name),
                 'status' => ucfirst($user->status),
+                'created_at' => $user->created_at,
                 'last_login' => $user->last_login,
-                // Ready for address and contact fields when database is updated
                 'address' => $user->address ?? '',
                 'contact_number' => $user->contact_number ?? ''
             ];
@@ -94,8 +94,8 @@ class UserManagementController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'string', Password::min(6)],
             'role' => 'required|in:Lawyer,Clerk',
-            'address' => 'nullable|string', // Ready for future use
-            'contact_number' => 'nullable|string|max:20', // Ready for future use
+            'address' => 'nullable|string',
+            'contact_number' => 'nullable|string|max:20',
             'status' => 'sometimes|in:Active,Inactive'
         ]);
 
@@ -104,6 +104,17 @@ class UserManagementController extends Controller
         $roleId = \DB::table('roles')->where('name', $roleName)->value('id');
 
         if (!$roleId) {
+            // Log failed user creation attempt
+            LoginLog::create([
+                'user_id' => $request->user()?->id,
+                'action' => 'user_create_failed',
+                'email_attempted' => $validated['email'],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'status' => 'failed',
+                'details' => 'Attempted to create user with invalid role: ' . $validated['role']
+            ]);
+
             return response()->json([
                 'message' => 'Invalid role selected'
             ], 422);
@@ -117,7 +128,6 @@ class UserManagementController extends Controller
             'status' => strtolower($validated['status'] ?? 'Active')
         ];
 
-        // Add address and contact if provided (for future use)
         if (isset($validated['address'])) {
             $userData['address'] = $validated['address'];
         }
@@ -128,6 +138,30 @@ class UserManagementController extends Controller
 
         $user = User::create($userData);
 
+        // Build details string
+        $details = "Created new user:\n";
+        $details .= "Name: " . $validated['name'] . "\n";
+        $details .= "Email: " . $validated['email'] . "\n";
+        $details .= "Role: " . ucfirst($roleName) . "\n";
+        $details .= "Status: " . ucfirst($user->status);
+        
+        if (isset($validated['address'])) {
+            $details .= "\nAddress: " . $validated['address'];
+        }
+        if (isset($validated['contact_number'])) {
+            $details .= "\nContact: " . $validated['contact_number'];
+        }
+
+        LoginLog::create([
+            'user_id' => $request->user()?->id,
+            'action' => 'user_create',
+            'email_attempted' => $validated['email'],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status' => 'success',
+            'details' => $details
+        ]);
+
         return response()->json([
             'message' => 'User created successfully',
             'data' => [
@@ -136,6 +170,7 @@ class UserManagementController extends Controller
                 'email' => $user->email,
                 'role' => ucfirst($roleName),
                 'status' => ucfirst($user->status),
+                'created_at' => $user->created_at,
                 'last_login' => $user->last_login,
                 'address' => $user->address ?? '',
                 'contact_number' => $user->contact_number ?? ''
@@ -146,10 +181,11 @@ class UserManagementController extends Controller
     /**
      * Display the specified user.
      */
-    public function show(User $user)
+    public function show(Request $request, User $user)
     {
-        // Load role relationship
         $user->load('role');
+        
+        // NO LOGGING FOR VIEW ACTION - REMOVED
         
         return response()->json([
             'data' => [
@@ -158,6 +194,7 @@ class UserManagementController extends Controller
                 'email' => $user->email,
                 'role' => ucfirst($user->role->name),
                 'status' => ucfirst($user->status),
+                'created_at' => $user->created_at,
                 'last_login' => $user->last_login,
                 'address' => $user->address ?? '',
                 'contact_number' => $user->contact_number ?? ''
@@ -175,46 +212,99 @@ class UserManagementController extends Controller
             'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
             'password' => ['sometimes', 'required', 'string', Password::min(6)],
             'role' => 'sometimes|required|in:Lawyer,Clerk',
-            'address' => 'nullable|string', // Ready for future use
-            'contact_number' => 'nullable|string|max:20', // Ready for future use
+            'address' => 'nullable|string',
+            'contact_number' => 'nullable|string|max:20',
             'status' => 'sometimes|required|in:Active,Inactive'
         ]);
 
         $updateData = [];
+        $changes = [];
 
-        if (isset($validated['name'])) {
+        if (isset($validated['name']) && $validated['name'] !== $user->full_name) {
             $updateData['full_name'] = $validated['name'];
+            $changes[] = "name: '{$user->full_name}' → '{$validated['name']}'";
         }
 
-        if (isset($validated['email'])) {
+        if (isset($validated['email']) && $validated['email'] !== $user->email) {
             $updateData['email'] = $validated['email'];
+            $changes[] = "email: '{$user->email}' → '{$validated['email']}'";
         }
 
         if (isset($validated['password'])) {
             $updateData['password_hash'] = Hash::make($validated['password']);
-
-                $updateData['must_change_password'] = true;
+            $updateData['must_change_password'] = true;
+            $changes[] = "password: [reset - user must change on next login]";
         }
+        
         if (isset($validated['role'])) {
-            $roleName = strtolower($validated['role']);
-            $roleId = \DB::table('roles')->where('name', $roleName)->value('id');
-            $updateData['role_id'] = $roleId;
+            $newRoleName = strtolower($validated['role']);
+            $oldRoleName = $user->role->name;
+            
+            if ($newRoleName !== $oldRoleName) {
+                $roleId = \DB::table('roles')->where('name', $newRoleName)->value('id');
+                $updateData['role_id'] = $roleId;
+                $changes[] = "role: '" . ucfirst($oldRoleName) . "' → '" . ucfirst($newRoleName) . "'";
+            }
         }
 
-        if (isset($validated['address'])) {
+        if (isset($validated['address']) && $validated['address'] !== $user->address) {
             $updateData['address'] = $validated['address'];
+            $oldAddress = $user->address ?? 'empty';
+            $changes[] = "address: '{$oldAddress}' → '{$validated['address']}'";
         }
 
-        if (isset($validated['contact_number'])) {
+        if (isset($validated['contact_number']) && $validated['contact_number'] !== $user->contact_number) {
             $updateData['contact_number'] = $validated['contact_number'];
+            $oldContact = $user->contact_number ?? 'empty';
+            $changes[] = "contact: '{$oldContact}' → '{$validated['contact_number']}'";
         }
 
         if (isset($validated['status'])) {
-            $updateData['status'] = strtolower($validated['status']);
+            $newStatus = strtolower($validated['status']);
+            $oldStatus = $user->status;
+            
+            if ($newStatus !== $oldStatus) {
+                $updateData['status'] = $newStatus;
+                $changes[] = "status: '" . ucfirst($oldStatus) . "' → '" . ucfirst($newStatus) . "'";
+            }
+        }
+
+        if (empty($updateData)) {
+            return response()->json([
+                'message' => 'No changes detected',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'email' => $user->email,
+                    'role' => ucfirst($user->role->name),
+                    'status' => ucfirst($user->status),
+                    'created_at' => $user->created_at,
+                    'last_login' => $user->last_login,
+                    'address' => $user->address ?? '',
+                    'contact_number' => $user->contact_number ?? ''
+                ]
+            ]);
         }
 
         $user->update($updateData);
         $user->load('role');
+
+        // Create detailed log message
+        $details = "Updated user: {$user->full_name} ({$user->email})\n";
+        $details .= "Changes made:\n";
+        foreach ($changes as $change) {
+            $details .= "- {$change}\n";
+        }
+
+        LoginLog::create([
+            'user_id' => $request->user()?->id,
+            'action' => 'user_update',
+            'email_attempted' => $user->email,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status' => 'success',
+            'details' => $details
+        ]);
 
         return response()->json([
             'message' => 'User updated successfully',
@@ -224,6 +314,7 @@ class UserManagementController extends Controller
                 'email' => $user->email,
                 'role' => ucfirst($user->role->name),
                 'status' => ucfirst($user->status),
+                'created_at' => $user->created_at,
                 'last_login' => $user->last_login,
                 'address' => $user->address ?? '',
                 'contact_number' => $user->contact_number ?? ''
@@ -234,14 +325,32 @@ class UserManagementController extends Controller
     /**
      * Remove the specified user.
      */
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
+        $userEmail = $user->email;
+        $userName = $user->full_name;
+        $userRole = ucfirst($user->role->name);
+        
+        $details = "Deleted user:\n";
+        $details .= "Name: {$userName}\n";
+        $details .= "Email: {$userEmail}\n";
+        $details .= "Role: {$userRole}\n";
+        $details .= "Status at deletion: " . ucfirst($user->status);
+        
         $user->delete();
+
+        LoginLog::create([
+            'user_id' => $request->user()?->id,
+            'action' => 'user_delete',
+            'email_attempted' => $userEmail,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status' => 'success',
+            'details' => $details
+        ]);
 
         return response()->json([
             'message' => 'User deleted successfully'
         ]);
     }
-
-
 }
