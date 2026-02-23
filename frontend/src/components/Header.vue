@@ -128,7 +128,7 @@ const pageTitle = computed(() => ({
   '/dashboard':      'Dashboard',
   '/usermanagement': 'User Management',
   '/audittrail':     'Activity Logs',
-  '/casemaster':        'Case Master',
+  '/casemaster':     'Case Master',
   '/tasks':          'Tasks',
   '/appointments':   'Appointments',
   '/account':        'Account Settings',
@@ -143,19 +143,23 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutside))
 
 // Open confirmation modal
 const askLogout = () => {
-  isOpen.value = false          // close dropdown first
+  isOpen.value = false
   showLogoutModal.value = true
 }
 
 // Actually log out after confirmation
+// authService.logout() calls the server + clears sessionStorage
 const confirmLogout = async () => {
   isLoggingOut.value = true
   try {
     await logout()
-  } catch {}
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  router.push('/')
+  } catch {
+    // Failsafe: clear session even if server call errors
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
+  } finally {
+    router.push('/')
+  }
 }
 </script>
 

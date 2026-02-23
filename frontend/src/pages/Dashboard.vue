@@ -11,25 +11,17 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
 import AdminDashboard  from "@/pages/Admin/AdminDashboard.vue";
 import LawyerDashboard from "@/pages/Lawyer/LawyerDashboard.vue";
 import ClerksDashboard from "@/pages/Clerks/ClerksDashboard.vue";
 
 const router = useRouter();
-
-const userRole = computed(() => {
-  try {
-    return JSON.parse(localStorage.getItem("user"))?.role?.name ?? null;
-  } catch {
-    return null;
-  }
-});
+const { userRole, clearSession } = useAuth();
 
 function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  clearSession();
   router.push("/");
 }
 </script>

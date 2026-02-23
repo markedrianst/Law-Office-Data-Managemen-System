@@ -201,8 +201,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import api from '@/services/api'
 
-const { userObj, userName, userRole, userEmail, userInitials, refreshUser } = useAuth()
+const { userObj, userName, userRole, userEmail, userInitials, refreshUser, patchStoredUser } = useAuth()
 
 // ─── Derived display data ─────────────────────────────────────────
 const joinedDate = computed(() => {
@@ -226,18 +227,15 @@ const profileForm = reactive({
 const pErr = reactive({ first_name:'', last_name:'', email:'' })
 
 // Populate form from stored user object
-// Backend returns full_name (single string), so we split it.
-// If your backend ever returns first_name/last_name separately, adjust here.
 const populateForm = () => {
   const u = userObj.value
   if (!u) return
 
-  // Split full_name into first / last  (handles "Juan dela Cruz" → first="Juan", last="dela Cruz")
   const full = u.full_name || u.name || ''
   const parts = full.trim().split(/\s+/)
   profileForm.first_name  = parts[0]  || ''
   profileForm.last_name   = parts.length > 1 ? parts.slice(1).join(' ') : ''
-  profileForm.middle_name = ''                      // not stored separately in your current schema
+  profileForm.middle_name = ''
   profileForm.email          = u.email           || ''
   profileForm.contact_number = u.contact_number  || u.contact || ''
   profileForm.address        = u.address         || ''
@@ -255,39 +253,32 @@ const saveProfile = async () => {
   if (!validateProfile()) return
   savingProfile.value = true
   try {
-    const token = localStorage.getItem('token')
     const full_name = [profileForm.first_name, profileForm.middle_name, profileForm.last_name]
       .filter(Boolean).join(' ').trim()
 
-    const res = await fetch('/api/account/profile', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        full_name,
-        email:          profileForm.email,
-        contact_number: profileForm.contact_number,
-        address:        profileForm.address,
-      })
+    // api.js automatically attaches the Bearer token from sessionStorage
+    const res = await api.put('/account/profile', {
+      full_name,
+      email:          profileForm.email,
+      contact_number: profileForm.contact_number,
+      address:        profileForm.address,
     })
 
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'Failed to save')
+    const data = res.data
+    if (!data) throw new Error('Failed to save')
 
-    // Update localStorage so Header + Sidebar refresh
-    const stored = JSON.parse(localStorage.getItem('user') || '{}')
-    stored.full_name       = full_name
-    stored.email           = profileForm.email
-    stored.contact_number  = profileForm.contact_number
-    stored.address         = profileForm.address
-    localStorage.setItem('user', JSON.stringify(stored))
+    // Update sessionStorage so Header + Sidebar refresh reactively
+    patchStoredUser({
+      full_name,
+      email:          profileForm.email,
+      contact_number: profileForm.contact_number,
+      address:        profileForm.address,
+    })
     refreshUser()
 
     showToast('Profile updated successfully!', 'success')
   } catch (e) {
-    showToast(e.message || 'Failed to update profile', 'error')
+    showToast(e.response?.data?.message || e.message || 'Failed to update profile', 'error')
   } finally { savingProfile.value = false }
 }
 
@@ -327,40 +318,25 @@ const changePassword = async () => {
   if (!validatePw()) return
   savingPw.value = true
   try {
-    const token = localStorage.getItem('token')
     const email = userObj.value?.email || profileForm.email
 
-    // Matches your AuthenticatedSessionController@change endpoint exactly:
-    // POST /api/auth/change-password
-    // body: { email, current_password, new_password, new_password_confirmation }
-    const res = await fetch('/api/auth/change-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        email,
-        current_password:          pwForm.current_password,
-        new_password:               pwForm.new_password,
-        new_password_confirmation:  pwForm.new_password_confirmation,
-      })
+    // api.js automatically attaches the Bearer token from sessionStorage
+    await api.post('/auth/change-password', {
+      email,
+      current_password:          pwForm.current_password,
+      new_password:               pwForm.new_password,
+      new_password_confirmation:  pwForm.new_password_confirmation,
     })
-
-    const data = await res.json()
-    if (!res.ok) {
-      // Handle 422 "Current password is incorrect"
-      if (res.status === 422) pwErr.current_password = data.message
-      else throw new Error(data.message || 'Failed to change password')
-      return
-    }
 
     pwForm.current_password = ''
     pwForm.new_password = ''
     pwForm.new_password_confirmation = ''
     showToast('Password changed successfully!', 'success')
   } catch (e) {
-    showToast(e.message || 'Failed to change password', 'error')
+    const status = e.response?.status
+    const msg    = e.response?.data?.message || e.message || 'Failed to change password'
+    if (status === 422) pwErr.current_password = msg
+    else showToast(msg, 'error')
   } finally { savingPw.value = false }
 }
 
