@@ -1,22 +1,25 @@
 <template>
-  <div 
-    class="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
+  <!-- Page wrapper — fades in on every mount via `visible` ref -->
+  <div
+    class="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4 transition-opacity duration-700 ease-out"
+    :class="visible ? 'opacity-100' : 'opacity-0'"
     :style="{ backgroundImage: 'url(' + backgroundImage + ')' }"
   >
     <!-- Floating Glass Card -->
     <div class="w-full max-w-md">
       <div class="relative">
         <div class="absolute inset-0 bg-black/20 rounded-2xl blur-xl transform translate-y-2"></div>
-        
-        <div 
-          class="relative backdrop-blur-md rounded-2xl shadow-2xl p-8 border"
+
+        <div
+          class="relative backdrop-blur-md rounded-2xl shadow-2xl p-8 border transition-transform duration-700 ease-out"
+          :class="visible ? 'translate-y-0' : 'translate-y-4'"
           :style="{
             backgroundColor: 'rgba(255, 255, 255, 0.15)',
             borderColor: 'rgba(255, 255, 255, 0.3)',
             boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset'
           }"
         >
-          <div class="absolute inset-0 rounded-2xl pointer-events-none" 
+          <div class="absolute inset-0 rounded-2xl pointer-events-none"
                :style="{ background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.3), transparent 70%)' }">
           </div>
 
@@ -36,13 +39,13 @@
 
             <!-- Title -->
             <div class="text-center mb-8">
-              <h1 class="text-3xl font-bold mb-1" 
+              <h1 class="text-3xl font-bold mb-1"
                   :style="{ color: 'white', textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }">
                 NICOLAS PINEDA
               </h1>
-              <h1 class="text-3xl font-bold mb-1" 
+              <h1 class="text-3xl font-bold mb-1"
                   :style="{ color: 'white', textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }">
-                LAW OFFICE 
+                LAW OFFICE
               </h1>
               <p class="text-sm tracking-wide"
                  :style="{ color: 'rgba(255, 255, 255, 0.9)', textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' }">
@@ -53,7 +56,7 @@
             <form @submit.prevent="handleLogin" class="space-y-6">
               <!-- Email Field -->
               <div>
-                <label class="block text-sm font-medium mb-1" 
+                <label class="block text-sm font-medium mb-1"
                        :style="{ color: 'rgba(255, 255, 255, 0.9)' }">
                   Email
                 </label>
@@ -73,7 +76,7 @@
                   @blur="handleBlur"
                   @input="clearFieldError('email')"
                 />
-                <p v-if="errors.email" class="mt-1 text-sm text-red-300" 
+                <p v-if="errors.email" class="mt-1 text-sm text-red-300"
                    :style="{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' }">
                   {{ errors.email }}
                 </p>
@@ -81,7 +84,7 @@
 
               <!-- Password Field -->
               <div>
-                <label class="block text-sm font-medium mb-1" 
+                <label class="block text-sm font-medium mb-1"
                        :style="{ color: 'rgba(255, 255, 255, 0.9)' }">
                   Password
                 </label>
@@ -161,8 +164,8 @@
         <div class="relative w-full max-w-md">
           <div class="relative">
             <div class="absolute inset-0 bg-black/20 rounded-2xl blur-xl transform translate-y-2"></div>
-            
-            <div 
+
+            <div
               class="relative backdrop-blur-md rounded-2xl shadow-2xl p-8 border"
               :style="{
                 backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -170,13 +173,13 @@
                 boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset'
               }"
             >
-              <div class="absolute inset-0 rounded-2xl pointer-events-none" 
+              <div class="absolute inset-0 rounded-2xl pointer-events-none"
                    :style="{ background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.3), transparent 70%)' }">
               </div>
 
               <div class="relative z-10">
                 <div class="text-center mb-6">
-                  <h2 class="text-2xl font-bold" 
+                  <h2 class="text-2xl font-bold"
                       :style="{ color: 'white', textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }">
                     Change Password
                   </h2>
@@ -186,7 +189,6 @@
                   </p>
                 </div>
 
-                <!-- NOTE: No @keyup.enter on inputs — form @submit.prevent handles Enter key natively -->
                 <form @submit.prevent="handleResetPassword">
                   <!-- Current Password -->
                   <div class="mb-4">
@@ -289,8 +291,8 @@
 
                   <!-- Success Message -->
                   <Transition name="fade">
-                    <div 
-                      v-if="showSuccessMessage" 
+                    <div
+                      v-if="showSuccessMessage"
                       class="mb-4 p-3 rounded-xl text-center"
                       :style="{
                         backgroundColor: 'rgba(34, 197, 94, 0.2)',
@@ -310,9 +312,9 @@
 
                   <!-- Action Buttons -->
                   <div class="flex justify-end gap-3">
-                    <button 
+                    <button
                       type="button"
-                      @click="closeResetModal" 
+                      @click="closeResetModal"
                       :disabled="resetLoading || showSuccessMessage"
                       class="px-5 py-2.5 rounded-xl font-medium transition-all duration-200"
                       :style="{
@@ -326,7 +328,7 @@
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       type="submit"
                       :disabled="resetLoading || showSuccessMessage"
                       class="relative px-5 py-2.5 rounded-xl font-medium transition-all duration-200 overflow-hidden"
@@ -356,13 +358,26 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { login, changePassword } from "@/services/auth";
 import backgroundImg from "../../assets/images/bg.jpg";
+import { useAuth } from "@/composables/useAuth";
 
+const { refreshUser } = useAuth();
 const router = useRouter();
 const backgroundImage = ref(backgroundImg);
+
+// ── Fade-in on every route visit ─────────────────────────────────────────────
+// Starts invisible (opacity-0 + slight upward offset) and animates to
+// opacity-100 + translate-y-0 via Tailwind transition classes on the root div.
+const visible = ref(false);
+onMounted(() => {
+  // nextTick is not needed — a one-frame delay via setTimeout(0)
+  // is enough for the browser to paint the initial opacity-0 state
+  // before we flip to opacity-100 so the transition is visible.
+  setTimeout(() => { visible.value = true; }, 0);
+});
 
 // Login form state
 const email = ref("");
@@ -475,16 +490,16 @@ async function handleLogin() {
 
     if (user.must_change_password) {
       openResetModal(user.email);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
       return;
     }
 
+    refreshUser();
     router.push("/dashboard");
   } catch (err) {
     const msg = err.message || "An error occurred during login";
     if (msg === "Your account is inactive. Please contact the administrator.") {
-      // Show the exact backend message under the email field
       errors.email = msg;
     } else if (msg === "Invalid credentials or inactive account") {
       errors.email = "Please check your email";
@@ -498,23 +513,16 @@ async function handleLogin() {
 }
 
 // ─── Password change handler ──────────────────────────────────────────────────
-// FIX: Removed @keyup.enter from inputs — the <form @submit.prevent> already
-// handles Enter natively, so those listeners caused a second submission after
-// the first (successful) one finished, producing the 422 error.
-// The resetLoading guard below also prevents any remaining race conditions.
 
 const handleResetPassword = async () => {
-  // Guard: prevent double-submission
   if (resetLoading.value) return;
 
-  // Reset errors
   resetErrors.currentPassword = "";
   resetErrors.newPassword = "";
   resetErrors.confirmPassword = "";
   showSuccessMessage.value = false;
   successMessage.value = "";
 
-  // Validate
   if (!currentPassword.value) resetErrors.currentPassword = "Current password is required";
   if (!newPassword.value) {
     resetErrors.newPassword = "New password is required";
@@ -546,7 +554,6 @@ const handleResetPassword = async () => {
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Close modal and pre-fill email for convenience
     showResetModal.value = false;
     email.value = savedEmail;
     password.value = "";

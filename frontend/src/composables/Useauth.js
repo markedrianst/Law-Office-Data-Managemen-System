@@ -1,79 +1,92 @@
-// composables/useAuth.js
-// ─────────────────────────────────────────────────────────────────
-// Central auth composable — import this in Header, Sidebar, Account
-// Handles your exact backend shape:
-//   { id, role_id, full_name, email, status, role: { id, name, ... } }
-// ─────────────────────────────────────────────────────────────────
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+// src/composables/useAuth.js
+import { ref, computed } from "vue";
 
-const parseStoredUser = () => {
+// Shared reactive ref — null until explicitly loaded
+const _user = ref(null);
+
+// Internal loader
+function loadUserFromSession() {
   try {
-    let raw = localStorage.getItem('user')
-    if (!raw || raw === 'null' || raw === 'undefined') return null
-    for (let i = 0; i < 3; i++) {
-      try {
-        const parsed = JSON.parse(raw)
-        if (typeof parsed === 'string') { raw = parsed; continue }
-        if (typeof parsed === 'object' && parsed !== null) return parsed
-        break
-      } catch { break }
-    }
-  } catch {}
-  return null
+    const raw = sessionStorage.getItem("user");
+    _user.value = raw ? JSON.parse(raw) : null;
+  } catch {
+    _user.value = null;
+  }
 }
 
+// Hydrate immediately on first import
+loadUserFromSession();
+
 export function useAuth() {
-  const userObj = ref(parseStoredUser())
+  const userObj = _user;
 
-  const syncUser = () => { userObj.value = parseStoredUser() }
-
-  onMounted(() => {
-    window.addEventListener('storage', syncUser)
-    // Re-read shortly after mount in case login just wrote to localStorage
-    setTimeout(syncUser, 100)
-  })
-  onUnmounted(() => window.removeEventListener('storage', syncUser))
-
-  // ── name: backend column is full_name ──────────────────────────
   const userName = computed(() => {
-    const u = userObj.value
-    if (!u) return 'User'
-    // Try full_name first (your DB column), then fallbacks
-    return u.full_name || u.name || u.username || 'User'
-  })
+    // Re-read sessionStorage as fallback if ref is empty
+    if (!_user.value) loadUserFromSession();
+    const u = _user.value;
+    return u?.full_name || u?.name || "";
+  });
 
-  // ── role: backend returns nested { id, name } object ──────────
-  // $user->load('role') → user.role = { id:1, name:'admin' }
+  const userEmail = computed(() => {
+    if (!_user.value) loadUserFromSession();
+    return _user.value?.email ?? "";
+  });
+
   const userRole = computed(() => {
-    const u = userObj.value
-    if (!u) return 'Staff'
-    // Handle nested role object OR flat string
-    if (u.role && typeof u.role === 'object') return u.role.name || 'Staff'
-    if (typeof u.role === 'string') return u.role
-    return 'Staff'
-  })
-
-  const userRoleId = computed(() => {
-    const u = userObj.value
-    if (!u) return null
-    if (u.role && typeof u.role === 'object') return u.role.id
-    return u.role_id || null
-  })
+    if (!_user.value) loadUserFromSession();
+    const u = _user.value;
+    if (!u) return "";
+    return u.role?.name ?? (typeof u.role === "string" ? u.role.toLowerCase() : "");
+  });
 
   const userInitials = computed(() => {
-    const parts = userName.value.trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return parts[0]?.[0]?.toUpperCase() || 'U'
-  })
+    const name = userName.value;
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  });
 
-  const userEmail = computed(() => userObj.value?.email || '')
+  const isAdmin  = computed(() => userRole.value === "admin");
+  const isLawyer = computed(() => userRole.value === "lawyer");
+  const isClerk  = computed(() => userRole.value === "clerk");
+  const isAuthenticated = computed(() => !!sessionStorage.getItem("token"));
 
-  const isAdmin  = computed(() => userRole.value.toLowerCase() === 'admin')
-  const isLawyer = computed(() => userRole.value.toLowerCase() === 'lawyer')
-  const isClerk  = computed(() => userRole.value.toLowerCase() === 'clerk')
+  function refreshUser() {
+    loadUserFromSession();
+  }
 
-  // Force a re-read (call after login/profile update)
-  const refreshUser = () => syncUser()
+  function patchStoredUser(patch = {}) {
+    try {
+      const raw = sessionStorage.getItem("user");
+      const stored = raw ? JSON.parse(raw) : {};
+      const updated = { ...stored, ...patch };
+      sessionStorage.setItem("user", JSON.stringify(updated));
+      _user.value = updated;
+    } catch (e) {
+      console.error("useAuth.patchStoredUser failed:", e);
+    }
+  }
 
-  return { userObj, userName, userRole, userRoleId, userEmail, userInitials, isAdmin, isLawyer, isClerk, refreshUser }
+  function clearSession() {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    _user.value = null;
+  }
+
+  return {
+    userObj,
+    userName,
+    userEmail,
+    userRole,
+    userInitials,
+    isAdmin,
+    isLawyer,
+    isClerk,
+    isAuthenticated,
+    refreshUser,
+    patchStoredUser,
+    clearSession,
+  };
 }

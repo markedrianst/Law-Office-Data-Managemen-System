@@ -59,8 +59,52 @@
 
     <!-- Cases Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <div v-if="isLoading" class="flex justify-center items-center py-20">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1a4972]"></div>
+      <div v-if="isLoading" class="overflow-x-auto">
+        <table class="min-w-full">
+          <tbody class="divide-y divide-slate-50">
+            <tr v-for="i in 6" :key="i" class="animate-pulse">
+              <!-- Case Code / Title -->
+              <td class="px-4 py-4">
+                <div class="h-3 w-20 bg-slate-200 rounded mb-2"></div>
+                <div class="h-4 w-44 bg-slate-200 rounded mb-1.5"></div>
+                <div class="h-3 w-16 bg-slate-100 rounded"></div>
+              </td>
+              <!-- Client -->
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-slate-200 flex-shrink-0"></div>
+                  <div class="h-4 w-28 bg-slate-200 rounded"></div>
+                </div>
+              </td>
+              <!-- Assigned To -->
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-1.5 mb-1.5">
+                  <div class="w-5 h-5 rounded-full bg-slate-200 flex-shrink-0"></div>
+                  <div class="h-3 w-32 bg-slate-200 rounded"></div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-5 h-5 rounded-full bg-slate-100 flex-shrink-0"></div>
+                  <div class="h-3 w-28 bg-slate-100 rounded"></div>
+                </div>
+              </td>
+              <!-- Priority -->
+              <td class="px-4 py-4">
+                <div class="h-6 w-16 bg-slate-200 rounded-lg"></div>
+              </td>
+              <!-- Status -->
+              <td class="px-4 py-4">
+                <div class="h-6 w-16 bg-slate-200 rounded-lg"></div>
+              </td>
+              <!-- Actions -->
+              <td class="px-4 py-4">
+                <div class="flex gap-1">
+                  <div class="h-7 w-14 bg-slate-200 rounded-lg"></div>
+                  <div class="h-7 w-14 bg-slate-100 rounded-lg"></div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div v-else class="overflow-x-auto">
@@ -279,9 +323,7 @@
                     </select>
                   </div>
                   <div class="sm:col-span-2">
-                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
-                      Client <span class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
-                    </label>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Client <span class="text-red-500">*</span></label>
                     <div class="flex gap-2">
                       <div class="relative flex-1" ref="clientDropdownRef">
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,7 +334,7 @@
                           @input="clientDropdownOpen = true; if(!clientSearch) clearClient()"
                           type="text" placeholder="Search client name..."
                           class="w-full pl-9 pr-8 py-2.5 text-sm border rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10 transition-all"
-                          :class="form.client_id ? 'border-[#1a4972] font-medium text-slate-800' : 'border-slate-200 text-slate-500'" />
+                          :class="form.client_id ? 'border-[#1a4972] font-medium text-slate-800' : errors.client_id ? 'border-red-400' : 'border-slate-200 text-slate-500'" />
                         <button v-if="clientSearch || form.client_id" type="button" @click.prevent="clearClient"
                           class="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,6 +370,7 @@
                         </svg>
                       </button>
                     </div>
+                    <p v-if="errors.client_id" class="text-xs text-red-500 mt-1">{{ errors.client_id }}</p>
                     <Transition name="fade-slide">
                       <div v-if="newlyCreatedClient" class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -712,7 +755,7 @@ const defaultForm = () => ({
   priority: 'normal', intake_status: 'for_approval', case_status: 'active', summary: '',
 });
 const form   = reactive(defaultForm());
-const errors = reactive({ title: '', assigned_lawyer_id: '', case_no: '' });
+const errors = reactive({ title: '', assigned_lawyer_id: '', case_no: '', client_id: '' });
 
 const showNewClientModal = ref(false);
 const clientSaving       = ref(false);
@@ -869,7 +912,7 @@ const selectClient       = (cl) => { form.client_id = cl.id; clientSearch.value 
 const clearClient        = ()   => { form.client_id = '';    clientSearch.value = '';            newlyCreatedClient.value = '';     clientDropdownOpen.value = false; };
 const handleOutsideClick = (e)  => { if (clientDropdownRef.value && !clientDropdownRef.value.contains(e.target)) clientDropdownOpen.value = false; };
 
-const clearErrors = () => { errors.title = ''; errors.assigned_lawyer_id = ''; errors.case_no = ''; };
+const clearErrors = () => { errors.title = ''; errors.assigned_lawyer_id = ''; errors.case_no = ''; errors.client_id = ''; };
 const closeForm   = () => { showFormModal.value = false; clientDropdownOpen.value = false; };
 
 const openCreate = () => {
@@ -898,6 +941,7 @@ const validateForm = () => {
   if (!form.title.trim())       { errors.title = 'Case title is required';        ok = false; }
   if (!form.case_no)            { errors.case_no = 'Case number is required';     ok = false; }
   if (!form.assigned_lawyer_id) { errors.assigned_lawyer_id = 'Assign a lawyer';  ok = false; }
+  if (!form.client_id)          { errors.client_id = 'Client is required';        ok = false; }
   return ok;
 };
 
@@ -909,9 +953,11 @@ const submitForm = async () => {
     else                 await CaseService.store(form);
     await loadCases(); closeForm();
   } catch (e) {
-    if (e.errors?.title)              errors.title              = e.errors.title[0];
-    if (e.errors?.case_no)            errors.case_no            = e.errors.case_no[0];
-    if (e.errors?.assigned_lawyer_id) errors.assigned_lawyer_id = e.errors.assigned_lawyer_id[0];
+    // Laravel returns errors inside response.data.errors (axios) or e.errors directly
+    const errs = e?.response?.data?.errors ?? e?.errors ?? {};
+    if (errs.title)              errors.title              = Array.isArray(errs.title)              ? errs.title[0]              : errs.title;
+    if (errs.case_no)            errors.case_no            = Array.isArray(errs.case_no)            ? errs.case_no[0]            : errs.case_no;
+    if (errs.assigned_lawyer_id) errors.assigned_lawyer_id = Array.isArray(errs.assigned_lawyer_id) ? errs.assigned_lawyer_id[0] : errs.assigned_lawyer_id;
   } finally { formLoading.value = false; }
 };
 
