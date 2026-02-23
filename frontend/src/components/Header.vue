@@ -54,7 +54,7 @@
 
               <div class="dd-divider"></div>
 
-              <button class="dd-item dd-item--danger" @click="logoutUser">
+              <button class="dd-item dd-item--danger" @click="askLogout">
                 <span class="dd-icon dd-icon--danger">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,40 +71,85 @@
       </div>
     </div>
   </header>
+
+  <!-- ── Logout Confirmation Modal ─────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+        <div class="modal-card">
+          <!-- Icon -->
+          <div class="modal-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </div>
+
+          <!-- Text -->
+          <div class="modal-body">
+            <h2 class="modal-title">Sign out?</h2>
+            <p class="modal-sub">You'll need to log back in to access the system.</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="modal-actions">
+            <button class="modal-btn modal-btn--cancel" :disabled="isLoggingOut" @click="showLogoutModal = false">
+              Cancel
+            </button>
+            <button class="modal-btn modal-btn--confirm" :disabled="isLoggingOut" @click="confirmLogout">
+              <span v-if="isLoggingOut" class="logout-spinner"></span>
+              {{ isLoggingOut ? 'Signing out…' : 'Yes, sign out' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-import {logout} from '@/services/auth'
+import { logout } from '@/services/auth'
 
 const router = useRouter()
 const route  = useRoute()
 const { userName, userRole, userInitials } = useAuth()
 
-const isOpen     = ref(false)
-const dropdownRef = ref(null)
+const isOpen          = ref(false)
+const dropdownRef     = ref(null)
+const showLogoutModal = ref(false)
+const isLoggingOut    = ref(false)
 
 const pageTitle = computed(() => ({
   '/dashboard':      'Dashboard',
   '/usermanagement': 'User Management',
   '/audittrail':     'Activity Logs',
-  '/clients':        'Clients',
+  '/casemaster':        'Case Master',
   '/tasks':          'Tasks',
   '/appointments':   'Appointments',
   '/account':        'Account Settings',
 }[route.path] || 'Dashboard'))
 
-// Click outside
+// Click outside dropdown
 const handleOutside = e => {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target)) isOpen.value = false
 }
 onMounted(()  => document.addEventListener('mousedown', handleOutside))
 onUnmounted(() => document.removeEventListener('mousedown', handleOutside))
 
-const logoutUser = async () => {
-  isOpen.value = false
+// Open confirmation modal
+const askLogout = () => {
+  isOpen.value = false          // close dropdown first
+  showLogoutModal.value = true
+}
+
+// Actually log out after confirmation
+const confirmLogout = async () => {
+  isLoggingOut.value = true
   try {
     await logout()
   } catch {}
@@ -130,27 +175,18 @@ const logoutUser = async () => {
 }
 
 .page-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 13px; font-weight: 600;
   color: rgba(255,255,255,0.9);
-  letter-spacing: 0.02em;
-  margin: 0;
+  letter-spacing: 0.02em; margin: 0;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.header-right { display: flex; align-items: center; gap: 8px; }
 
-/* Bell */
+/* ── Bell ── */
 .icon-btn {
-  position: relative;
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.75);
+  position: relative; width: 36px; height: 36px;
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.75);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: background .15s;
 }
@@ -158,16 +194,14 @@ const logoutUser = async () => {
 .bell-dot {
   position: absolute; top: 7px; right: 7px;
   width: 7px; height: 7px; border-radius: 50%;
-  background: #ef4444;
-  border: 1.5px solid #0f2f4a;
+  background: #ef4444; border: 1.5px solid #0f2f4a;
 }
 
-/* User button */
+/* ── User button ── */
 .user-menu { position: relative; }
 .user-btn {
   display: flex; align-items: center; gap: 10px;
-  padding: 6px 12px 6px 6px;
-  border-radius: 12px;
+  padding: 6px 12px 6px 6px; border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.08);
   cursor: pointer; transition: background .15s;
@@ -179,63 +213,42 @@ const logoutUser = async () => {
   background: linear-gradient(135deg, rgba(255,255,255,0.28), rgba(255,255,255,0.1));
   border: 1.5px solid rgba(255,255,255,0.32);
   color: white; font-size: 13px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-
-.user-info {
-  display: none;
-  flex-direction: column; gap: 1px; text-align: left;
-  max-width: 130px;
-}
+.user-info { display: none; flex-direction: column; gap: 1px; text-align: left; max-width: 130px; }
 @media(min-width:640px) { .user-info { display: flex; } }
-
-.user-name {
-  font-size: 12px; font-weight: 600; color: white;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.user-role {
-  font-size: 11px; color: rgba(255,255,255,0.5);
-  text-transform: capitalize; white-space: nowrap;
-}
-
+.user-name  { font-size: 12px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role  { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: capitalize; white-space: nowrap; }
 .chevron { color: rgba(255,255,255,0.45); transition: transform .2s; flex-shrink: 0; }
 .chevron.flipped { transform: rotate(180deg); }
 
-/* Dropdown */
+/* ── Dropdown ── */
 .dropdown {
   position: absolute; right: 0; top: calc(100% + 8px);
   width: 220px;
-  background: rgba(7, 22, 38, 0.97);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
+  background: rgba(7,22,38,0.97); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
   z-index: 9999;
 }
-
 .dropdown-header {
   display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 .dh-avatar {
   width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, #1a4972, #2d6db5);
   color: white; font-size: 14px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .dh-name { font-size: 12px; font-weight: 700; color: white; margin: 0; }
 .dh-role { font-size: 11px; color: rgba(255,255,255,0.4); margin: 2px 0 0; text-transform: capitalize; }
-
 .dropdown-body { padding: 6px; }
-
 .dd-item {
   display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 9px 10px;
-  border-radius: 10px; border: none; background: transparent;
+  width: 100%; padding: 9px 10px; border-radius: 10px;
+  border: none; background: transparent;
   color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 500;
   cursor: pointer; text-decoration: none; transition: background .15s, color .15s;
 }
@@ -243,17 +256,89 @@ const logoutUser = async () => {
 .dd-item--active { background: rgba(255,255,255,0.1) !important; color: white !important; }
 .dd-item--danger { color: rgba(255,160,160,0.85); }
 .dd-item--danger:hover { background: rgba(239,68,68,0.12) !important; color: #fca5a5 !important; }
-
 .dd-icon {
   width: 28px; height: 28px; border-radius: 8px;
   background: rgba(255,255,255,0.07);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .dd-icon--danger { background: rgba(239,68,68,0.12); }
-
 .dd-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 4px 6px; }
 
-/* Transition */
+/* ── Dropdown transition ── */
 .menu-enter-active, .menu-leave-active { transition: opacity .15s ease, transform .15s ease; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-6px) scale(.97); }
+
+/* ── Logout Modal Overlay ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(10, 20, 35, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+
+/* ── Modal Card ── */
+.modal-card {
+  background: white; border-radius: 20px;
+  padding: 32px 28px 24px;
+  width: 100%; max-width: 360px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.04);
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 16px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.modal-icon-wrap {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.15);
+  display: flex; align-items: center; justify-content: center;
+  color: #dc2626;
+}
+
+.modal-body { display: flex; flex-direction: column; gap: 6px; }
+.modal-title {
+  font-size: 17px; font-weight: 700;
+  color: #0f172a; margin: 0;
+}
+.modal-sub {
+  font-size: 13px; color: #64748b; margin: 0; line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex; gap: 10px; width: 100%; margin-top: 4px;
+}
+
+.modal-btn {
+  flex: 1; padding: 10px 16px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s, opacity .15s;
+  border: none;
+}
+.modal-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.modal-btn--cancel {
+  background: #f1f5f9; color: #475569;
+  border: 1.5px solid #e2e8f0;
+}
+.modal-btn--cancel:hover:not(:disabled) { background: #e2e8f0; }
+
+.modal-btn--confirm {
+  background: #dc2626; color: white;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.modal-btn--confirm:hover:not(:disabled) { background: #b91c1c; }
+
+.logout-spinner {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  animation: spin .65s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Modal transition ── */
+.modal-enter-active, .modal-leave-active { transition: opacity .2s ease, transform .2s ease; }
+.modal-enter-from, .modal-leave-to       { opacity: 0; transform: scale(.95); }
 </style>

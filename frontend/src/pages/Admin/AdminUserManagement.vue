@@ -1,17 +1,6 @@
 <!-- Light Theme User Management with Created_at Sorting (Newest-to-Oldest) -->
 <template>
-  <!-- Error display -->
-  <div v-if="apiError" class="mb-4 p-4 rounded-xl text-sm"
-    :style="{
-      background: 'rgba(239,68,68,0.08)',
-      border: '1px solid rgba(239,68,68,0.25)',
-      color: '#b91c1c'
-    }">
-    {{ apiError }}
-  </div>
-
   <div class="min-h-screen p-6" style="background: #f0f4f8; font-family: 'Segoe UI', sans-serif;">
-
     <!-- Header Section -->
     <div class="mb-7">
       <div class="flex items-center gap-3 mb-1">
@@ -448,7 +437,7 @@ const formatLastLogin = (dateStr) => {
   return new Date(dateStr).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
-const openAddUserModal = () => { resetForm(); isEditing.value = false; showModal.value = true; };
+const openAddUserModal = () => { resetForm(); isEditing.value = false; showModal.value = true;form.password = 'temporary123'; };
 const closeModal = () => { showModal.value = false; resetForm(); };
 const resetForm = () => {
   Object.assign(form, { firstName: '', middleName: '', lastName: '', address: '', contact: '', email: '', role: '', password: '', status: 'Active' });

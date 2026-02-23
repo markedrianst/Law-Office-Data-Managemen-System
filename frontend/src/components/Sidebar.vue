@@ -113,9 +113,9 @@ const allNav = [
   { path: '/dashboard',      label: 'Dashboard',    icon: icons.dashboard,    roles: [] },
   { path: '/usermanagement', label: 'Users',         icon: icons.users,        roles: ['admin'] },
   { path: '/audittrail',     label: 'Activity Logs', icon: icons.logs,         roles: ['admin'] },
-  { path: '/clients',        label: 'Clients',       icon: icons.clients,      roles: [] },
-  { path: '/tasks',          label: 'Tasks',         icon: icons.tasks,        roles: [] },
-  { path: '/appointments',   label: 'Appointments',  icon: icons.appointments, roles: [] },
+  { path: '/casemaster',        label: 'Case Master',       icon: icons.clients,      roles: ['admin'] },
+  //{ path: '/tasks',          label: 'Tasks',         icon: icons.tasks,        roles: [] },
+  //  { path: '/appointments',   label: 'Appointments',  icon: icons.appointments, roles: [] },
 ]
 
 const visibleNav = computed(() => {

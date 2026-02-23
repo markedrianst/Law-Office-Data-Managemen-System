@@ -143,7 +143,6 @@ class UserManagementController extends Controller
         $details .= "Name: " . $validated['name'] . "\n";
         $details .= "Email: " . $validated['email'] . "\n";
         $details .= "Role: " . ucfirst($roleName) . "\n";
-        $details .= "Status: " . ucfirst($user->status);
         
         if (isset($validated['address'])) {
             $details .= "\nAddress: " . $validated['address'];

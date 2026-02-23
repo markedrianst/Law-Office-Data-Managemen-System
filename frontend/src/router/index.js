@@ -4,13 +4,15 @@ import Dashboard from "@/pages/Dashboard.vue";
 import AdminUserManagement from "@/pages/Admin/AdminUserManagement.vue";
 import AuditTrail from "../pages/Admin/AuditTrail.vue";
 import AccountPage from "@/pages/AccountPage.vue";
+import CaseMaster from "@/pages/Admin/cases/CaseMaster.vue";
 const routes = [
   {
     path: "/",
     name: "Login",
     component: Login,
-    meta: { guest: true },
+    meta: { guest: true },  
   },
+  
   {
     path: "/account",
     name: "AccountPage",
@@ -21,6 +23,12 @@ const routes = [
     path: "/usermanagement",
     name: "AdminUserManagement",
     component: AdminUserManagement,
+    meta: { requiresAuth: true , role: "admin"},
+  },
+  {
+    path: "/casemaster",
+    name: "CaseMaster",
+    component: CaseMaster,
     meta: { requiresAuth: true , role: "admin"},
   },
   {

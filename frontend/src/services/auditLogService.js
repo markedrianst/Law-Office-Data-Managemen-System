@@ -6,6 +6,20 @@ export const auditLogService = {
    * Get audit logs with filters
    * @param {Object} params - { email, status, action, date_from, date_to, page, per_page }
    */
+
+  // Fetch paginated case activity logs with filters
+async getCaseActivityLogs(params = {}) {
+  const response = await api.get('/admin/audit-logs/case-activity', { params })
+  return response.data   // { data: [...], meta: {...} }
+},
+
+// Fetch distinct case actions for the filter dropdown
+async getCaseActions() {
+  const response = await api.get('/admin/audit-logs/case-actions')
+  return response.data   // [{ value, label }, ...]
+},
+
+
   async getLogs(params = {}) {
     try {
       const response = await api.get('/audit-logs', { params });
@@ -185,4 +199,6 @@ export const auditLogService = {
     if (!email) return '?';
     return email.charAt(0).toUpperCase();
   }
+
+  
 };
