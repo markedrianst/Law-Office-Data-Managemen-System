@@ -42,6 +42,8 @@ return new class extends Migration
         Schema::create('login_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->string('action', 50);
+            $table->text('details')->nullable();
             $table->string('email_attempted', 120);
             $table->string('ip_address', 45);
             $table->string('user_agent', 255);

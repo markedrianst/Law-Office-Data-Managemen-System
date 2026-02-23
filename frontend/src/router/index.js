@@ -2,20 +2,40 @@ import { createRouter, createWebHistory } from "vue-router";
 import Login     from "@/pages/Authentication/Login.vue";
 import Dashboard from "@/pages/Dashboard.vue";
 import AdminUserManagement from "@/pages/Admin/AdminUserManagement.vue";
-
-
+import AuditTrail from "../pages/Admin/AuditTrail.vue";
+import AccountPage from "@/pages/AccountPage.vue";
+import CaseMaster from "@/pages/Admin/cases/CaseMaster.vue";
 const routes = [
   {
     path: "/",
     name: "Login",
     component: Login,
-    meta: { guest: true },
+    meta: { guest: true },  
+  },
+  
+  {
+    path: "/account",
+    name: "AccountPage",
+    component: AccountPage,
+    meta: { requiresAuth: true },
   },
   {
     path: "/usermanagement",
     name: "AdminUserManagement",
     component: AdminUserManagement,
     meta: { requiresAuth: true , role: "admin"},
+  },
+  {
+    path: "/casemaster",
+    name: "CaseMaster",
+    component: CaseMaster,
+    meta: { requiresAuth: true , role: "admin"},
+  },
+  {
+    path: "/audittrail",
+    name: "AuditTrail",
+    component: AuditTrail,
+    meta: { requiresAuth: true },
   },
   {
     path: "/dashboard",

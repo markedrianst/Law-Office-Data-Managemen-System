@@ -33,3 +33,38 @@ function logout() {
   router.push("/");
 }
 </script>
+
+<style scoped>
+.error {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f0f4f8;
+  font-family: 'Segoe UI', sans-serif;
+  padding: 20px;
+  text-align: center;
+}
+
+.error p {
+  color: #1e293b;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.error button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #1a4972, #0f2f4a);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .error p { font-size: 14px; }
+}
+</style>
