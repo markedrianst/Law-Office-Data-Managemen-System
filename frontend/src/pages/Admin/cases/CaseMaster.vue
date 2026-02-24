@@ -305,7 +305,7 @@
                   </div>
                   <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Case Number <span class="text-red-500">*</span></label>
-                    <input v-model="form.case_no" type="number" placeholder="e.g. 12345"
+                    <input v-model="form.case_no" type="text" placeholder="e.g. CRIM CASE-123"
                       class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10 transition-all"
                       :class="{ 'border-red-400': errors.case_no }" />
                     <p v-if="errors.case_no" class="text-xs text-red-500 mt-1">{{ errors.case_no }}</p>
@@ -317,6 +317,7 @@
                   <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Category</label>
                     <select v-model="form.category_id"
+                      required
                       class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-[#1a4972] text-slate-600 transition-all">
                       <option value="">— Select Category —</option>
                       <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
@@ -386,8 +387,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div class="flex items-center justify-between mb-1.5">
-                      <label class="text-sm font-semibold text-slate-700">Court / Office</label>
-                      <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                      <label class="text-sm font-semibold text-slate-700">Court / Office&ensp;
                         <input type="checkbox" v-model="courtNA" @change="onCourtNAChange"
                           class="w-3.5 h-3.5 rounded accent-[#1a4972] cursor-pointer" />
                         <span class="text-xs text-slate-500 font-medium">N/A</span>
@@ -400,15 +400,14 @@
                   </div>
                   <div>
                     <div class="flex items-center justify-between mb-1.5">
-                      <label class="text-sm font-semibold text-slate-700">Docket No.</label>
-                      <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                        <input type="checkbox" v-model="docketNA" @change="onDocketNAChange"
+                      <label class="text-sm font-semibold text-slate-700">Docket No.&ensp;
+                         <input type="checkbox" v-model="docketNA" @change="onDocketNAChange"
                           class="w-3.5 h-3.5 rounded accent-[#1a4972] cursor-pointer" />
                         <span class="text-xs text-slate-500 font-medium">N/A</span>
                       </label>
                     </div>
                     <input v-model="form.docket_no" type="text"
-                      :placeholder="docketNA ? 'Not Applicable' : 'e.g. Civil Case No. 2024-001'"
+                      :placeholder="docketNA ? 'Not Applicable' : 'Blue-123456'"
                       :disabled="docketNA"
                       class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" />
                   </div>

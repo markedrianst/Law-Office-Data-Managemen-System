@@ -131,7 +131,7 @@ class CaseController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'case_no'            => 'required|integer|unique:cases,case_no',
+            'case_no'            => 'required|string|max:200|:cases,case_no',
             'title'              => 'required|string|max:200',
             'category_id'        => 'nullable|exists:case_categories,id',
             'client_id'          => 'nullable|exists:clients,id',
@@ -234,7 +234,8 @@ public function update(Request $request, int $id): JsonResponse
     $validated = $request->validate([
         'case_no'            => [
             'required',
-            'integer',
+            'string',
+            'max:200',
             'unique:cases,case_no,' . $case->id . ',id'
         ],
         'title'              => 'required|string|max:200',
