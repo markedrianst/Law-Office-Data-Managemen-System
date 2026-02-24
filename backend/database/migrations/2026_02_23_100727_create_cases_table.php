@@ -14,7 +14,7 @@ return new class extends Migration
             Schema::create('cases', function (Blueprint $table) {
             $table->id();
             $table->string('case_code', 30)->unique();
-            $table->integer('case_no');
+            $table->string('case_no', 180);
             $table->string('title', 200);
             $table->foreignId('category_id')->nullable()->constrained('case_categories')->nullOnDelete();
             $table->foreignId('client_id')->nullable()->constrained('clients')->nullOnDelete();
@@ -22,12 +22,12 @@ return new class extends Migration
             $table->string('docket_no', 80)->nullable();
             $table->foreignId('assigned_lawyer_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('assigned_clerk_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->enum('intake_status', [
-                'draft',
-                'for_approval',
-                'approved',
-                'returned'
-            ])->default('for_approval');
+            // $table->enum('intake_status', [
+            //     'draft',
+            //     'for_approval',
+            //     'approved',
+            //     'returned'
+            // ])->default('for_approval');
 
             $table->enum('case_status', [
                 'active',
