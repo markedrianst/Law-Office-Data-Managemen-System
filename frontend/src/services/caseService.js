@@ -3,6 +3,7 @@ import api from '@/services/api';
 // ─────────────────────────────────────────────────────────────────────────────
 // CASES
 // ─────────────────────────────────────────────────────────────────────────────
+
 export const getCourts = (params = {}) =>
   api.get('/admin/courts-offices', { params });
 
@@ -50,6 +51,28 @@ export const getCategories = () =>
 
 export const getAssignableUsers = () =>
   api.get('/admin/users/assignable');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECKLIST
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getChecklist = (caseId) =>
+  api.get(`/admin/cases/${caseId}/checklist`);
+
+export const createChecklistTask = (caseId, payload) =>
+  api.post(`/admin/cases/${caseId}/checklist`, payload);
+
+export const getChecklistTask = (caseId, taskId) =>
+  api.get(`/admin/cases/${caseId}/checklist/${taskId}`);
+
+export const updateChecklistTask = (caseId, taskId, payload) =>
+  api.put(`/admin/cases/${caseId}/checklist/${taskId}`, payload);
+
+export const updateChecklistTaskStatus = (caseId, taskId, status) =>
+  api.patch(`/admin/cases/${caseId}/checklist/${taskId}/status`, { status });
+
+export const deleteChecklistTask = (caseId, taskId) =>
+  api.delete(`/admin/cases/${caseId}/checklist/${taskId}`);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMATTER

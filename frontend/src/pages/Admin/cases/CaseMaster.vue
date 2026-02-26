@@ -56,6 +56,8 @@
 
     <!-- Cases Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+
+      <!-- Skeleton loader -->
       <div v-if="isLoading" class="overflow-x-auto">
         <table class="min-w-full">
           <tbody class="divide-y divide-slate-50">
@@ -72,6 +74,7 @@
         </table>
       </div>
 
+      <!-- Data table -->
       <div v-else class="overflow-x-auto">
         <table class="min-w-full">
           <thead>
@@ -95,6 +98,7 @@
 
           <tbody class="divide-y divide-slate-50">
             <tr v-for="c in cases" :key="c.id" class="hover:bg-blue-50/30 transition-colors duration-100">
+              <!-- Case Code / Title -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2 mb-0.5">
                   <p class="text-xs font-bold tracking-wider" :class="getCategoryTextClass(c.category)">{{ c.case_code }}</p>
@@ -103,12 +107,14 @@
                 <p class="text-sm font-semibold text-slate-800 max-w-[200px] truncate" :title="c.title">{{ c.title }}</p>
                 <p class="text-xs text-slate-400 mt-0.5">Case #{{ c.case_no }}</p>
               </td>
+              <!-- Client -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2">
                   <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" :class="getCategoryBgClass(c.category)">{{ getInitials(c.client) }}</div>
                   <span class="text-sm text-slate-700 font-medium whitespace-nowrap">{{ c.client }}</span>
                 </div>
               </td>
+              <!-- Assigned To -->
               <td class="px-4 py-4">
                 <div class="flex flex-col gap-1.5">
                   <div class="flex items-center gap-1.5">
@@ -123,6 +129,7 @@
                   </div>
                 </div>
               </td>
+              <!-- Stage -->
               <td class="px-4 py-4">
                 <span v-if="c.stage" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 whitespace-nowrap">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -130,15 +137,18 @@
                 </span>
                 <span v-else class="text-xs text-slate-400 italic">No stage set</span>
               </td>
+              <!-- Priority -->
               <td class="px-4 py-4">
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg" :class="priorityClass(c.priority)">
                   <span class="w-1.5 h-1.5 rounded-full" :class="priorityDotClass(c.priority)"></span>
                   {{ capitalize(c.priority) }}
                 </span>
               </td>
+              <!-- Status -->
               <td class="px-4 py-4">
                 <span class="px-2.5 py-1 text-xs font-semibold rounded-lg" :class="caseStatusClass(c.case_status)">{{ capitalize(c.case_status) }}</span>
               </td>
+              <!-- Actions -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-1">
                   <button @click="openView(c)" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] transition-colors hover-navy-bg">
@@ -153,7 +163,8 @@
               </td>
             </tr>
 
-            <tr v-if="!isLoading && cases.length === 0">
+            <!-- Empty state -->
+            <tr v-if="cases.length === 0">
               <td :colspan="columns.length" class="px-6 py-16 text-center">
                 <div class="flex flex-col items-center">
                   <div class="w-14 h-14 rounded-2xl navy-bg-8 flex items-center justify-center mb-3">
@@ -175,16 +186,22 @@
           of <span class="font-semibold text-slate-700">{{ pagination.total }}</span> cases
         </p>
         <div class="flex items-center gap-1">
-          <button @click="previousPage" :disabled="pagination.current_page === 1" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all" :class="pagination.current_page === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200'">← Prev</button>
-          <button v-for="page in displayedPages" :key="page" @click="goToPage(page)" class="w-7 h-7 rounded-lg text-xs font-medium transition-all" :class="pagination.current_page === page ? 'bg-gradient-to-br from-[#1a4972] to-[#0f2f4a] text-white' : 'text-slate-600 hover:bg-slate-200'">{{ page }}</button>
-          <button @click="nextPage" :disabled="pagination.current_page === pagination.last_page" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all" :class="pagination.current_page === pagination.last_page ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200'">Next →</button>
+          <button @click="previousPage" :disabled="pagination.current_page === 1"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            :class="pagination.current_page === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200'">← Prev</button>
+          <button v-for="page in displayedPages" :key="page" @click="goToPage(page)"
+            class="w-7 h-7 rounded-lg text-xs font-medium transition-all"
+            :class="pagination.current_page === page ? 'bg-gradient-to-br from-[#1a4972] to-[#0f2f4a] text-white' : 'text-slate-600 hover:bg-slate-200'">{{ page }}</button>
+          <button @click="nextPage" :disabled="pagination.current_page === pagination.last_page"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            :class="pagination.current_page === pagination.last_page ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200'">Next →</button>
         </div>
       </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODALS                                                        -->
-    <!-- ============================================================ -->
+    <!-- ================================================================ -->
+    <!-- MODALS                                                            -->
+    <!-- ================================================================ -->
 
     <!-- Create / Edit Case -->
     <CaseForm
@@ -219,15 +236,20 @@
       @save="saveNewClient"
     />
 
-    <!-- View Case -->
+    <!-- View Case (includes CaseTaskModal inside it) -->
     <CaseViewModal
       :show="showViewModal"
       :view-case="viewCase"
       :active-stages="activeStages"
       :stage-history="stageHistory"
       :stage-history-loading="stageHistoryLoading"
+      :checklist="checklist"
+      :checklist-loading="checklistLoading"
       @close="showViewModal = false"
       @edit="(c) => { openEdit(c); showViewModal = false; }"
+      @add-task="addChecklistTask"
+      @update-task="updateChecklistTask"
+      @delete-task="deleteChecklistTask"
     />
 
     <!-- Stage Change -->
@@ -241,7 +263,7 @@
       @save="saveStageChange"
     />
 
-    <!-- Add New Category (sits above CaseForm at z-[70]) -->
+    <!-- Add New Category -->
     <CaseCategoryModal
       :show="showCategoryModal"
       :category="null"
@@ -255,7 +277,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
-import * as CaseService from '@/services/caseService';
+import * as CaseService   from '@/services/caseService';
 import * as ClientService from '@/services/clientService';
 
 import CaseCategoryModal from '@/components/Modals/Admin/CaseMaster/CaseCategoryModal.vue';
@@ -264,7 +286,7 @@ import CaseStageModal    from '@/components/Modals/Admin/CaseMaster/StageChangeM
 import CaseViewModal     from '@/components/Modals/Admin/CaseMaster/CaseViewModal.vue';
 import ClientModal       from '@/components/Modals/Admin/CaseMaster/NewClientModal.vue';
 
-// ==================== COLUMNS ====================
+// ── Columns ────────────────────────────────────────────────────────────────
 const columns = [
   { label: 'Case Code / Title', field: 'case_code',   sortable: true  },
   { label: 'Client',            field: 'client',      sortable: true  },
@@ -275,23 +297,23 @@ const columns = [
   { label: 'Actions',           field: 'actions',     sortable: false },
 ];
 
-// ==================== CATEGORY MAP ====================
+// ── Category map ────────────────────────────────────────────────────────────
 const categoryMap = {
-  'criminal':      { text: 'text-red-700',    bg: 'bg-red-600',    badge: 'bg-red-50 text-red-700 border-red-200',         border: 'border-red-200',    lightBg: 'bg-red-50/60' },
+  'criminal':      { text: 'text-red-700',    bg: 'bg-red-600',    badge: 'bg-red-50 text-red-700 border-red-200',         border: 'border-red-200',    lightBg: 'bg-red-50/60'    },
   'annulment':     { text: 'text-purple-700', bg: 'bg-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-200', border: 'border-purple-200', lightBg: 'bg-purple-50/60' },
-  'civil':         { text: 'text-blue-700',   bg: 'bg-blue-600',   badge: 'bg-blue-50 text-blue-700 border-blue-200',       border: 'border-blue-200',   lightBg: 'bg-blue-50/60' },
-  'land issues':   { text: 'text-amber-700',  bg: 'bg-amber-600',  badge: 'bg-amber-50 text-amber-700 border-amber-200',    border: 'border-amber-200',  lightBg: 'bg-amber-50/60' },
+  'civil':         { text: 'text-blue-700',   bg: 'bg-blue-600',   badge: 'bg-blue-50 text-blue-700 border-blue-200',       border: 'border-blue-200',   lightBg: 'bg-blue-50/60'   },
+  'land issues':   { text: 'text-amber-700',  bg: 'bg-amber-600',  badge: 'bg-amber-50 text-amber-700 border-amber-200',    border: 'border-amber-200',  lightBg: 'bg-amber-50/60'  },
   'land transfer': { text: 'text-orange-700', bg: 'bg-orange-600', badge: 'bg-orange-50 text-orange-700 border-orange-200', border: 'border-orange-200', lightBg: 'bg-orange-50/60' },
-  'pending':       { text: 'text-slate-600',  bg: 'bg-slate-500',  badge: 'bg-slate-100 text-slate-600 border-slate-300',   border: 'border-slate-200',  lightBg: 'bg-slate-50/60' },
+  'pending':       { text: 'text-slate-600',  bg: 'bg-slate-500',  badge: 'bg-slate-100 text-slate-600 border-slate-300',   border: 'border-slate-200',  lightBg: 'bg-slate-50/60'  },
   'admin':         { text: 'text-indigo-700', bg: 'bg-indigo-600', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', border: 'border-indigo-200', lightBg: 'bg-indigo-50/60' },
 };
-const defaultCat = { text: 'text-[#1a4972]', bg: 'bg-[#1a4972]', badge: 'bg-blue-50 text-[#1a4972] border-blue-200', border: 'border-blue-200', lightBg: 'bg-blue-50/40' };
+const defaultCat              = { text: 'text-[#1a4972]', bg: 'bg-[#1a4972]', badge: 'bg-blue-50 text-[#1a4972] border-blue-200', border: 'border-blue-200', lightBg: 'bg-blue-50/40' };
 const getCategoryEntry        = (cat) => cat ? (categoryMap[cat.toLowerCase().trim()] ?? defaultCat) : defaultCat;
 const getCategoryTextClass    = (cat) => getCategoryEntry(cat).text;
 const getCategoryBgClass      = (cat) => getCategoryEntry(cat).bg;
 const getCategoryBadgeClass   = (cat) => getCategoryEntry(cat).badge;
 
-// ==================== STATE ====================
+// ── State ───────────────────────────────────────────────────────────────────
 const categories = ref([]);
 const clients    = ref([]);
 const lawyers    = ref([]);
@@ -321,7 +343,7 @@ const formLoading        = ref(false);
 const newlyCreatedClient = ref('');
 const courtNA            = ref(false);
 const docketNA           = ref(false);
-const clientSearchInit   = ref('');  // passed into CaseForm as :init-client-search
+const clientSearchInit   = ref('');
 
 const defaultForm = () => ({
   case_no: '', title: '', category_id: '', client_id: '',
@@ -336,9 +358,9 @@ const errors = reactive({ title: '', assigned_lawyer_id: '', case_no: '', client
 
 const showNewClientModal = ref(false);
 const clientSaving       = ref(false);
-const defaultCF = () => ({ first_name: '', middle_name: '', last_name: '', contact_no: '', email: '', address: '' });
-const clientForm   = reactive(defaultCF());
-const clientErrors = reactive({ first_name: '', last_name: '', email: '', contact_no: '' });
+const defaultCF          = () => ({ first_name: '', middle_name: '', last_name: '', contact_no: '', email: '', address: '' });
+const clientForm         = reactive(defaultCF());
+const clientErrors       = reactive({ first_name: '', last_name: '', email: '', contact_no: '' });
 
 const showViewModal = ref(false);
 const viewCase      = ref(null);
@@ -350,7 +372,11 @@ const stageSaving         = ref(false);
 const stageForm           = reactive({ stage_id: '', remarks: '' });
 const stageErrors         = reactive({ stage_id: '' });
 
-// ==================== COMPUTED ====================
+// ── Checklist state ─────────────────────────────────────────────────────────
+const checklist        = ref([]);
+const checklistLoading = ref(false);
+
+// ── Computed ────────────────────────────────────────────────────────────────
 const activeStages = computed(() => stages.value.filter(s => s.is_active));
 
 const displayedPages = computed(() => {
@@ -365,44 +391,36 @@ const displayedPages = computed(() => {
   return pages;
 });
 
-const previewCode = computed(() => `${new Date().getFullYear()}-${String(pagination.value.total + 1).padStart(4, '0')}`);
+const previewCode = computed(() =>
+  `${new Date().getFullYear()}-${String(pagination.value.total + 1).padStart(4, '0')}`
+);
 
-// ==================== UTILITIES ====================
+// ── Utilities ───────────────────────────────────────────────────────────────
 const toArray     = (v) => Array.isArray(v) ? v : Array.isArray(v?.data) ? v.data : Array.isArray(v?.data?.data) ? v.data.data : [];
 const getInitials = (n) => n ? n.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() : '??';
 const capitalize  = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 
-const priorityClass    = (p) => ({ urgent: 'bg-red-50 text-red-700',  normal: 'bg-blue-50 text-blue-700',  low: 'bg-slate-100 text-slate-600' }[p] || 'bg-slate-100 text-slate-500');
-const priorityDotClass = (p) => ({ urgent: 'bg-red-500',              normal: 'bg-blue-500',               low: 'bg-slate-400' }[p] || 'bg-slate-400');
+const priorityClass    = (p) => ({ urgent: 'bg-red-50 text-red-700',  normal: 'bg-blue-50 text-blue-700',  low: 'bg-slate-100 text-slate-600' }[p]  || 'bg-slate-100 text-slate-500');
+const priorityDotClass = (p) => ({ urgent: 'bg-red-500',              normal: 'bg-blue-500',               low: 'bg-slate-400'                }[p]  || 'bg-slate-400');
 const caseStatusClass  = (s) => ({ active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', closed: 'bg-red-50 text-red-700 ring-1 ring-red-200', archived: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' }[s] || 'bg-slate-100 text-slate-500');
 
-// ==================== CATEGORY "ADD NEW" HANDLER ====================
+// ── Category "Add new" handler ───────────────────────────────────────────────
 const onCategoryChange = (val) => {
-  if (val === '__add_new__') {
-    form.category_id    = prevCategoryId.value;
-    showCategoryModal.value = true;
-  } else {
-    prevCategoryId.value = val;
-    form.category_id     = val;
-  }
+  if (val === '__add_new__') { form.category_id = prevCategoryId.value; showCategoryModal.value = true; }
+  else { prevCategoryId.value = val; form.category_id = val; }
 };
 
 const onCategoryCreated = async () => {
   showCategoryModal.value = false;
   try {
-    const res        = await CaseService.getCategories();
+    const res = await CaseService.getCategories();
     categories.value = toArray(res);
     const newest = [...categories.value].sort((a, b) => b.id - a.id)[0];
-    if (newest) {
-      form.category_id     = String(newest.id);
-      prevCategoryId.value = String(newest.id);
-    }
-  } catch (e) {
-    console.error('Failed to reload categories:', e);
-  }
+    if (newest) { form.category_id = String(newest.id); prevCategoryId.value = String(newest.id); }
+  } catch (e) { console.error('Failed to reload categories:', e); }
 };
 
-// ==================== API ====================
+// ── API: Lookups & Cases ─────────────────────────────────────────────────────
 const loadLookups = async () => {
   const [catRes, clientRes, userRes, stageRes] = await Promise.allSettled([
     CaseService.getCategories(),
@@ -460,7 +478,47 @@ const loadStageHistory = async (caseId) => {
   finally { stageHistoryLoading.value = false; }
 };
 
-// ==================== EVENTS ====================
+// ── API: Checklist ────────────────────────────────────────────────────────────
+const loadChecklist = async (caseId) => {
+  checklistLoading.value = true;
+  checklist.value = [];
+  try {
+    const res = await CaseService.getChecklist(caseId);
+    checklist.value = res?.data?.data ?? [];
+  } catch (e) {
+    console.error('loadChecklist:', e);
+  } finally {
+    checklistLoading.value = false;
+  }
+};
+const addChecklistTask = async (taskData) => {
+  if (!viewCase.value) return;
+  try {
+    const res = await CaseService.createChecklistTask(viewCase.value.id, taskData);
+    const created = res?.data ?? res;
+    checklist.value = [...checklist.value, created];
+  } catch (e) { console.error('addChecklistTask:', e); }
+};
+
+const updateChecklistTask = async (taskData) => {
+  if (!viewCase.value) return;
+  try {
+    const res = await CaseService.updateChecklistTask(viewCase.value.id, taskData.id, taskData);
+    const updated = res?.data ?? res;
+    const idx = checklist.value.findIndex(t => t.id === taskData.id);
+    if (idx !== -1) checklist.value[idx] = updated;
+  } catch (e) { console.error('updateChecklistTask:', e); }
+};
+
+const deleteChecklistTask = async (taskId) => {
+  if (!viewCase.value) return;
+  try {
+    await CaseService.deleteChecklistTask(viewCase.value.id, taskId);
+    checklist.value = checklist.value.filter(t => t.id !== taskId);
+  } catch (e) { console.error('deleteChecklistTask:', e); }
+};
+
+// ── Events ───────────────────────────────────────────────────────────────────
 let searchTimer = null;
 const debouncedSearch    = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { currentPage.value = 1; loadCases(); }, 300); };
 const handleFilterChange = () => { currentPage.value = 1; loadCases(); };
@@ -468,8 +526,8 @@ const sortBy = (field) => {
   sortDirection.value = sortField.value === field ? (sortDirection.value === 'asc' ? 'desc' : 'asc') : 'asc';
   sortField.value = field; loadCases();
 };
-const previousPage = () => { if (pagination.value.current_page > 1)                           { currentPage.value--; loadCases(); } };
-const nextPage     = () => { if (pagination.value.current_page < pagination.value.last_page)  { currentPage.value++; loadCases(); } };
+const previousPage = () => { if (pagination.value.current_page > 1)                          { currentPage.value--; loadCases(); } };
+const nextPage     = () => { if (pagination.value.current_page < pagination.value.last_page) { currentPage.value++; loadCases(); } };
 const goToPage     = (page) => { currentPage.value = page; loadCases(); };
 
 const handleOutsideClick = (e) => { if (clientDropdownRef.value && !clientDropdownRef.value.contains(e.target)) {} };
@@ -481,8 +539,8 @@ const openCreate = () => {
   isEditing.value = false; editingId.value = null; newlyCreatedClient.value = '';
   courtNA.value = false; docketNA.value = false;
   Object.assign(form, defaultForm());
-  form.current_stage_id = activeStages.value[0]?.id ?? '';
-  prevCategoryId.value  = '';
+  form.current_stage_id  = activeStages.value[0]?.id ?? '';
+  prevCategoryId.value   = '';
   clientSearchInit.value = '';
   clearErrors();
   showFormModal.value = true;
@@ -516,8 +574,8 @@ const validateForm = () => {
   clearErrors(); let ok = true;
   if (!form.title.trim())       { errors.title              = 'Case title is required'; ok = false; }
   if (!form.case_no)            { errors.case_no            = 'Case number is required'; ok = false; }
-  if (!form.assigned_lawyer_id) { errors.assigned_lawyer_id = 'Assign a lawyer';        ok = false; }
-  if (!form.client_id)          { errors.client_id          = 'Client is required';     ok = false; }
+  if (!form.assigned_lawyer_id) { errors.assigned_lawyer_id = 'Assign a lawyer'; ok = false; }
+  if (!form.client_id)          { errors.client_id          = 'Client is required'; ok = false; }
   return ok;
 };
 
@@ -564,7 +622,7 @@ const saveNewClient = async () => {
     const res    = await ClientService.create({ full_name, contact_no: clientForm.contact_no, email: clientForm.email, address: clientForm.address });
     const nc     = res?.data?.data ?? res?.data ?? res;
     const client = { ...nc, full_name: nc.full_name ?? full_name };
-    clients.value = [...clients.value, client];
+    clients.value          = [...clients.value, client];
     form.client_id         = client.id;
     clientSearchInit.value = client.full_name;
     newlyCreatedClient.value = client.full_name;
@@ -577,9 +635,12 @@ const saveNewClient = async () => {
 };
 
 const openView = async (c) => {
-  viewCase.value = c;
+  viewCase.value      = c;
   showViewModal.value = true;
-  await loadStageHistory(c.id);
+  await Promise.all([
+    loadStageHistory(c.id),
+    loadChecklist(c.id),
+  ]);
 };
 
 const openStageChange = () => { stageForm.stage_id = ''; stageForm.remarks = ''; stageErrors.stage_id = ''; showStageModal.value = true; };
@@ -617,5 +678,5 @@ onBeforeUnmount(() => {
 .modal-enter-active, .modal-leave-active { transition: all 0.25s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .hover-navy-bg:hover { background-color: rgba(26, 73, 114, 0.08); }
-.navy-bg-8  { background-color: rgba(26, 73, 114, 0.08); }
+.navy-bg-8 { background-color: rgba(26, 73, 114, 0.08); }
 </style>

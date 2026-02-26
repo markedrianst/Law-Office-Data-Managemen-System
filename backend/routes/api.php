@@ -5,10 +5,26 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\AuditLogController;
-use App\Http\Controllers\Admin\CaseController;
+use App\Http\Controllers\Admin\CaseMaster\CaseController;
 use App\Http\Controllers\Admin\CaseStageController;
 use App\Http\Controllers\Admin\CaseCategoryController;
 use App\Http\Controllers\Admin\CourtOfficeController;
+
+use App\Http\Controllers\Admin\CaseChecklistController;
+
+Route::prefix('admin')->group(function () {
+
+    Route::prefix('cases/{case}/checklist')->group(function () {
+        Route::get('/',                      [CaseChecklistController::class, 'index']);
+        Route::post('/',                     [CaseChecklistController::class, 'store']);
+        Route::get('/{checklist}',           [CaseChecklistController::class, 'show']);
+        Route::put('/{checklist}',           [CaseChecklistController::class, 'update']);
+        Route::delete('/{checklist}',        [CaseChecklistController::class, 'destroy']);
+        Route::patch('/{checklist}/status',  [CaseChecklistController::class, 'updateStatus']);
+    });
+
+});
+
 
 Route::post('/login',         [AuthenticatedSessionController::class, 'login']);
 Route::post('/logout',        [AuthenticatedSessionController::class, 'logout']);
