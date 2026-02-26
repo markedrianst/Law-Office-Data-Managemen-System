@@ -8,7 +8,7 @@ import AccountPage        from "@/pages/AccountPage.vue";
 import CaseMaster         from "@/pages/Admin/cases/CaseMaster.vue";
 import CaseCategory       from "@/pages/Admin/MasterData/CasesCategory.vue";
 import CourtMaster         from "@/pages/Admin/MasterData/CourtMaster.vue";
-
+import Documents         from "@/pages/Admin/MasterData/Documents.vue";
 const routes = [
   {
     path: "/",
@@ -39,6 +39,12 @@ const routes = [
     path: "/casecategory",
     name: "CaseCategory",
     component: CaseCategory,
+    meta: { requiresAuth: true, role: "admin" },
+  },
+  {
+    path: "/documents",
+    name: "Documents",
+    component: Documents,
     meta: { requiresAuth: true, role: "admin" },
   },
   {

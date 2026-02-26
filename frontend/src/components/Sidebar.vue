@@ -163,6 +163,7 @@ const allNav = [
     children: [
       { path: '/casecategory', label: 'Case Categories', icon: icons.tasks, roles: [] },
       { path: '/courtmaster', label: 'Courts', icon: icons.tasks, roles: [] }
+      ,{ path: '/documents', label: 'Documents', icon: icons.tasks, roles: [] }
     ]
   },
 ]

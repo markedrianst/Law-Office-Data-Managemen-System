@@ -3,152 +3,118 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Cases;
+use App\Models\CaseActivityLog;
+use App\Models\CaseStage;
+use App\Models\CaseStageHistory;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CaseStageController extends Controller
 {
     // =========================================================================
-    // MASTER DATA — manage the stage list itself
+    // MASTER DATA — manage the stage list
     // =========================================================================
 
-    /**
-     * GET /admin/master-data/case-stages
-     * Returns all stages ordered by sort_order, then id.
-     */
+    // GET /admin/master-data/case-stages
     public function index(): JsonResponse
     {
-        $stages = DB::table('case_stages')
-            ->orderBy('id')
+        $stages = CaseStage::orderBy('id')
             ->get(['id', 'name', 'is_active', 'created_at', 'updated_at']);
 
         return response()->json(['data' => $stages]);
     }
 
-    /**
-     * POST /admin/master-data/case-stages
-     */
+    // POST /admin/master-data/case-stages
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:100|unique:case_stages,name',
+            'name' => 'required|string|max:100|unique:case_stages,name',
         ]);
 
-        $maxOrder = DB::table('case_stages') ?? 0;
-
-        $id = DB::table('case_stages')->insertGetId([
-            'name'        => $validated['name'],
-            'is_active'   => true,
-            'created_at'  => now(),
-            'updated_at'  => now(),
+        $stage = CaseStage::create([
+            'name'      => $validated['name'],
+            'is_active' => true,
         ]);
 
         return response()->json([
             'message' => 'Stage created successfully.',
-            'data'    => DB::table('case_stages')->where('id', $id)->first(),
+            'data'    => $stage,
         ], 201);
     }
 
-    /**
-     * PUT /admin/master-data/case-stages/{id}
-     */
+    // PUT /admin/master-data/case-stages/{id}
     public function update(Request $request, int $id): JsonResponse
     {
-        $stage = DB::table('case_stages')->where('id', $id)->first();
+        $stage = CaseStage::find($id);
+
         if (! $stage) {
             return response()->json(['message' => 'Stage not found.'], 404);
         }
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100|unique:case_stages,name,' . $id,
+            'name' => "required|string|max:100|unique:case_stages,name,{$id}",
         ]);
 
-        DB::table('case_stages')->where('id', $id)->update([
-            'name'        => $validated['name'],
-            'updated_at'  => now(),
-        ]);
+        $stage->update(['name' => $validated['name']]);
 
         return response()->json([
             'message' => 'Stage updated successfully.',
-            'data'    => DB::table('case_stages')->where('id', $id)->first(),
+            'data'    => $stage->fresh(),
         ]);
     }
 
-    /**
-     * PATCH /admin/master-data/case-stages/{id}/toggle
-     * Toggle is_active on/off.
-     */
+    // PATCH /admin/master-data/case-stages/{id}/toggle
     public function toggle(int $id): JsonResponse
     {
-        $stage = DB::table('case_stages')->where('id', $id)->first();
+        $stage = CaseStage::find($id);
+
         if (! $stage) {
             return response()->json(['message' => 'Stage not found.'], 404);
         }
 
-        DB::table('case_stages')->where('id', $id)->update([
-            'is_active'  => ! $stage->is_active,
-            'updated_at' => now(),
-        ]);
+        $stage->update(['is_active' => ! $stage->is_active]);
 
         return response()->json([
-            'message' => $stage->is_active ? 'Stage deactivated.' : 'Stage activated.',
-            'data'    => DB::table('case_stages')->where('id', $id)->first(),
+            'message' => $stage->is_active ? 'Stage activated.' : 'Stage deactivated.',
+            'data'    => $stage->fresh(),
         ]);
     }
-
-    /**
-     * PATCH /admin/master-data/case-stages/reorder
-     * Expects: { stages: [{ id: 1, sort_order: 1 }, ...] }
-     */
 
     // =========================================================================
     // PER-CASE STAGE ACTIONS
     // =========================================================================
 
-    /**
-     * GET /admin/cases/{caseId}/stages/history
-     */
+    // GET /admin/cases/{caseId}/stages/history
     public function history(int $caseId): JsonResponse
     {
-        if (! DB::table('cases')->where('id', $caseId)->exists()) {
+        if (! Cases::where('id', $caseId)->exists()) {
             return response()->json(['message' => 'Case not found.'], 404);
         }
 
-        $history = DB::table('case_stage_histories')
-            ->leftJoin('case_stages as from_stage', 'case_stage_histories.from_stage_id', '=', 'from_stage.id')
-            ->leftJoin('case_stages as to_stage',   'case_stage_histories.to_stage_id',   '=', 'to_stage.id')
-            ->leftJoin('users',                     'case_stage_histories.changed_by',     '=', 'users.id')
-            ->select([
-                'case_stage_histories.id',
-                'from_stage.name as from_stage_name',
-                'to_stage.name   as to_stage_name',
-                'users.full_name as changed_by_name',
-                'case_stage_histories.remarks',
-                'case_stage_histories.created_at',
-            ])
-            ->where('case_stage_histories.case_id', $caseId)
-            ->orderByDesc('case_stage_histories.created_at')
+        $history = CaseStageHistory::with(['fromStage', 'toStage', 'changedBy'])
+            ->where('case_id', $caseId)
+            ->orderByDesc('created_at')
             ->get()
             ->map(fn ($h) => [
                 'id'         => $h->id,
-                'from'       => $h->from_stage_name ?? '— Start —',
-                'to'         => $h->to_stage_name   ?? '—',
-                'changed_by' => $h->changed_by_name ?? 'System',
+                'from'       => $h->fromStage?->name ?? '— Start —',
+                'to'         => $h->toStage?->name   ?? '—',
+                'changed_by' => $h->changedBy?->full_name ?? 'System',
                 'remarks'    => $h->remarks,
-                'time'       => \Carbon\Carbon::parse($h->created_at)->format('M d, Y g:i A'),
+                'time'       => Carbon::parse($h->created_at)->format('M d, Y g:i A'),
             ]);
 
         return response()->json(['data' => $history]);
     }
 
-    /**
-     * PUT /admin/cases/{caseId}/stage
-     * Expects: { stage_id: int, remarks?: string }
-     */
+    // PUT /admin/cases/{caseId}/stage
     public function updateCaseStage(Request $request, int $caseId): JsonResponse
     {
-        $case = DB::table('cases')->where('id', $caseId)->first();
+        $case = Cases::find($caseId);
+
         if (! $case) {
             return response()->json(['message' => 'Case not found.'], 404);
         }
@@ -159,49 +125,43 @@ class CaseStageController extends Controller
         ]);
 
         $newStageId = (int) $validated['stage_id'];
+        $oldStageId = (int) $case->current_stage_id;
 
-        if ($newStageId === (int) $case->current_stage_id) {
+        if ($newStageId === $oldStageId) {
             return response()->json(['message' => 'Case is already at this stage.'], 422);
         }
 
-        DB::transaction(function () use ($case, $newStageId, $validated) {
-            DB::table('cases')->where('id', $case->id)->update([
-                'current_stage_id' => $newStageId,
-                'updated_at'       => now(),
-            ]);
+        DB::transaction(function () use ($case, $newStageId, $oldStageId, $validated) {
+            $actorId = auth()->id();
 
-            DB::table('case_stage_histories')->insert([
+            $case->update(['current_stage_id' => $newStageId]);
+
+            CaseStageHistory::create([
                 'case_id'       => $case->id,
-                'from_stage_id' => $case->current_stage_id,
+                'from_stage_id' => $oldStageId ?: null,
                 'to_stage_id'   => $newStageId,
-                'changed_by'    => auth()->id(),
+                'changed_by'    => $actorId,
                 'remarks'       => $validated['remarks'] ?? null,
-                'created_at'    => now(),
-                'updated_at'    => now(),
             ]);
 
-            DB::table('case_activity_logs')->insert([
-                'case_id'    => $case->id,
-                'user_id'    => auth()->id(),
-                'action'     => 'changed stage',
-                'details'    => json_encode([
-                    'from' => $case->current_stage_id,
-                    'to'   => $newStageId,
-                ]),
-                'created_at' => now(),
-                'updated_at' => now(),
+            CaseActivityLog::create([
+                'case_id' => $case->id,
+                'user_id' => $actorId,
+                'action'  => 'changed stage',
+                'details' => json_encode(['from' => $oldStageId, 'to' => $newStageId]),
             ]);
         });
 
-        $updated = DB::table('cases')
-            ->leftJoin('case_stages', 'cases.current_stage_id', '=', 'case_stages.id')
-            ->select(['cases.id', 'cases.current_stage_id', 'case_stages.name as stage_name'])
-            ->where('cases.id', $case->id)
-            ->first();
+        // Return fresh case with new stage name
+        $case->load('currentStage');
 
         return response()->json([
             'message' => 'Stage updated successfully.',
-            'data'    => $updated,
+            'data'    => [
+                'id'               => $case->id,
+                'current_stage_id' => $case->current_stage_id,
+                'stage_name'       => $case->currentStage?->name,
+            ],
         ]);
     }
 }

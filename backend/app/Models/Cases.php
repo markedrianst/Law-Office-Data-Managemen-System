@@ -51,8 +51,7 @@ class Cases extends Model
 
     public function currentStage(): BelongsTo
     {
-        // Assumes a CaseStage model; swap class name if yours differs
-        return $this->belongsTo(\App\Models\CaseStage::class, 'current_stage_id');
+        return $this->belongsTo(CaseStage::class, 'current_stage_id');
     }
 
     public function activityLogs(): HasMany
@@ -62,6 +61,6 @@ class Cases extends Model
 
     public function stageHistories(): HasMany
     {
-        return $this->hasMany(\App\Models\CaseStageHistory::class, 'case_id');
+        return $this->hasMany(CaseStageHistory::class, 'case_id');
     }
 }
