@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CaseController;
 use App\Http\Controllers\Admin\CaseStageController;
+use App\Http\Controllers\Admin\CaseCategoryController;
+use App\Http\Controllers\Admin\CourtOfficeController;
 
 Route::post('/login',         [AuthenticatedSessionController::class, 'login']);
 Route::post('/logout',        [AuthenticatedSessionController::class, 'logout']);
@@ -92,4 +94,18 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     // Clients
     Route::get('clients',  [CaseController::class, 'listClients']);
     Route::post('clients', [CaseController::class, 'quickCreateClient']);
+
+// Case Categories
+    Route::apiResource('case-categories', CaseCategoryController::class);
+    Route::patch('case-categories/{id}/toggle',[CaseCategoryController::class, 'toggleStatus']);
+    Route::get('courts-offices', [CaseController::class, 'courtsOffices']);
+
+// ✅ CORRECT ORDER — static routes FIRST
+Route::get   ('courts/active',             [CourtOfficeController::class, 'active']);
+Route::get   ('courts/types',              [CourtOfficeController::class, 'types']);
+Route::post  ('courts/reorder',            [CourtOfficeController::class, 'reorder']);
+Route::patch ('courts/{id}/toggle-active', [CourtOfficeController::class, 'toggleActive']);
+Route::apiResource('courts', CourtOfficeController::class);
+
+
 });

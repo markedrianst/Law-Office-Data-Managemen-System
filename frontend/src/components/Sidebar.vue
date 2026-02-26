@@ -45,21 +45,60 @@
         <p v-if="!collapsed" class="nav-label">MAIN</p>
       </transition>
 
-      <router-link
-        v-for="item in visibleNav"
-        :key="item.path"
-        :to="item.path"
-        class="nav-item"
-        :class="{ active: route.path === item.path }"
-      >
-        <span class="nav-icon" v-html="item.icon"></span>
-        <transition name="fade-text">
-          <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
-        </transition>
-        <transition name="fade-text">
-          <span v-if="!collapsed && item.badge" class="nav-badge">{{ item.badge }}</span>
-        </transition>
-      </router-link>
+      <template v-for="item in visibleNav" :key="item.label || item.path">
+        <!-- Regular nav item -->
+        <router-link
+          v-if="!item.isDropdown"
+          :to="item.path"
+          class="nav-item"
+          :class="{ active: route.path === item.path }"
+        >
+          <span class="nav-icon" v-html="item.icon"></span>
+          <transition name="fade-text">
+            <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
+          </transition>
+          <transition name="fade-text">
+            <span v-if="!collapsed && item.badge" class="nav-badge">{{ item.badge }}</span>
+          </transition>
+        </router-link>
+
+        <!-- Dropdown item -->
+        <div v-else class="nav-dropdown">
+          <div 
+            class="nav-item dropdown-toggle" 
+            :class="{ active: isDropdownActive(item) }"
+            @click="toggleDropdown(item)"
+          >
+            <span class="nav-icon" v-html="item.icon"></span>
+            <transition name="fade-text">
+              <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
+            </transition>
+            <transition name="fade-text">
+              <span v-if="!collapsed" class="dropdown-arrow" :class="{ rotated: item.expanded.value }">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </span>
+            </transition>
+          </div>
+
+          <!-- Dropdown children -->
+          <transition name="dropdown">
+            <div v-if="!collapsed && item.expanded.value" class="dropdown-children">
+              <router-link
+                v-for="child in item.children"
+                :key="child.path"
+                :to="child.path"
+                class="nav-item nav-item--child"
+                :class="{ active: route.path === child.path }"
+              >
+                <span class="nav-icon nav-icon--child" v-html="child.icon"></span>
+                <span class="nav-text">{{ child.label }}</span>
+              </router-link>
+            </div>
+          </transition>
+        </div>
+      </template>
     </nav>
 
     <!-- Bottom user card -->
@@ -114,8 +153,18 @@ const allNav = [
   { path: '/usermanagement', label: 'Users',         icon: icons.users,        roles: ['admin'] },
   { path: '/audittrail',     label: 'Activity Logs', icon: icons.logs,         roles: ['admin'] },
   { path: '/casemaster',        label: 'Case Master',       icon: icons.clients,      roles: ['admin'] },
-  //{ path: '/tasks',          label: 'Tasks',         icon: icons.tasks,        roles: [] },
-  //  { path: '/appointments',   label: 'Appointments',  icon: icons.appointments, roles: [] },
+  // Master Data dropdown
+  { 
+    label: 'Master Data Preference', 
+    icon: icons.tasks,
+    isDropdown: true,
+    roles: [],
+    expanded: ref(false),
+    children: [
+      { path: '/casecategory', label: 'Case Categories', icon: icons.tasks, roles: [] },
+      { path: '/courtmaster', label: 'Courts', icon: icons.tasks, roles: [] }
+    ]
+  },
 ]
 
 const visibleNav = computed(() => {
@@ -125,6 +174,16 @@ const visibleNav = computed(() => {
     return item.roles.includes(role)                  // role-gated
   })
 })
+
+// Check if any child of dropdown is active
+const isDropdownActive = (item) => {
+  return item.children.some(child => route.path === child.path)
+}
+
+// Toggle dropdown expanded state
+const toggleDropdown = (item) => {
+  item.expanded.value = !item.expanded.value
+}
 </script>
 
 <style scoped>
@@ -234,4 +293,59 @@ const visibleNav = computed(() => {
 .fade-text-enter-active { transition: opacity .2s .05s, transform .2s .05s; }
 .fade-text-leave-active { transition: opacity .12s, transform .12s; }
 .fade-text-enter-from, .fade-text-leave-to { opacity: 0; transform: translateX(-4px); }
+
+/* Dropdown styles */
+.nav-dropdown {
+  width: 100%;
+}
+
+.dropdown-toggle {
+  cursor: pointer;
+  position: relative;
+}
+
+.dropdown-arrow {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-children {
+  margin-left: 28px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding-left: 4px;
+  border-left: 1px dashed rgba(255,255,255,0.15);
+}
+
+.nav-item--child {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.nav-icon--child {
+  width: 14px;
+  opacity: 0.7;
+}
+
+/* Dropdown animation */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.3s ease;
+  max-height: 100px;
+  overflow: hidden;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-10px);
+}
 </style>

@@ -3,6 +3,8 @@ import api from '@/services/api';
 // ─────────────────────────────────────────────────────────────────────────────
 // CASES
 // ─────────────────────────────────────────────────────────────────────────────
+export const getCourts = (params = {}) =>
+  api.get('/admin/courts-offices', { params });
 
 export const getCases = (params = {}) =>
   api.get('/admin/cases', { params });

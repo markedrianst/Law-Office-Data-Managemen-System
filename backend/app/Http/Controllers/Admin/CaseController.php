@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use App\Models\CourtOffice;
 
 class CaseController extends Controller
 {
@@ -384,6 +385,23 @@ class CaseController extends Controller
             ->get(['users.id', 'users.full_name as name', 'roles.name as role']);
 
         return response()->json(['data' => $users]);
+    }
+
+    public function courtsOffices(Request $request): JsonResponse
+    {
+        $query = DB::table('courts')->where('is_active', true);
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $courts = $query->orderBy('name')->get(['id', 'name', 'type', 'is_active']);
+
+        return response()->json(['data' => $courts]);
     }
 
     public function listClients(): JsonResponse

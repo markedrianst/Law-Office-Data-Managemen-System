@@ -6,6 +6,8 @@ import AdminUserManagement from "@/pages/Admin/AdminUserManagement.vue";
 import AuditTrail         from "@/pages/Admin/AuditTrail.vue";
 import AccountPage        from "@/pages/AccountPage.vue";
 import CaseMaster         from "@/pages/Admin/cases/CaseMaster.vue";
+import CaseCategory       from "@/pages/Admin/MasterData/CasesCategory.vue";
+import CourtMaster         from "@/pages/Admin/MasterData/CourtMaster.vue";
 
 const routes = [
   {
@@ -20,10 +22,23 @@ const routes = [
     component: AccountPage,
     meta: { requiresAuth: true },
   },
+
   {
     path: "/usermanagement",
     name: "AdminUserManagement",
     component: AdminUserManagement,
+    meta: { requiresAuth: true, role: "admin" },
+  },
+  {
+    path: "/courtmaster",
+    name: "CourtMaster",
+    component: CourtMaster,
+    meta: { requiresAuth: true, role: "admin" },
+  },
+  {
+    path: "/casecategory",
+    name: "CaseCategory",
+    component: CaseCategory,
     meta: { requiresAuth: true, role: "admin" },
   },
   {
