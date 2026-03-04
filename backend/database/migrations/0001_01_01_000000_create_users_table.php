@@ -17,11 +17,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::table('roles')->insert([
-            ['name' => 'admin', 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'clerk', 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'lawyer', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+       
          Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
@@ -33,11 +29,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::table('users')->insert([
-            ['role_id' => 1, 'full_name' => 'Admin User', 'email' => 'admin@gmail.com', 'password_hash' => bcrypt('password123'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
-            ['role_id' => 2, 'full_name' => 'Clerk User', 'email' => 'clerk@gmail.com', 'password_hash' => bcrypt('password123'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
-            ['role_id' => 3, 'full_name' => 'Lawyer User', 'email' => 'lawyer@gmail.com', 'password_hash' => bcrypt('password123'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+       
 
         Schema::create('login_logs', function (Blueprint $table) {
             $table->id();

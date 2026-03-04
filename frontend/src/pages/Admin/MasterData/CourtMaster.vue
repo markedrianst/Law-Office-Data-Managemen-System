@@ -54,10 +54,10 @@
         <table class="min-w-full">
           <tbody class="divide-y divide-slate-50">
             <tr v-for="i in 6" :key="i" class="animate-pulse">
+              <td class="px-4 py-4"><div class="h-4 w-8 bg-slate-200 rounded"></div></td>
               <td class="px-4 py-4"><div class="h-4 w-44 bg-slate-200 rounded mb-2"></div><div class="h-3 w-28 bg-slate-100 rounded"></div></td>
               <td class="px-4 py-4"><div class="h-6 w-24 bg-slate-200 rounded-lg"></div></td>
               <td class="px-4 py-4"><div class="h-3 w-48 bg-slate-200 rounded"></div></td>
-              <td class="px-4 py-4"><div class="h-3 w-16 bg-slate-200 rounded"></div></td>
               <td class="px-4 py-4"><div class="h-6 w-16 bg-slate-200 rounded-lg"></div></td>
               <td class="px-4 py-4"><div class="flex gap-1"><div class="h-7 w-14 bg-slate-200 rounded-lg"></div><div class="h-7 w-28 bg-slate-100 rounded-lg"></div></div></td>
             </tr>
@@ -87,9 +87,11 @@
           </thead>
 
           <tbody class="divide-y divide-slate-50">
-            <tr v-for="court in courts" :key="court.id" class="hover:bg-blue-50/30 transition-colors duration-100">
+            <tr v-for="court in courts" :key="court.id"
+              class="hover:bg-blue-50/30 transition-colors duration-100"
+              :class="{ 'opacity-60': isLastItem(court) }">
 
-              <!-- Name + Sort Order -->
+              <!-- Name -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2.5">
                   <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -100,7 +102,6 @@
                   </div>
                   <div>
                     <p class="text-sm font-semibold text-slate-800">{{ court.name }}</p>
-                    <p class="text-xs text-slate-400 mt-0.5">Sort order: {{ court.sort_order }}</p>
                   </div>
                 </div>
               </td>
@@ -137,7 +138,7 @@
                 </span>
               </td>
 
-              <!-- Actions — Edit + Toggle only, no delete -->
+              <!-- Actions -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-1">
                   <button @click="openEdit(court)"
@@ -167,7 +168,7 @@
                 <div class="flex flex-col items-center">
                   <div class="w-14 h-14 rounded-2xl navy-bg-8 flex items-center justify-center mb-3">
                     <svg class="w-7 h-7 text-[#1a4972] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/>
                     </svg>
                   </div>
                   <p class="text-sm font-semibold text-slate-700 mb-1">No courts or offices found</p>
@@ -177,6 +178,19 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Sort order info banner (visible when list has items) -->
+      <div v-if="!isLoading && courts.length > 1" class="px-4 py-2.5 border-t border-slate-100 bg-blue-50/40">
+        <p class="text-[11px] text-slate-500 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-[#1a4972] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          New courts are automatically assigned sort order
+          <span class="font-semibold text-[#1a4972]">{{ computedNewSortOrder }}</span>
+          and inserted before
+          <span class="font-semibold text-slate-700">"Others"</span> which always stays last at sort order 9999.
+        </p>
       </div>
 
       <!-- Pagination -->
@@ -221,7 +235,6 @@
               <div class="flex items-center justify-between">
                 <div>
                   <h2 class="text-lg font-bold text-white">{{ isEditing ? 'Edit Court / Office' : 'New Court / Office' }}</h2>
-                  <p class="text-xs text-blue-200 mt-0.5">{{ isEditing ? 'Update details below' : 'Fill in the details to add a new entry' }}</p>
                 </div>
                 <button @click="closeForm" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,8 +244,9 @@
               </div>
             </div>
 
+
             <!-- Modal Body -->
-            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div class="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
 
               <!-- Name -->
               <div>
@@ -245,7 +259,7 @@
                 <p v-if="errors.name" class="mt-1 text-xs text-red-500">{{ errors.name }}</p>
               </div>
 
-              <!-- Type — fixed enum values only -->
+              <!-- Type -->
               <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1.5">Type</label>
                 <select v-model="form.type"
@@ -263,7 +277,7 @@
                 </textarea>
               </div>
 
-              <!-- Contact Info — ONLY type changed: number → tel, placeholder updated, icon added, invalid tag fixed -->
+              <!-- Contact Info -->
               <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1.5">Contact Info</label>
                 <div class="relative">
@@ -277,20 +291,18 @@
                 </div>
               </div>
 
-              <!-- Sort Order + Active row -->
-              <div class="flex gap-4">
-                <div class="flex items-end pb-0.5">
-                  <label class="flex items-center gap-2.5 cursor-pointer">
-                    <div class="relative">
-                      <input type="checkbox" v-model="form.is_active" class="sr-only peer" />
-                      <div class="w-10 rounded-full transition-colors peer-checked:bg-[#1a4972] bg-slate-300 peer-focus:ring-2 peer-focus:ring-[#1a4972]/30"
-                        style="height: 22px;"></div>
-                      <div class="absolute top-0.5 left-0.5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-[18px]"
-                        style="width: 18px; height: 18px;"></div>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-600">Active</span>
-                  </label>
-                </div>
+              <!-- Active toggle -->
+              <div class="flex items-center pb-0.5">
+                <label class="flex items-center gap-2.5 cursor-pointer">
+                  <div class="relative">
+                    <input type="checkbox" v-model="form.is_active" class="sr-only peer" />
+                    <div class="w-10 rounded-full transition-colors peer-checked:bg-[#1a4972] bg-slate-300 peer-focus:ring-2 peer-focus:ring-[#1a4972]/30"
+                      style="height: 22px;"></div>
+                    <div class="absolute top-0.5 left-0.5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-[18px]"
+                      style="width: 18px; height: 18px;"></div>
+                  </div>
+                  <span class="text-xs font-semibold text-slate-600">Active</span>
+                </label>
               </div>
             </div>
 
@@ -353,18 +365,16 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
 import * as CourtService from '@/services/courtService';
 
 // ==================== CONSTANTS ====================
-// Must match the enum in the migration exactly
 const ALLOWED_TYPES = ['Court', 'Prosecutor', 'Agency', 'Other'];
 
 const columns = [
-  { label: 'Name',        field: 'name',      sortable: true  },
-  { label: 'Type',        field: 'type',      sortable: true  },
-  { label: 'Address',     field: 'address',   sortable: false },
-  { label: 'Status',      field: 'is_active', sortable: true  },
-  { label: 'Actions',     field: 'actions',   sortable: false },
+  { label: 'Name',    field: 'name',       sortable: true  },
+  { label: 'Type',    field: 'type',       sortable: true  },
+  { label: 'Address', field: 'address',    sortable: false },
+  { label: 'Status',  field: 'is_active',  sortable: true  },
+  { label: 'Actions', field: 'actions',    sortable: false },
 ];
 
-// Type colors matched to the enum values
 const TYPE_COLORS = {
   'Court':      { badge: 'bg-blue-50 text-blue-700 border-blue-200',     avatarBg: 'bg-blue-100',   avatarIcon: 'text-blue-600'   },
   'Prosecutor': { badge: 'bg-red-50 text-red-700 border-red-200',        avatarBg: 'bg-red-100',    avatarIcon: 'text-red-600'    },
@@ -375,13 +385,14 @@ const DEFAULT_COLOR = { badge: 'bg-slate-100 text-slate-600 border-slate-200', a
 const getTypeColor  = (type) => type ? (TYPE_COLORS[type] ?? DEFAULT_COLOR) : DEFAULT_COLOR;
 
 // ==================== STATE ====================
-const courts    = ref([]);
+const courts    = ref([]);   // paginated (display)
+const allCourts = ref([]);   // full unfiltered list sorted by sort_order ASC
 const isLoading = ref(false);
 
 const searchQuery   = ref('');
 const filterType    = ref('');
 const filterActive  = ref('');
-const sortField     = ref('sort_order');
+const sortField     = ref('sort_order');  // default: sort by sort_order ASC
 const sortDirection = ref('asc');
 const currentPage   = ref(1);
 const pagination    = ref({ current_page: 1, last_page: 1, per_page: 15, total: 0, from: 0, to: 0 });
@@ -392,7 +403,7 @@ const isEditing     = ref(false);
 const editingId     = ref(null);
 const formLoading   = ref(false);
 
-const defaultForm = () => ({ name: '', type: '', address: '', is_active: true, sort_order: 0, notes: '' });
+const defaultForm = () => ({ name: '', type: '', address: '', contact_info: '', is_active: true, sort_order: 1, notes: '' });
 const form   = reactive(defaultForm());
 const errors = reactive({ name: '' });
 
@@ -403,6 +414,71 @@ const confirmMessage   = ref('');
 const confirmBtnText   = ref('');
 const actionLoading    = ref(false);
 const actionTarget     = ref(null);
+
+// ==================== SORT ORDER HELPERS ====================
+
+/**
+ * RULES:
+ * ─────────────────────────────────────────────────────────────
+ * • "Others" (sort_order = 9999) is the permanent last item — it NEVER moves.
+ * • All other courts start at sort_order = 1 and increment by 1.
+ * • When a new court is added, it is inserted right before "Others":
+ *     new sort_order = (highest non-Others sort_order) + 1
+ *   This is always < 9999, so Others always stays last.
+ * • No shifting of existing items needed — each new court simply
+ *   takes the next available integer slot before 9999.
+ *
+ * EXAMPLE — before adding "Court C":
+ *   1 · RTC Branch 16
+ *   2 · MTC Capas
+ *   3 · Office of the City Prosecutor
+ *   9999 · Others
+ *
+ * After adding "Court C":
+ *   1 · RTC Branch 16
+ *   2 · MTC Capas
+ *   3 · Office of the City Prosecutor
+ *   4 · Court C   ← new, inserted before Others
+ *   9999 · Others ← unchanged, still last
+ */
+
+const OTHERS_SORT_ORDER = 9999;
+
+/** The "Others" anchor — identified by sort_order 9999 OR name "Others" */
+const othersItem = computed(() =>
+  allCourts.value.find(c => c.sort_order === OTHERS_SORT_ORDER || c.name === 'Others') ?? null
+);
+
+/** All courts except Others, sorted ASC — used to find the next available slot */
+const nonOtherCourts = computed(() =>
+  allCourts.value
+    .filter(c => c.id !== othersItem.value?.id)
+    .sort((a, b) => a.sort_order - b.sort_order)
+);
+
+/** Highest sort_order among non-Others courts. Falls back to 0 so first court gets 1. */
+const maxNonOtherSortOrder = computed(() =>
+  nonOtherCourts.value.length
+    ? nonOtherCourts.value[nonOtherCourts.value.length - 1].sort_order
+    : 0   // 0 + 1 = 1, so the very first court starts at 1
+);
+
+/**
+ * sort_order for the new court.
+ * Always starts at 1 for the first entry, then increments.
+ * Capped at 9998 so it can never reach or exceed Others.
+ */
+const computedNewSortOrder = computed(() =>
+  Math.min(maxNonOtherSortOrder.value + 1, OTHERS_SORT_ORDER - 1)
+);
+
+// Template aliases
+const lastCourtName     = computed(() => othersItem.value?.name ?? 'Others');
+const secondToLastOrder = computed(() => computedNewSortOrder.value);
+
+/** True when this row is the permanent "Others" anchor */
+const isLastItem = (court) =>
+  othersItem.value != null && court.id === othersItem.value.id;
 
 // ==================== COMPUTED ====================
 const displayedPages = computed(() => {
@@ -418,19 +494,44 @@ const displayedPages = computed(() => {
 });
 
 // ==================== API ====================
+
+/** Always loads the full list sorted by sort_order ASC for accurate anchor detection */
+const loadAllCourts = async () => {
+  try {
+    const res = await CourtService.getCourts({
+      sort_by: 'sort_order',
+      sort_direction: 'asc',
+      per_page: 9999,
+    });
+    allCourts.value = (res.data?.data ?? []).map(CourtService.formatCourt);
+  } catch (e) { console.error('loadAllCourts:', e); }
+};
+
 const loadCourts = async () => {
   isLoading.value = true;
   try {
-    const res = await CourtService.getCourts({
-      ...(searchQuery.value         ? { search:    searchQuery.value  } : {}),
-      ...(filterType.value          ? { type:       filterType.value   } : {}),
-      ...(filterActive.value !== '' ? { is_active:  filterActive.value } : {}),
-      sort_by:        sortField.value,
-      sort_direction: sortDirection.value,
-      page:           currentPage.value,
-      per_page:       pagination.value.per_page,
-    });
-    courts.value = (res.data?.data ?? []).map(CourtService.formatCourt);
+    const [res] = await Promise.all([
+      CourtService.getCourts({
+        ...(searchQuery.value         ? { search:    searchQuery.value  } : {}),
+        ...(filterType.value          ? { type:       filterType.value   } : {}),
+        ...(filterActive.value !== '' ? { is_active:  filterActive.value } : {}),
+        sort_by:        sortField.value,
+        sort_direction: sortDirection.value,
+        page:           currentPage.value,
+        per_page:       pagination.value.per_page,
+      }),
+      loadAllCourts(),
+    ]);
+    // Map then client-side sort so the table is always ordered by sort_order ASC,
+    // regardless of what the backend returns.
+    const mapped = (res.data?.data ?? []).map(CourtService.formatCourt);
+    courts.value = sortField.value === 'sort_order'
+      ? [...mapped].sort((a, b) =>
+          sortDirection.value === 'asc'
+            ? a.sort_order - b.sort_order
+            : b.sort_order - a.sort_order
+        )
+      : mapped;
     const m = res.data?.meta ?? {};
     if (m.current_page) {
       pagination.value = {
@@ -451,8 +552,20 @@ let searchTimer = null;
 const debouncedSearch    = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { currentPage.value = 1; loadCourts(); }, 300); };
 const handleFilterChange = () => { currentPage.value = 1; loadCourts(); };
 const sortBy = (field) => {
-  sortDirection.value = sortField.value === field ? (sortDirection.value === 'asc' ? 'desc' : 'asc') : 'asc';
-  sortField.value = field; loadCourts();
+  sortDirection.value = sortField.value === field
+    ? (sortDirection.value === 'asc' ? 'desc' : 'asc')
+    : 'asc';
+  sortField.value = field;
+  // For sort_order, apply immediately client-side (no round-trip needed)
+  if (field === 'sort_order') {
+    courts.value = [...courts.value].sort((a, b) =>
+      sortDirection.value === 'asc'
+        ? a.sort_order - b.sort_order
+        : b.sort_order - a.sort_order
+    );
+  } else {
+    loadCourts();
+  }
 };
 const previousPage = () => { if (pagination.value.current_page > 1)                          { currentPage.value--; loadCourts(); } };
 const nextPage     = () => { if (pagination.value.current_page < pagination.value.last_page) { currentPage.value++; loadCourts(); } };
@@ -472,12 +585,13 @@ const openCreate = () => {
 const openEdit = (court) => {
   isEditing.value = true; editingId.value = court.id;
   Object.assign(form, {
-    name:       court.name,
-    type:       court.type       ?? '',
-    address:    court.address    ?? '',
-    is_active:  court.is_active,
-    sort_order: court.sort_order ?? 0,
-    notes:      court.notes      ?? '',
+    name:         court.name,
+    type:         court.type         ?? '',
+    address:      court.address      ?? '',
+    contact_info: court.contact_info ?? '',
+    is_active:    court.is_active,
+    sort_order:   court.sort_order   ?? 1,
+    notes:        court.notes        ?? '',
   });
   clearErrors();
   showFormModal.value = true;
@@ -489,6 +603,13 @@ const validateForm = () => {
   return ok;
 };
 
+/**
+ * CREATE: auto-assign sort_order = computedNewSortOrder (maxNonOther + 1, starts at 1).
+ * No shifting needed — Others stays at 9999 permanently.
+ *
+ * Backend contract (CourtController@store) — no increment needed:
+ *   Court::create([..., 'sort_order' => $request->sort_order]);
+ */
 const submitForm = async () => {
   if (!validateForm()) return;
   formLoading.value = true;
@@ -499,11 +620,15 @@ const submitForm = async () => {
       address: form.address || null,
       notes:   form.notes   || null,
     };
+
     if (isEditing.value) {
       await CourtService.update(editingId.value, payload);
     } else {
+      // Auto-assign sort_order: starts at 1, increments with each new court
+      payload.sort_order = computedNewSortOrder.value;
       await CourtService.store(payload);
     }
+
     await loadCourts();
     closeForm();
   } catch (e) {

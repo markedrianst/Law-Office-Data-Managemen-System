@@ -18,9 +18,6 @@
               <p class="text-sm text-slate-500">Full case details and assignments</p>
             </div>
           </div>
-          <button @click="$emit('close')" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
         </div>
 
         <!-- Body -->
@@ -66,8 +63,6 @@
           </div>
 
           <!-- Case Information -->
-      
-          <!-- ── Case Information ──────────────────────────────────────── -->
           <div class="rounded-xl border border-slate-200 overflow-hidden">
             <div class="px-5 py-3 bg-slate-50 border-b border-slate-100">
               <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Case Information</p>
@@ -77,23 +72,22 @@
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Case Code</p>
                 <p class="text-base font-semibold text-slate-800">{{ viewCase.case_code || '—' }}</p>
               </div>
-              <div class="sm:col-span-1">
+              <div>
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Case Number</p>
                 <p class="text-base font-semibold text-slate-800">{{ viewCase.case_no || '—' }}</p>
               </div>
-              <div class="sm:col-span-1">
+              <div>
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Case Title</p>
                 <p class="text-base font-semibold text-slate-800">{{ viewCase.title || '—' }}</p>
               </div>
-               <div class="sm:col-span-1">
+              <div>
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Court/Office</p>
                 <p class="text-base font-semibold text-slate-800">{{ viewCase.court_or_office || '—' }}</p>
               </div>
-              <div class="sm:col-span-1">
+              <div>
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Docket No.</p>
                 <p class="text-base font-semibold text-slate-800">{{ viewCase.docket_no || '—' }}</p>
               </div>
-              
               <div>
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Client</p>
                 <p class="text-base font-semibold text-slate-800">{{ viewCase.client || '—' }}</p>
@@ -112,7 +106,6 @@
               </div>
             </div>
           </div>
-
 
           <!-- Summary -->
           <div v-if="viewCase.summary" class="rounded-xl bg-slate-50 border border-slate-200 px-5 py-4">
@@ -140,15 +133,6 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <!-- Progress pill -->
-            
-                <!-- Add Task button -->
-                <button @click="openChecklist('add')"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] border border-[#1a4972]/20 bg-[#1a4972]/5 hover:bg-[#1a4972]/10 transition-colors">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                  Add Task
-                </button>
-                <!-- View Checklist button -->
                 <button @click="openChecklist('view')"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-br from-[#1a4972] to-[#0f2f4a] shadow shadow-[#1a4972]/30 hover:opacity-90 transition-all">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -205,13 +189,13 @@
     </div>
   </Transition>
 
-  <!-- Checklist Modal — z-[60] sits above this modal -->
+  <!-- Checklist Modal — clerks threaded through so the task dropdown works -->
   <CaseChecklistModal
     :show="checklistModalShow"
     :view-case="viewCase"
     :checklist="checklist"
-    :checklist-loading="checklistLoading"
     :initial-mode="checklistInitialMode"
+    :clerks="clerks"
     @close="checklistModalShow = false"
     @add-task="$emit('add-task', $event)"
     @update-task="$emit('update-task', $event)"
@@ -230,18 +214,17 @@ const props = defineProps({
   stageHistory:        { type: Array,   default: () => [] },
   stageHistoryLoading: { type: Boolean, default: false },
   checklist:           { type: Array,   default: () => [] },
-  checklistLoading:    { type: Boolean, default: false },
+  clerks:              { type: Array,   default: () => [] },  // ← ADDED
 });
 
 const emit = defineEmits(['close', 'edit', 'add-task', 'update-task', 'delete-task']);
 
-// Checklist modal state
-const checklistModalShow    = ref(false);
-const checklistInitialMode  = ref('view'); // 'view' | 'add'
+const checklistModalShow   = ref(false);
+const checklistInitialMode = ref('view');
 
 const openChecklist = (mode = 'view') => {
   checklistInitialMode.value = mode;
-  checklistModalShow.value = true;
+  checklistModalShow.value   = true;
 };
 
 watch(() => props.show, (v) => { if (!v) checklistModalShow.value = false; });
@@ -256,8 +239,8 @@ const catMap = {
   'pending':       { text: 'text-slate-600',  badge: 'bg-slate-100 text-slate-600 border-slate-300',   border: 'border-slate-200',  lightBg: 'bg-slate-50/60'  },
   'admin':         { text: 'text-indigo-700', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', border: 'border-indigo-200', lightBg: 'bg-indigo-50/60' },
 };
-const defCat         = { text: 'text-[#1a4972]', badge: 'bg-blue-50 text-[#1a4972] border-blue-200', border: 'border-blue-200', lightBg: 'bg-blue-50/40' };
-const cat            = (c) => c ? (catMap[c.toLowerCase().trim()] ?? defCat) : defCat;
+const defCat             = { text: 'text-[#1a4972]', badge: 'bg-blue-50 text-[#1a4972] border-blue-200', border: 'border-blue-200', lightBg: 'bg-blue-50/40' };
+const cat                = (c) => c ? (catMap[c.toLowerCase().trim()] ?? defCat) : defCat;
 const getCategoryText    = (c) => cat(c).text;
 const getCategoryBadge   = (c) => cat(c).badge;
 const getCategoryBorder  = (c) => cat(c).border;

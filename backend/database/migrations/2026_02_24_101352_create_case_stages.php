@@ -17,18 +17,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Seed the 8 default stages
-        \DB::table('case_stages')->insert([
-            ['name' => 'Intake / Client Interview',  'order' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'For Document Preparation',   'order' => 2, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'For Lawyer Review',           'order' => 3, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'For Filing',                  'order' => 4, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Filed / Pending',             'order' => 5, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Hearing / Proceedings',       'order' => 6, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'For Decision / Resolution',   'order' => 7, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Closed',                      'order' => 8, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-        ]);
-
+       
         // 2. Full audit trail — every stage change is a permanent record
         Schema::create('case_stage_histories', function (Blueprint $table) {
             $table->id();

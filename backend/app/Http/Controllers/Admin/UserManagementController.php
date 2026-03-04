@@ -7,10 +7,25 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\LoginLog;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rules\Password;
 
 class UserManagementController extends Controller
 {
+    /**
+     * Clear the assignable-users cache used by CaseController.
+     * Called after any create / update / delete so the case dropdowns
+     * always reflect the latest user list without waiting 5 minutes.
+     */
+    private function clearAssignableUsersCache(): void
+    {
+        // CaseController now always caches with key: assignable_users_all_{limit}
+        // We clear the most common limits used by the frontend.
+        foreach ([100, 50, 200, 999] as $limit) {
+            Cache::forget("assignable_users_all_{$limit}");
+        }
+    }
+
     /**
      * Display a listing of users with filters and pagination.
      */
@@ -127,6 +142,8 @@ class UserManagementController extends Controller
         if (isset($validated['contact_number'])) $userData['contact_number'] = $validated['contact_number'];
 
         $user = User::create($userData);
+
+        $this->clearAssignableUsersCache();
 
         $details  = "Created new user:\n";
         $details .= "Name: "  . $validated['name']  . "\n";
@@ -278,6 +295,8 @@ class UserManagementController extends Controller
         $user->update($updateData);
         $user->load('role');
 
+        $this->clearAssignableUsersCache();
+
         $details  = "Updated user: {$user->full_name} ({$user->email})\n";
         $details .= "Changes made:\n";
         foreach ($changes as $change) {
@@ -330,6 +349,8 @@ class UserManagementController extends Controller
         $user->tokens()->delete();
 
         $user->delete();
+
+        $this->clearAssignableUsersCache();
 
         LoginLog::create([
             'user_id'         => $request->user()?->id,

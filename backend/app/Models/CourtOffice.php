@@ -12,7 +12,7 @@ class CourtOffice extends Model
     protected $table = 'courts';
 
     protected $fillable = [
-        'name', 'type', 'address', 'is_active', 'contact_info', 
+        'name', 'type', 'address', 'sort_order','is_active', 'contact_info', 
     ];
 
     protected $casts = [

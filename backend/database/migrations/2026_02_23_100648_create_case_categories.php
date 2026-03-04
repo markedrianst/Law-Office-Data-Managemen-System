@@ -52,16 +52,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::table('case_categories')->insert([
-            ['name' => 'Criminal', 'is_active' => true, 'sort_order' => 1, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Annulment', 'is_active' => true, 'sort_order' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Civil', 'is_active' => true, 'sort_order' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Land Issues', 'is_active' => true, 'sort_order' => 4, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Land Transfer', 'is_active' => true, 'sort_order' => 5, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Pending', 'is_active' => true, 'sort_order' => 6, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Admin', 'is_active' => true, 'sort_order' => 7, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Other', 'is_active' => true, 'sort_order' => 8, 'created_at' => now(), 'updated_at' => now()],
-        ]);
+       
     }
 
     public function down(): void

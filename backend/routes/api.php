@@ -9,21 +9,9 @@ use App\Http\Controllers\Admin\CaseMaster\CaseController;
 use App\Http\Controllers\Admin\CaseStageController;
 use App\Http\Controllers\Admin\CaseCategoryController;
 use App\Http\Controllers\Admin\CourtOfficeController;
-
+use App\Http\Controllers\Admin\CaseMaster\DocumentController;
 use App\Http\Controllers\Admin\CaseChecklistController;
 
-Route::prefix('admin')->group(function () {
-
-    Route::prefix('cases/{case}/checklist')->group(function () {
-        Route::get('/',                      [CaseChecklistController::class, 'index']);
-        Route::post('/',                     [CaseChecklistController::class, 'store']);
-        Route::get('/{checklist}',           [CaseChecklistController::class, 'show']);
-        Route::put('/{checklist}',           [CaseChecklistController::class, 'update']);
-        Route::delete('/{checklist}',        [CaseChecklistController::class, 'destroy']);
-        Route::patch('/{checklist}/status',  [CaseChecklistController::class, 'updateStatus']);
-    });
-
-});
 
 
 Route::post('/login',         [AuthenticatedSessionController::class, 'login']);
@@ -116,12 +104,30 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::patch('case-categories/{id}/toggle',[CaseCategoryController::class, 'toggleStatus']);
     Route::get('courts-offices', [CaseController::class, 'courtsOffices']);
 
-// ✅ CORRECT ORDER — static routes FIRST
-Route::get   ('courts/active',             [CourtOfficeController::class, 'active']);
-Route::get   ('courts/types',              [CourtOfficeController::class, 'types']);
-Route::post  ('courts/reorder',            [CourtOfficeController::class, 'reorder']);
-Route::patch ('courts/{id}/toggle-active', [CourtOfficeController::class, 'toggleActive']);
-Route::apiResource('courts', CourtOfficeController::class);
+    // ✅ CORRECT ORDER — static routes FIRST
+    Route::get   ('courts/active',             [CourtOfficeController::class, 'active']);
+    Route::get   ('courts/types',              [CourtOfficeController::class, 'types']);
+    Route::post  ('courts/reorder',            [CourtOfficeController::class, 'reorder']);
+    Route::patch ('courts/{id}/toggle-active', [CourtOfficeController::class, 'toggleActive']);
+    Route::apiResource('courts', CourtOfficeController::class);
 
+
+    Route::prefix('cases/{case}/checklist')->group(function () {
+        Route::get('/',                      [CaseChecklistController::class, 'index']);
+        Route::post('/',                     [CaseChecklistController::class, 'store']);
+        Route::get('/{checklist}',           [CaseChecklistController::class, 'show']);
+        Route::put('/{checklist}',           [CaseChecklistController::class, 'update']);
+        Route::delete('/{checklist}',        [CaseChecklistController::class, 'destroy']);
+        Route::patch('/{checklist}/status',  [CaseChecklistController::class, 'updateStatus']);
+    });
+
+    Route::prefix('documents')->controller(DocumentController::class)->group(function () {
+        Route::get('/',                           'index');
+        Route::get('/active',                     'active');
+        Route::get('/{document}',                 'show');
+        Route::post('/',                          'store');
+        Route::put('/{document}',                 'update');
+        Route::patch('/{document}/toggle-active', 'toggleActive');
+    });
 
 });

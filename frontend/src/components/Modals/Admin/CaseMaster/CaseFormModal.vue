@@ -15,9 +15,7 @@
               <p class="text-sm text-slate-500 hidden sm:block">{{ isEditing ? 'Update case information and assignments' : 'Fill in the details. Case code is auto-generated.' }}</p>
             </div>
           </div>
-          <button @click="$emit('close')" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
+        
         </div>
 
         <!-- Body -->
@@ -113,9 +111,9 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
                   <div class="flex items-center justify-between mb-1.5">
-                    <label class="text-sm font-semibold text-slate-700">Court / Office</label>
                     <div class="flex items-center gap-1.5">
-                      <input type="checkbox" v-model="courtNA" @change="onCourtNAChange" id="courtNACheck"
+                       <label class="text-sm font-semibold text-slate-700">Court / Office</label>
+                       <input type="checkbox" v-model="courtNA" @change="onCourtNAChange" id="courtNACheck"
                         class="w-3.5 h-3.5 rounded accent-[#1a4972] cursor-pointer" />
                       <label for="courtNACheck" class="text-xs text-slate-500 font-medium cursor-pointer select-none">N/A</label>
                     </div>
@@ -284,7 +282,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import api from '@/services/api';
 
 const props = defineProps({
@@ -427,7 +425,7 @@ const handleClickOutside = (event) => {
 
 // Initialize
 onMounted(() => {
-  loadCourts();
+  nextTick(() => loadCourts());
   document.addEventListener('mousedown', handleClickOutside);
 });
 
