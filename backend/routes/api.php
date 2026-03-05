@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\CaseCategoryController;
 use App\Http\Controllers\Admin\CourtOfficeController;
 use App\Http\Controllers\Admin\CaseMaster\DocumentController;
 use App\Http\Controllers\Admin\CaseChecklistController;
+use App\Http\Controllers\Admin\ChecklistTrackerController;
+use App\Http\Controllers\Admin\FolderTrackerController;
 
 
 
@@ -119,6 +121,13 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::put('/{checklist}',           [CaseChecklistController::class, 'update']);
         Route::delete('/{checklist}',        [CaseChecklistController::class, 'destroy']);
         Route::patch('/{checklist}/status',  [CaseChecklistController::class, 'updateStatus']);
+    });
+
+    Route::prefix('cases/{case}')->group(function () {
+        Route::get ('checklist-tracker', [ChecklistTrackerController::class, 'index']);
+        Route::post('checklist-tracker', [ChecklistTrackerController::class, 'store']);
+        Route::get ('folder-tracker',    [FolderTrackerController::class,    'index']);
+        Route::post('folder-tracker',    [FolderTrackerController::class,    'store']);
     });
 
     Route::prefix('documents')->controller(DocumentController::class)->group(function () {

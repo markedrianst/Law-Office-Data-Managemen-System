@@ -223,7 +223,11 @@
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Due Date</label>
                 <input v-model="localTask.due_date" type="date"
                   class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10 bg-white transition-all" />
-              </div>
+              <p v-if="errors.due_date" class="mt-1 text-xs text-red-500 font-medium">
+                {{ errors.due_date }}
+              </p>
+
+                </div>
             </div>
 
             <!-- Assigned Clerk -->
@@ -345,6 +349,8 @@ const props = defineProps({
   mode:   { type: String,  default: 'add' },
   task:   { type: Object,  default: null  },
   clerks: { type: Array,   default: () => [] },
+  // Add to defineProps:
+errors: { type: Object, default: () => ({ task: '', due_date: '', status: '' }) }
 });
 
 const emit = defineEmits(['close', 'save', 'switch-to-edit']);
@@ -586,6 +592,11 @@ const handleSave = () => {
   errors.document_type_id = '';
   if (!localTask.document_type_id) {
     errors.document_type_id = 'Please select a document type.';
+    return;
+  }
+  errors.due_date = '';
+  if (!localTask.due_date) {
+    errors.due_date = 'Please select a due date.';
     return;
   }
 

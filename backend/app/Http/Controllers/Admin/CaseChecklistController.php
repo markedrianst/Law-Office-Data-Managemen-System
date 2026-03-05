@@ -29,7 +29,7 @@ class CaseChecklistController extends Controller
         $validated = $request->validate([
             'task'              => ['required', 'string', 'max:500'],
             'status'            => ['required', 'in:todo,in-progress,done'],
-            'due_date'          => ['nullable', 'date', 'date_format:Y-m-d'],
+            'due_date'          => ['required', 'date', 'date_format:Y-m-d'],
             'assigned_clerk_id' => ['nullable', 'integer'],
             'notes'             => ['nullable', 'string', 'max:1000'],
         ]);
@@ -72,7 +72,7 @@ class CaseChecklistController extends Controller
         $validated = $request->validate([
             'task'              => ['sometimes', 'required', 'string', 'max:500'],
             'status'            => ['sometimes', 'required', 'in:todo,in-progress,done'],
-            'due_date'          => ['nullable', 'date', 'date_format:Y-m-d'],
+            'due_date'          => ['required', 'date', 'date_format:Y-m-d'],
             'assigned_clerk_id' => ['nullable', 'integer'],
             'notes'             => ['nullable', 'string', 'max:1000'],
         ]);

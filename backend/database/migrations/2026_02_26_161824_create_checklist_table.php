@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('case_checklists', function (Blueprint $table) {
+       Schema::create('case_checklists', function (Blueprint $table) {
             $table->id();
             $table->foreignId('case_id')
                   ->constrained('cases')
@@ -21,6 +21,10 @@ return new class extends Migration
             $table->enum('status', ['todo', 'in-progress', 'done'])->default('todo');
             $table->date('due_date')->nullable();
             $table->string('assigned_to', 255)->nullable();
+            $table->foreignId('assigned_clerk_id')
+                  ->nullable()
+                  ->constrained('users')
+                  ->nullOnDelete();
             $table->text('notes')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();

@@ -270,3 +270,22 @@ export const clearCache = () => {
   cache.usersPromise = null;
   cache.lastFetch = 0;
 };
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECKLIST TRACKER (IN/OUT movements)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getChecklistTracker = (caseId) =>
+  api.get(`/admin/cases/${caseId}/checklist-tracker`);
+
+export const createChecklistTrackerEntry = (caseId, payload) =>
+  api.post(`/admin/cases/${caseId}/checklist-tracker`, payload);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FOLDER TRACKER (IN/OUT movements)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getFolderTracker = (caseId) =>
+  api.get(`/admin/cases/${caseId}/folder-tracker`);
+
+export const createFolderTrackerEntry = (caseId, payload) =>
+  api.post(`/admin/cases/${caseId}/folder-tracker`, payload);

@@ -225,20 +225,25 @@
       @save="saveNewClient"
     />
 
-    <!-- View Case -->
-    <CaseViewModal
-      :show="showViewModal"
-      :view-case="viewCase"
-      :active-stages="activeStages"
-      :stage-history="stageHistory"
-      :checklist="checklist"
-      :clerks="clerks"
-      @close="showViewModal = false"
-      @edit="(c) => { openEdit(c); showViewModal = false; }"
-      @add-task="addChecklistTask"
-      @update-task="updateChecklistTask"
-      @delete-task="deleteChecklistTask"
-    />
+<CaseViewModal
+  ref="viewModalRef"
+  :show="showViewModal"
+  :view-case="viewCase"
+  :active-stages="activeStages"
+  :stage-history="stageHistory"
+  :checklist="checklist"
+  :clerks="clerks"
+  :folder-history="folderHistory"
+  :checklist-history="checklistHistory"
+  @close="showViewModal = false"
+  @edit="(c) => { openEdit(c); showViewModal = false; }"
+  @add-task="addChecklistTask"
+  @update-task="updateChecklistTask"
+  @delete-task="deleteChecklistTask"
+  @update-stage="updateCaseStage"
+  @checklist-movement="handleChecklistMovement"
+  @folder-movement="handleFolderMovement"
+/>
 
     <!-- Stage Change -->
     <CaseStageModal
@@ -271,7 +276,6 @@ import * as ClientService from '@/services/clientService';
 // Import modals (same as before)
 import CaseCategoryModal from '@/components/Modals/Admin/CaseMaster/CaseCategoryModal.vue';
 import CaseForm          from '@/components/Modals/Admin/CaseMaster/CaseFormModal.vue';
-import CaseStageModal    from '@/components/Modals/Admin/CaseMaster/StageChangeModal.vue';
 import CaseViewModal     from '@/components/Modals/Admin/CaseMaster/CaseViewModal.vue';
 import ClientModal       from '@/components/Modals/Admin/CaseMaster/NewClientModal.vue';
 
@@ -361,7 +365,9 @@ const stageSaving    = ref(false);
 const stageForm      = reactive({ stage_id: '', remarks: '' });
 const stageErrors    = reactive({ stage_id: '' });
 const checklist      = ref([]);
-
+const viewModalRef = ref(null);
+const folderHistory = ref([]);
+const checklistHistory = ref([]);
 // ── Computed
 const activeStages = computed(() => {
   const s = stages.value;
@@ -592,6 +598,59 @@ const loadChecklist = async (caseId) => {
   }
 };
 
+const loadFolderTracker = async (caseId) => {
+  try {
+    const res          = await CaseService.getFolderTracker(caseId);
+    folderHistory.value = unwrapTask(res) || [];
+  } catch (e) {
+    console.error('loadFolderTracker:', e);
+    folderHistory.value = [];
+  }
+};
+
+const loadChecklistTracker = async (caseId) => {
+  try {
+    const res              = await CaseService.getChecklistTracker(caseId);
+    checklistHistory.value = unwrapTask(res) || [];
+  } catch (e) {
+    console.error('loadChecklistTracker:', e);
+    checklistHistory.value = [];
+  }
+};
+
+const handleFolderMovement = async ({ type, person, date, purpose, handledBy }) => {
+  if (!viewCase.value) return;
+  try {
+    await CaseService.createFolderTrackerEntry(viewCase.value.id, {
+      type:       type.toUpperCase(),
+      from_to:    person     || null,
+      date:       date       || null,
+      purpose:    purpose    || null,
+      handled_by: handledBy  || null,
+    });
+    await loadFolderTracker(viewCase.value.id);
+  } catch (e) {
+    console.error('handleFolderMovement:', e);
+  }
+};
+
+const handleChecklistMovement = async ({ type, taskId, taskName, person, date, purpose, handledBy }) => {
+  if (!viewCase.value) return;
+  try {
+    await CaseService.createChecklistTrackerEntry(viewCase.value.id, {
+      type:         type.toUpperCase(),
+      checklist_id: taskId    || null,
+      from_to:      person    || null,
+      date:         date      || null,
+      purpose:      purpose   || null,
+      handled_by:   handledBy || null,
+    });
+    await loadChecklistTracker(viewCase.value.id);
+  } catch (e) {
+    console.error('handleChecklistMovement:', e);
+  }
+};
+
 // ── Checklist operations (optimistic)
 const addChecklistTask = async (taskData) => {
   if (!viewCase.value) return;
@@ -811,7 +870,12 @@ const saveNewClient = async () => {
 const openView = async (c) => {
   viewCase.value      = c;
   showViewModal.value = true;   // watcher fires → refreshUsers()
-  await Promise.allSettled([loadStageHistory(c.id), loadChecklist(c.id)]);
+  await Promise.allSettled([
+    loadStageHistory(c.id),
+    loadChecklist(c.id),
+    loadFolderTracker(c.id),
+    loadChecklistTracker(c.id),
+  ]);
 };
 
 const closeStageModal = () => { showStageModal.value = false; };
@@ -832,6 +896,32 @@ const saveStageChange = async () => {
     stageErrors.stage_id = e?.response?.data?.message ?? 'Failed to update stage.';
   } finally {
     stageSaving.value = false;
+  }
+};
+
+const updateCaseStage = async ({ stage_id, stage_name }) => {
+  if (!viewCase.value) return;
+  try {
+    await CaseService.updateStage(viewCase.value.id, { stage_id });
+
+    // Update the modal's viewCase so the dropdown reflects the new value instantly
+    viewCase.value = { ...viewCase.value, current_stage_id: stage_id, stage: stage_name };
+
+    // Update the matching row in the cases table
+    const idx = cases.value.findIndex(c => c.id === viewCase.value.id);
+    if (idx !== -1) {
+      cases.value[idx] = { ...cases.value[idx], current_stage_id: stage_id, stage: stage_name };
+    }
+
+    // Bust stale sessionStorage cache
+    for (const k of Object.keys(sessionStorage)) {
+      if (k.startsWith('cm_cases_')) sessionStorage.removeItem(k);
+    }
+  } catch (e) {
+    console.error('updateCaseStage failed:', e);
+  } finally {
+    // Always stop the spinner in the modal
+    viewModalRef.value?.finishStageUpdate();
   }
 };
 

@@ -19,6 +19,7 @@ class CaseChecklist extends Model
         'status',
         'due_date',
         'assigned_to',
+        'assigned_clerk_id',
         'notes',
         'completed_at',
     ];
