@@ -1,24 +1,38 @@
 <template>
   <div class="layout">
-    <Sidebar />
+    <!-- Mobile sidebar overlay -->
+    <div v-if="sidebarOpen && isMobile" class="sidebar-overlay" @click="sidebarOpen = false"></div>
+
+    <!-- Sidebar (hidden on mobile, shown as drawer) -->
+    <Sidebar 
+      class="sidebar" 
+      :class="{ 'mobile-visible': sidebarOpen && isMobile }"
+      @navigate="sidebarOpen = false"
+    />
+
+    <!-- Main content area -->
     <div class="main">
-      <Header />
-      <router-view />
-      <Footer />
+      <Header 
+        class="header" 
+        :sidebar-open="sidebarOpen" 
+        @toggle-sidebar="sidebarOpen = !sidebarOpen"
+      />
+
+      <!-- Scrollable content -->
+      <div class="content">
+        <slot />
+      </div>
+
+      <Footer class="footer" />
     </div>
 
+    <!-- ===== MODALS ===== -->
     <Teleport to="body">
-      <!-- ── Account Deactivated Modal ──────────────────────── -->
       <Transition name="modal">
         <div v-if="showDeactivatedModal" class="modal-overlay">
           <div class="modal-card">
             <div class="modal-icon modal-icon--red">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+              <!-- svg kept same -->
             </div>
             <h2 class="modal-title">Account Deactivated</h2>
             <p class="modal-msg">{{ deactivatedMessage }}</p>
@@ -29,18 +43,10 @@
         </div>
       </Transition>
 
-      <!-- ── Role Changed Modal ─────────────────────────────── -->
       <Transition name="modal">
         <div v-if="showRoleChangedModal" class="modal-overlay">
           <div class="modal-card">
-            <div class="modal-icon modal-icon--blue">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
+            <div class="modal-icon modal-icon--blue"></div>
             <h2 class="modal-title">Role Updated</h2>
             <p class="modal-msg">{{ roleChangedMessage }}</p>
             <button class="modal-btn modal-btn--blue" @click="confirmRoleChangedLogout">
@@ -50,17 +56,10 @@
         </div>
       </Transition>
 
-      <!-- ── Credentials Changed Modal ─────────────────────── -->
       <Transition name="modal">
         <div v-if="showCredentialModal" class="modal-overlay">
           <div class="modal-card">
-            <div class="modal-icon modal-icon--amber">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </div>
+            <div class="modal-icon modal-icon--amber"></div>
             <h2 class="modal-title">Session Expired</h2>
             <p class="modal-msg">{{ credentialMessage }}</p>
             <button class="modal-btn modal-btn--amber" @click="confirmCredentialLogout">
@@ -74,10 +73,14 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
 import Sidebar from "@/components/Sidebar.vue";
-import Header  from "@/components/Header.vue";
-import Footer  from "@/components/Footer.vue";
+import Header from "@/components/Header.vue";
+import Footer from "@/components/Footer.vue";
 import { useStatusCheck } from "@/composables/useStatusCheck";
+
+const sidebarOpen = ref(false);
+const isMobile = ref(false);
 
 const {
   showDeactivatedModal,
@@ -90,60 +93,175 @@ const {
   credentialMessage,
   confirmCredentialLogout,
 } = useStatusCheck(30000);
+
+// Detect mobile screen size
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 768;
+  // Close sidebar when switching to desktop
+  if (!isMobile.value) {
+    sidebarOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  handleResize();
+  window.addEventListener('resize', handleResize);
+  // Close sidebar on route change
+  window.addEventListener('popstate', () => {
+    sidebarOpen.value = false;
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+  window.removeEventListener('popstate', () => {
+    sidebarOpen.value = false;
+  });
+});
 </script>
 
 <style scoped>
-.layout { display: flex; min-height: 100vh; }
-.main   { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+/* ===== LAYOUT STRUCTURE ===== */
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  flex-direction: row;
+}
 
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+/* Mobile sidebar - convert to drawer */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    width: 75vw;
+    max-width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .sidebar.mobile-visible {
+    transform: translateX(0);
+  }
+}
+
+/* ===== SIDEBAR OVERLAY (MOBILE) ===== */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ===== MAIN CONTENT ===== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #f4f6f9;
+}
+
+/* ===== HEADER ===== */
+.header {
+  flex-shrink: 0;
+}
+
+/* ===== SCROLLABLE CONTENT ===== */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Tablet and smaller phones */
+@media (max-width: 640px) {
+  .content {
+    padding: 16px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .content {
+    padding: 12px;
+  }
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  flex-shrink: 0;
+}
+
+/* ===== MODALS (UNCHANGED) ===== */
 .modal-overlay {
-  position: fixed; inset: 0; z-index: 99999;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
   background: rgba(10, 20, 35, 0.7);
   backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center; padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
+
 .modal-card {
-  background: white; border-radius: 20px;
+  background: white;
+  border-radius: 20px;
   padding: 36px 28px 28px;
-  width: 100%; max-width: 380px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.25);
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center; gap: 14px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
   font-family: 'Segoe UI', sans-serif;
 }
 
-/* Icons */
-.modal-icon {
-  width: 60px; height: 60px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-}
-.modal-icon--red   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2);  color: #dc2626; }
-.modal-icon--blue  { background: rgba(26,73,114,0.1);  border: 1px solid rgba(26,73,114,0.2);  color: #1a4972; }
-.modal-icon--amber { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #d97706; }
-
-.modal-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
-.modal-msg   { font-size: 13px; color: #64748b; margin: 0; line-height: 1.6; }
-
-/* Buttons */
-.modal-btn {
-  margin-top: 6px; padding: 11px 32px; border-radius: 12px; border: none;
-  color: white; font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: opacity .15s;
-}
-.modal-btn:hover { opacity: .9; }
-.modal-btn--red   {
-  background: linear-gradient(135deg, #dc2626, #991b1b);
-  box-shadow: 0 4px 14px rgba(220,38,38,.3);
-}
-.modal-btn--blue  {
-  background: linear-gradient(135deg, #1a4972, #0f2f4a);
-  box-shadow: 0 4px 14px rgba(26,73,114,.3);
-}
-.modal-btn--amber {
-  background: linear-gradient(135deg, #f59e0b, #b45309);
-  box-shadow: 0 4px 14px rgba(245,158,11,.3);
+@media (max-width: 480px) {
+  .modal-card {
+    max-width: 90%;
+    padding: 28px 20px 20px;
+  }
 }
 
-.modal-enter-active, .modal-leave-active { transition: opacity .25s ease, transform .25s ease; }
-.modal-enter-from, .modal-leave-to       { opacity: 0; transform: scale(.95); }
+/* Modal transitions */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
 </style>

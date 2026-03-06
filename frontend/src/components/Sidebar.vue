@@ -4,32 +4,32 @@
     <!-- Logo -->
     <div class="sidebar-logo">
       <div class="logo-icon">
-   <svg xmlns="http://www.w3.org/2000/svg" 
-     width="20" 
-     height="20" 
-     viewBox="0 0 24 24"
-     fill="none" 
-     stroke="currentColor" 
-     stroke-width="1.8" 
-     stroke-linecap="round" 
-     stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" 
+          width="20" 
+          height="20" 
+          viewBox="0 0 24 24"
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="1.8" 
+          stroke-linecap="round" 
+          stroke-linejoin="round">
 
-  <!-- Center pole -->
-  <line x1="12" y1="3" x2="12" y2="21"/>
+          <!-- Center pole -->
+          <line x1="12" y1="3" x2="12" y2="21"/>
 
-  <!-- Top bar -->
-  <line x1="5" y1="7" x2="19" y2="7"/>
+          <!-- Top bar -->
+          <line x1="5" y1="7" x2="19" y2="7"/>
 
-  <!-- Left scale -->
-  <path d="M7 7l-3 5h6l-3-5z"/>
+          <!-- Left scale -->
+          <path d="M7 7l-3 5h6l-3-5z"/>
 
-  <!-- Right scale -->
-  <path d="M17 7l-3 5h6l-3-5z"/>
+          <!-- Right scale -->
+          <path d="M17 7l-3 5h6l-3-5z"/>
 
-  <!-- Base -->
-  <line x1="8" y1="21" x2="16" y2="21"/>
+          <!-- Base -->
+          <line x1="8" y1="21" x2="16" y2="21"/>
 
-</svg>
+        </svg>
       </div>
       <transition name="fade-text">
         <div v-if="!collapsed" class="logo-text">
@@ -45,21 +45,62 @@
         <p v-if="!collapsed" class="nav-label">MAIN</p>
       </transition>
 
-      <router-link
-        v-for="item in visibleNav"
-        :key="item.path"
-        :to="item.path"
-        class="nav-item"
-        :class="{ active: route.path === item.path }"
-      >
-        <span class="nav-icon" v-html="item.icon"></span>
-        <transition name="fade-text">
-          <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
-        </transition>
-        <transition name="fade-text">
-          <span v-if="!collapsed && item.badge" class="nav-badge">{{ item.badge }}</span>
-        </transition>
-      </router-link>
+      <template v-for="item in visibleNav" :key="item.label || item.path">
+        <!-- Regular nav item -->
+        <router-link
+          v-if="!item.isDropdown"
+          :to="item.path"
+          class="nav-item"
+          :class="{ active: route.path === item.path }"
+          @click="$emit('navigate')"
+        >
+          <span class="nav-icon" v-html="item.icon"></span>
+          <transition name="fade-text">
+            <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
+          </transition>
+          <transition name="fade-text">
+            <span v-if="!collapsed && item.badge" class="nav-badge">{{ item.badge }}</span>
+          </transition>
+        </router-link>
+
+        <!-- Dropdown item -->
+        <div v-else class="nav-dropdown">
+          <div 
+            class="nav-item dropdown-toggle" 
+            :class="{ active: isDropdownActive(item) }"
+            @click="toggleDropdown(item)"
+          >
+            <span class="nav-icon" v-html="item.icon"></span>
+            <transition name="fade-text">
+              <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
+            </transition>
+            <transition name="fade-text">
+              <span v-if="!collapsed" class="dropdown-arrow" :class="{ rotated: item.expanded.value }">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </span>
+            </transition>
+          </div>
+
+          <!-- Dropdown children -->
+          <transition name="dropdown">
+            <div v-if="!collapsed && item.expanded.value" class="dropdown-children">
+              <router-link
+                v-for="child in item.children"
+                :key="child.path"
+                :to="child.path"
+                class="nav-item nav-item--child"
+                :class="{ active: route.path === child.path }"
+                @click="$emit('navigate')"
+              >
+                <span class="nav-icon nav-icon--child" v-html="child.icon"></span>
+                <span class="nav-text">{{ child.label }}</span>
+              </router-link>
+            </div>
+          </transition>
+        </div>
+      </template>
     </nav>
 
     <!-- Bottom user card -->
@@ -75,8 +116,8 @@
       </transition>
       <div v-if="collapsed" class="uc-avatar uc-avatar--solo">{{ userInitials }}</div>
 
-      <!-- Collapse toggle -->
-      <button class="collapse-btn" @click="collapsed = !collapsed">
+      <!-- Collapse toggle (desktop only) -->
+      <button v-if="!isMobile" class="collapse-btn" @click="collapsed = !collapsed">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
           :style="{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .3s' }">
@@ -89,13 +130,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
-const route    = useRoute()
+const route = useRoute()
 const collapsed = ref(false)
+const isMobile = ref(false)
 const { userName, userRole, userInitials, isAdmin, isLawyer, isClerk } = useAuth()
+
+// Emit navigate event
+defineEmits(['navigate'])
 
 // ─── SVG icons as strings ────────────────────────────────────────
 const icons = {
@@ -108,22 +153,56 @@ const icons = {
 }
 
 // ─── All possible nav items with role access control ─────────────
-// roles: [] means everyone, otherwise only listed roles can see it
 const allNav = [
   { path: '/dashboard',      label: 'Dashboard',    icon: icons.dashboard,    roles: [] },
   { path: '/usermanagement', label: 'Users',         icon: icons.users,        roles: ['admin'] },
   { path: '/audittrail',     label: 'Activity Logs', icon: icons.logs,         roles: ['admin'] },
   { path: '/casemaster',        label: 'Case Master',       icon: icons.clients,      roles: ['admin'] },
-  //{ path: '/tasks',          label: 'Tasks',         icon: icons.tasks,        roles: [] },
-  //  { path: '/appointments',   label: 'Appointments',  icon: icons.appointments, roles: [] },
+  // Master Data dropdown
+  { 
+    label: 'Master Data Preference', 
+    icon: icons.tasks,
+    isDropdown: true,
+    roles: [],
+    expanded: ref(false),
+    children: [
+      { path: '/casecategory', label: 'Case Categories', icon: icons.tasks, roles: [] },
+      { path: '/courtmaster', label: 'Courts', icon: icons.tasks, roles: [] },
+      { path: '/documents', label: 'Documents', icon: icons.tasks, roles: [] }
+    ]
+  },
 ]
 
 const visibleNav = computed(() => {
   const role = userRole.value.toLowerCase()
   return allNav.filter(item => {
-    if (item.roles.length === 0) return true          // everyone
-    return item.roles.includes(role)                  // role-gated
+    if (item.roles.length === 0) return true
+    return item.roles.includes(role)
   })
+})
+
+// Check if any child of dropdown is active
+const isDropdownActive = (item) => {
+  return item.children.some(child => route.path === child.path)
+}
+
+// Toggle dropdown expanded state
+const toggleDropdown = (item) => {
+  item.expanded.value = !item.expanded.value
+}
+
+// Detect mobile screen
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  handleResize()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -134,104 +213,342 @@ const visibleNav = computed(() => {
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #1a4972 0%, #0f2f4a 55%, #091e31 100%);
-  transition: width .3s cubic-bezier(.4,0,.2,1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   font-family: 'Segoe UI', sans-serif;
   position: relative;
   overflow: hidden;
 }
-.sidebar.collapsed { width: 68px; }
+
+.sidebar.collapsed {
+  width: 68px;
+}
+
+/* Mobile responsive sidebar */
+@media (max-width: 767px) {
+  .sidebar {
+    width: 240px;
+  }
+
+  .sidebar.collapsed {
+    width: 240px;
+  }
+}
 
 /* Logo */
 .sidebar-logo {
-  display: flex; align-items: center; gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 20px 16px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   min-height: 68px;
 }
+
 .logo-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.18);
-  display: flex; align-items: center; justify-content: center;
-  color: white; flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
 }
-.logo-text { display: flex; flex-direction: column; gap: 1px; white-space: nowrap; overflow: hidden; }
-.logo-main { font-size: 11px; font-weight: 700; color: white; letter-spacing: 0.06em; }
-.logo-sub  { font-size: 9px;  font-weight: 500; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; }
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.logo-main {
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.06em;
+}
+
+.logo-sub {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.1em;
+}
 
 /* Nav */
-.sidebar-nav { flex: 1; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for nav */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .nav-label {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
-  color: rgba(255,255,255,0.3); padding: 0 8px; margin-bottom: 6px;
-  white-space: nowrap; overflow: hidden;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 0 8px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .nav-item {
-  display: flex; align-items: center; gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 10px 10px;
   border-radius: 10px;
   text-decoration: none;
-  color: rgba(255,255,255,0.6);
-  font-size: 13px; font-weight: 500;
-  transition: background .15s, color .15s;
-  white-space: nowrap; overflow: hidden;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
   position: relative;
-}
-.nav-item:hover {
-  background: rgba(255,255,255,0.09);
-  color: rgba(255,255,255,0.9);
-}
-.nav-item.active {
-  background: rgba(255,255,255,0.15);
-  color: white;
-}
-.nav-item.active::before {
-  content: '';
-  position: absolute; left: 0; top: 20%; bottom: 20%;
-  width: 3px; border-radius: 0 3px 3px 0;
-  background: rgba(255,255,255,0.7);
+  cursor: pointer;
 }
 
-.nav-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; }
-.nav-text  { flex: 1; }
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+}
+
+.nav-text {
+  flex: 1;
+}
+
 .nav-badge {
-  font-size: 10px; font-weight: 700; padding: 1px 7px;
-  border-radius: 99px; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Footer */
 .sidebar-footer {
   padding: 12px 10px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  display: flex; align-items: center; gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.user-card { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
 .uc-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  border: 1.5px solid rgba(255,255,255,0.25);
-  color: white; font-size: 11px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
-.uc-avatar--solo { margin: 0 auto 8px; }
-.uc-info { min-width: 0; }
-.uc-name { font-size: 11px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
-.uc-role { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: capitalize; margin: 1px 0 0; }
+
+.uc-avatar--solo {
+  margin: 0 auto 8px;
+}
+
+.uc-info {
+  min-width: 0;
+}
+
+.uc-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.uc-role {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: capitalize;
+  margin: 1px 0 0;
+}
 
 .collapse-btn {
-  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
-  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.5); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .15s;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
-.collapse-btn:hover { background: rgba(255,255,255,0.13); color: white; }
+
+.collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: white;
+}
 
 /* Text fade transition */
-.fade-text-enter-active { transition: opacity .2s .05s, transform .2s .05s; }
-.fade-text-leave-active { transition: opacity .12s, transform .12s; }
-.fade-text-enter-from, .fade-text-leave-to { opacity: 0; transform: translateX(-4px); }
+.fade-text-enter-active {
+  transition: opacity 0.2s 0.05s, transform 0.2s 0.05s;
+}
+
+.fade-text-leave-active {
+  transition: opacity 0.12s, transform 0.12s;
+}
+
+.fade-text-enter-from,
+.fade-text-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+/* Dropdown styles */
+.nav-dropdown {
+  width: 100%;
+}
+
+.dropdown-toggle {
+  cursor: pointer;
+  position: relative;
+}
+
+.dropdown-arrow {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-children {
+  margin-left: 28px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding-left: 4px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.nav-item--child {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.nav-icon--child {
+  width: 14px;
+  opacity: 0.7;
+}
+
+/* Dropdown animation */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.3s ease;
+  max-height: 100px;
+  overflow: hidden;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-10px);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .sidebar-logo {
+    padding: 16px 12px;
+  }
+
+  .sidebar-nav {
+    padding: 12px 8px;
+  }
+
+  .nav-item {
+    padding: 9px 8px;
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  .nav-icon {
+    width: 16px;
+  }
+
+  .sidebar-footer {
+    padding: 10px 8px;
+    gap: 8px;
+  }
+}
 </style>
