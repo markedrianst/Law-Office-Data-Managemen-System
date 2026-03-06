@@ -17,16 +17,25 @@ class FolderMovement extends Model
         'date',
         'purpose',
         'handled_by',
+        'is_current',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date'       => 'date',
+        'is_current' => 'boolean',
     ];
 
     public function case(): BelongsTo
     {
         return $this->belongsTo(Cases::class, 'case_id');
     }
+    
+    public function cases(): BelongsTo
+{
+    return $this->belongsTo(Cases::class, 'case_id');
+}
+
+
 
     public function recordedBy(): BelongsTo
     {

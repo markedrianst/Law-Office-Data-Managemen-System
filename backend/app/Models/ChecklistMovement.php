@@ -16,10 +16,16 @@ class ChecklistMovement extends Model
         'date',
         'purpose',
         'handled_by',
+        'is_current',
+        'approval_status',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date'        => 'date',
+        'is_current'  => 'boolean',
+        'approved_at' => 'datetime',
     ];
 
     public function case(): BelongsTo
@@ -35,5 +41,10 @@ class ChecklistMovement extends Model
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 }

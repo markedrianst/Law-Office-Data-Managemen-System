@@ -20,7 +20,24 @@ class CaseChecklistController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        return CaseChecklistResource::collection($items);
+        // Return explicit fields so is_out is always a real boolean,
+        // regardless of what CaseChecklistResource may or may not expose.
+        return response()->json([
+            'data' => $items->map(fn($item) => [
+                'id'                => $item->id,
+                'case_id'           => $item->case_id,
+                'task'              => $item->task,
+                'status'            => $item->status,
+                'due_date'          => $item->due_date?->format('Y-m-d'),
+                'assigned_to'       => $item->assigned_to,
+                'assigned_clerk_id' => $item->assigned_clerk_id,
+                'notes'             => $item->notes,
+                'is_out'            => (bool) $item->is_out,
+                'completed_at'      => $item->completed_at,
+                'created_at'        => $item->created_at,
+                'updated_at'        => $item->updated_at,
+            ]),
+        ]);
     }
 
     // POST /admin/cases/{case}/checklist
@@ -29,7 +46,7 @@ class CaseChecklistController extends Controller
         $validated = $request->validate([
             'task'              => ['required', 'string', 'max:500'],
             'status'            => ['required', 'in:todo,in-progress,done'],
-            'due_date'          => ['required', 'date', 'date_format:Y-m-d'],
+            'due_date'          => ['nullable', 'date', 'date_format:Y-m-d'],
             'assigned_clerk_id' => ['nullable', 'integer'],
             'notes'             => ['nullable', 'string', 'max:1000'],
         ]);
@@ -72,7 +89,7 @@ class CaseChecklistController extends Controller
         $validated = $request->validate([
             'task'              => ['sometimes', 'required', 'string', 'max:500'],
             'status'            => ['sometimes', 'required', 'in:todo,in-progress,done'],
-            'due_date'          => ['required', 'date', 'date_format:Y-m-d'],
+            'due_date'          => ['nullable', 'date', 'date_format:Y-m-d'],
             'assigned_clerk_id' => ['nullable', 'integer'],
             'notes'             => ['nullable', 'string', 'max:1000'],
         ]);

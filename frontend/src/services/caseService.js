@@ -280,6 +280,9 @@ export const getChecklistTracker = (caseId) =>
 export const createChecklistTrackerEntry = (caseId, payload) =>
   api.post(`/admin/cases/${caseId}/checklist-tracker`, payload);
 
+export const approveChecklistMovement = (caseId, movementId, approval_status) =>
+  api.patch(`/admin/cases/${caseId}/checklist-tracker/${movementId}/approve`, { approval_status });
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FOLDER TRACKER (IN/OUT movements)
 // ─────────────────────────────────────────────────────────────────────────────

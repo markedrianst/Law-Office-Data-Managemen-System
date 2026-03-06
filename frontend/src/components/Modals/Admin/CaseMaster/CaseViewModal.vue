@@ -36,7 +36,8 @@
                 <div class="w-1 h-5 bg-blue-600 rounded-full"></div>
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Case Information</h3>
               </div>
-              <div class="grid grid-cols-2 gap-x-8 gap-y-4">
+              <div class="grid grid-cols-2 gap-x-6 gap-y-4">
+                <!-- Row 1: Code | Number -->
                 <div>
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Case Code</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.case_code || '—' }}</p>
@@ -45,14 +46,17 @@
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Case Number</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.case_no || '—' }}</p>
                 </div>
-                <div class="col-span-2">
+                <!-- Row 2: Title (full) -->
+                <div class="col-span-1">
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Case Title</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.title || '—' }}</p>
                 </div>
+                <!-- Row 3: Client | Docket No -->
                 <div>
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Client</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.client || '—' }}</p>
                 </div>
+                <!-- Row 4: Lawyer | Clerk -->
                 <div>
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Assigned Lawyer</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.lawyer ? 'Atty. ' + viewCase.lawyer : '—' }}</p>
@@ -61,6 +65,7 @@
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Assigned Clerk</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.clerk || '—' }}</p>
                 </div>
+                <!-- Row 5: Category | Court -->
                 <div>
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Category</p>
                   <p class="text-sm font-bold text-gray-900">{{ viewCase.category || '—' }}</p>
@@ -99,6 +104,19 @@
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Folder Status</h3>
               </div>
               <div class="space-y-4 flex-1">
+
+                <!-- Docket Number -->
+                <div>
+                  <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Docket Number</p>
+                  <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 border border-gray-200 text-sm font-bold rounded-lg">
+                    <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    {{ viewCase.docket_no || '—' }}
+                  </span>
+                </div>
+
+                <!-- Case status -->
                 <div>
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Current Status</p>
                   <span :class="statusBadgeClass(viewCase.case_status)" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-lg">
@@ -106,7 +124,9 @@
                     {{ formatStatus(viewCase.case_status) }}
                   </span>
                 </div>
-                <div>
+
+                <!-- Current Holder — only when folder is OUT -->
+                <div v-if="viewCase.is_out">
                   <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Current Holder</p>
                   <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#1a4972] to-[#2a5a8c] flex items-center justify-center text-xs font-bold text-white shadow-sm">
@@ -115,6 +135,7 @@
                     <p class="text-sm font-bold text-gray-900">{{ viewCase.clerk || '—' }}</p>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
@@ -402,7 +423,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(record, idx) in folderHistory" :key="record.id"
+                    <tr v-for="(record, idx) in paginatedFolderHistory" :key="record.id"
                       class="border-b border-gray-50 hover:bg-gray-50/60 transition"
                       :class="idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'">
                       <td class="px-6 py-3 text-sm text-gray-700">{{ formatDate(record.date) }}</td>
@@ -415,7 +436,7 @@
                         </span>
                       </td>
                       <td class="px-6 py-3 text-sm text-gray-700">
-                        <span class="text-gray-400 mr-1">{{ record.type === 'OUT' ? 'To:' : 'From:' }}</span>{{ record.from_to || '—' }}
+                        <span class="text-gray-400 mr-1">{{ record.type === 'OUT' ? 'From:' : 'To:' }}</span>{{ record.from_to || '—' }}
                       </td>
                       <td class="px-6 py-3 text-sm text-gray-700">{{ record.purpose || '—' }}</td>
                       <td class="px-6 py-3 text-sm font-semibold text-gray-800">{{ record.handled_by || '—' }}</td>
@@ -427,6 +448,30 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <!-- Folder Tracker Pagination -->
+              <div v-if="folderHistory.length > TRACKER_SIZE" class="px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+                <span class="text-xs text-gray-400">
+                  {{ (folderTrackerPage - 1) * TRACKER_SIZE + 1 }}–{{ Math.min(folderTrackerPage * TRACKER_SIZE, folderHistory.length) }} of {{ folderHistory.length }}
+                </span>
+                <div class="flex items-center gap-1">
+                  <button @click="folderTrackerPage = 1" :disabled="folderTrackerPage === 1"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="folderTrackerPage === 1 ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">«</button>
+                  <button @click="folderTrackerPage--" :disabled="folderTrackerPage === 1"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="folderTrackerPage === 1 ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">‹</button>
+                  <button v-for="page in totalFolderTrackerPages" :key="page"
+                    @click="folderTrackerPage = page"
+                    class="px-2.5 py-1 text-xs border rounded-lg"
+                    :class="folderTrackerPage === page ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">{{ page }}</button>
+                  <button @click="folderTrackerPage++" :disabled="folderTrackerPage === totalFolderTrackerPages"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="folderTrackerPage === totalFolderTrackerPages ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">›</button>
+                  <button @click="folderTrackerPage = totalFolderTrackerPages" :disabled="folderTrackerPage === totalFolderTrackerPages"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="folderTrackerPage === totalFolderTrackerPages ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">»</button>
+                </div>
               </div>
             </div>
 
@@ -489,7 +534,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(record, idx) in checklistHistory" :key="'ch-' + record.id"
+                    <tr v-for="(record, idx) in paginatedChecklistHistory" :key="'ch-' + record.id"
                       class="border-b border-gray-50 hover:bg-gray-50/60 transition"
                       :class="idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'">
                       <td class="px-6 py-3 text-sm text-gray-700">{{ formatDate(record.date) }}</td>
@@ -503,7 +548,7 @@
                         {{ record.approval_status === 'APPROVED' ? 'Approved' : record.approval_status === 'REJECTED' ? 'Rejected' : 'Pending' }}
                       </td>
                       <td class="px-6 py-3 text-sm text-gray-700 font-medium">
-                        {{ record.task_name || record.checklist.task }}
+                        {{ record.task_name || record.checklist?.task || 'All / General' }}
                       </td>
                       <td class="px-6 py-3 text-sm text-gray-700">
                         <span class="text-gray-400 mr-1">{{ record.type === 'OUT' ? 'To:' : 'From:' }}</span>{{ record.from_to || '—' }}
@@ -519,9 +564,80 @@
                   </tbody>
                 </table>
               </div>
+              <!-- Checklist Tracker Pagination -->
+              <div v-if="checklistHistory.length > TRACKER_SIZE" class="px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+                <span class="text-xs text-gray-400">
+                  {{ (checklistTrackerPage - 1) * TRACKER_SIZE + 1 }}–{{ Math.min(checklistTrackerPage * TRACKER_SIZE, checklistHistory.length) }} of {{ checklistHistory.length }}
+                </span>
+                <div class="flex items-center gap-1">
+                  <button @click="checklistTrackerPage = 1" :disabled="checklistTrackerPage === 1"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="checklistTrackerPage === 1 ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">«</button>
+                  <button @click="checklistTrackerPage--" :disabled="checklistTrackerPage === 1"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="checklistTrackerPage === 1 ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">‹</button>
+                  <button v-for="page in totalChecklistTrackerPages" :key="page"
+                    @click="checklistTrackerPage = page"
+                    class="px-2.5 py-1 text-xs border rounded-lg"
+                    :class="checklistTrackerPage === page ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">{{ page }}</button>
+                  <button @click="checklistTrackerPage++" :disabled="checklistTrackerPage === totalChecklistTrackerPages"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="checklistTrackerPage === totalChecklistTrackerPages ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">›</button>
+                  <button @click="checklistTrackerPage = totalChecklistTrackerPages" :disabled="checklistTrackerPage === totalChecklistTrackerPages"
+                    class="px-2 py-1 text-xs border rounded-lg"
+                    :class="checklistTrackerPage === totalChecklistTrackerPages ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-500 hover:bg-gray-100'">»</button>
+                </div>
+              </div>
             </div>
           </div>
 
+        </div>
+      </div>
+    </div>
+  </Transition>
+
+  <!-- ══ ALERT MODAL ══════════════════════════════════════════════════════ -->
+  <Transition name="toast">
+    <div v-if="toast.show"
+      class="fixed inset-0 z-[110] flex items-center justify-center p-4"
+      style="background: rgba(0,0,0,0.35); backdrop-filter: blur(2px);"
+      @click.self="toast.show = false">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <!-- Coloured top bar -->
+        <div :class="toast.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'"
+          class="px-6 py-5 flex items-center gap-4">
+          <!-- Icon circle -->
+          <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <svg v-if="toast.type === 'error'" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-white font-bold text-base leading-tight">
+              {{ toast.type === 'error' ? 'Action Not Allowed' : 'Nothing to Do' }}
+            </p>
+            <p class="text-white/70 text-xs mt-0.5">Folder tracker guard</p>
+          </div>
+          <button @click="toast.show = false" class="text-white/60 hover:text-white transition p-1 rounded-lg hover:bg-white/10">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <!-- Body -->
+        <div class="px-6 py-5">
+          <p class="text-sm text-gray-700 leading-relaxed">{{ toast.message }}</p>
+        </div>
+        <!-- Footer -->
+        <div class="px-6 pb-5">
+          <button @click="toast.show = false"
+            :class="toast.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
+            class="w-full py-2.5 text-sm font-bold text-white rounded-xl transition active:scale-95 shadow-sm">
+            Got it
+          </button>
         </div>
       </div>
     </div>
@@ -565,11 +681,11 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                {{ fm.type === 'out' ? 'Release To' : 'Received From' }} <span class="text-red-400">*</span>
+                {{ fm.type === 'out' ? 'From (Creator)' : 'To (Creator)' }}
               </label>
-              <input v-model="fm.form.person" type="text"
-                :placeholder="fm.type === 'out' ? 'Recipient name…' : 'Sender name…'"
-                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition"/>
+              <input v-model="fm.form.person" type="text" disabled
+                placeholder="Creator name…"
+                class="w-full px-3 py-2 border border-gray-100 rounded-xl text-sm bg-gray-50 text-gray-500 cursor-not-allowed"/>
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Date <span class="text-red-400">*</span></label>
@@ -628,27 +744,43 @@
 
         <!-- Form -->
         <div class="px-6 py-5 space-y-4">
-          <!-- Checklist item selector -->
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Document / Task</label>
-            <select v-model="ctm.form.taskId" @change="onCtmTaskChange"
-              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition bg-white">
-              <option value="">All / General</option>
-              <option v-for="task in checklist" :key="task.id" :value="task.id">
-                {{ task.task ?? task.document_type ?? '—' }}
+            <!-- Checklist item selector -->
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Document / Task</label>
+          <select v-model="ctm.form.taskId" @change="onCtmTaskChange"
+            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition bg-white">
+            <option value="">All / General</option>
+            <!-- OUT: only items currently IN (is_out = false) -->
+            <template v-if="ctm.type === 'out'">
+              <option
+                v-for="task in props.checklist.filter(t => !t.is_out)"
+                :key="task.id"
+                :value="task.id"
+              >
+                {{ task.task ?? '—' }}
               </option>
-            </select>
-          </div>
-
+            </template>
+            <!-- IN: only items currently OUT (is_out = true) -->
+            <template v-else-if="ctm.type === 'in'">
+              <option
+                v-for="task in props.checklist.filter(t => !!t.is_out)"
+                :key="task.id"
+                :value="task.id"
+              >
+                {{ task.task ?? '—' }}
+              </option>
+            </template>
+          </select>
+        </div>
           <!-- Form fields -->
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                {{ ctm.type === 'out' ? 'Release To' : 'Received From' }} <span class="text-red-400">*</span>
+                {{ ctm.type === 'out' ? 'From (Creator)' : 'To (Creator)' }}
               </label>
-              <input v-model="ctm.form.person" type="text"
-                :placeholder="ctm.type === 'out' ? 'Recipient name…' : 'Sender name…'"
-                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition"/>
+              <input v-model="ctm.form.person" type="text" disabled
+                placeholder="Creator name…"
+                class="w-full px-3 py-2 border border-gray-100 rounded-xl text-sm bg-gray-50 text-gray-500 cursor-not-allowed"/>
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Date <span class="text-red-400">*</span></label>
@@ -701,11 +833,12 @@ const props = defineProps({
   clerks:              { type: Array,   default: () => [] },
   folderHistory:       { type: Array,   default: () => [] },
   checklistHistory:    { type: Array,   default: () => [] },
-  // Add to defineProps:
-errors: { type: Object, default: () => ({ task: '', due_date: '', status: '' }) }
+  currentUser:         { type: Object,  default: null  },
+  cases:              { type: Array,   default: () => [] },
+  errors:              { type: Object,  default: () => ({ task: '', due_date: '', status: '' }) },
 });
 
-const emit = defineEmits(['close', 'edit', 'add-task', 'update-task', 'delete-task', 'update-stage', 'checklist-movement', 'folder-movement']);
+const emit = defineEmits(['close', 'edit', 'add-task', 'update-task', 'delete-task', 'update-stage', 'checklist-movement', 'folder-movement', 'update:viewCase']);
 
 const tabs      = ['Folder Tracker', 'Checklist Tracker'];
 const activeTab = ref('Folder Tracker');
@@ -717,18 +850,56 @@ const inChecklistDropdownOpen = ref(false);
 // Close dropdowns when clicking outside
 const closeDropdowns = () => { inDropdownOpen.value = false; inChecklistDropdownOpen.value = false; };
 
+// ── Toast notification ─────────────────────────────────────────────────────
+const toast = reactive({ show: false, message: '', type: 'error', timer: null });
+const showToast = (message, type = 'error') => {
+  if (toast.timer) clearTimeout(toast.timer);
+  toast.message = message;
+  toast.type    = type;
+  toast.show    = true;
+  toast.timer   = setTimeout(() => { toast.show = false; }, 4000);
+};
+
 // ── Folder IN/OUT modal ────────────────────────────────────────────────────
 const fm = reactive({ show: false, type: 'out', form: { person: '', date: '', purpose: '', handledBy: '' } });
 
 const openFolderModal = (type) => {
+  type = type.toLowerCase();
+
+  // cases.is_out: 0 = folder IN office, 1 = folder OUT of office
+  const folderIsOut = !!props.viewCase?.is_out;
+
+  if (type === 'out' && folderIsOut) {
+    showToast('The folder is already OUT of the office. Receive it back IN first.');
+    return;
+  }
+  if (type === 'in' && !folderIsOut) {
+    showToast('The folder is already IN the office. Nothing to receive.', 'info');
+    return;
+  }
+
   fm.type = type;
-  fm.form = { person: '', date: new Date().toISOString().slice(0, 10), purpose: '', handledBy: '' };
+  const creatorName = props.currentUser
+    ? (props.currentUser.full_name ?? props.currentUser.name ?? '')
+    : '';
+  // Auto-fill Handled By: prefer the case's assigned clerk, fall back to logged-in user
+  const handledBy = props.viewCase?.clerk || creatorName;
+  fm.form = { person: creatorName, date: new Date().toISOString().slice(0, 10), purpose: '', handledBy };
   fm.show = true;
   inDropdownOpen.value = false;
 };
 
 const submitFolderModal = () => {
-  emit('folder-movement', { type: fm.type, ...fm.form });
+  emit('folder-movement', {
+    type:       fm.type,
+    from_to:    fm.form.person,   // map person → from_to for the backend
+    date:       fm.form.date,
+    purpose:    fm.form.purpose,
+    handled_by: fm.form.handledBy,
+  });
+  // Patch viewCase.is_out immediately so guards reflect the new state
+  // without waiting for the parent to re-fetch the case.
+  emit('update:viewCase', { ...props.viewCase, is_out: fm.type === 'out' ? 1 : 0 });
   fm.show = false;
 };
 
@@ -767,8 +938,47 @@ const ctm = reactive({
 });
 
 const openChecklistTracker = (type) => {
+  type = type.toLowerCase();
+
+  // Guard 1: cases.is_out — the physical folder must be IN before releasing
+  // checklist items OUT. If the folder is already out, block the OUT action.
+  const folderIsOut = !!props.viewCase?.is_out;
+
+  if (type === 'out' && folderIsOut) {
+    showToast('The case folder is currently OUT of the office. Receive it back IN before releasing checklist items.');
+    return;
+  }
+
+  // Guard 2: case_checklists.is_out — per-item state
+  // OUT → need at least one item still IN the office (is_out = 0)
+  // IN  → need at least one item currently OUT       (is_out = 1)
+  const anyIn  = props.checklist.some(t => !t.is_out);   // at least one item still in office
+  const anyOut = props.checklist.some(t => !!t.is_out);  // at least one item currently out
+
+  if (type === 'out' && !anyIn) {
+    showToast('All checklist items are already OUT of the office. Nothing to release.');
+    return;
+  }
+
+  if (type === 'in' && !anyOut) {
+    showToast('No checklist items are currently OUT. Nothing to receive.', 'info');
+    return;
+  }
+
   ctm.type = type;
-  ctm.form = { taskId: '', person: '', date: new Date().toISOString().slice(0, 10), purpose: '', handledBy: '' };
+
+  const creatorName = props.currentUser
+    ? (props.currentUser.full_name ?? props.currentUser.name ?? '')
+    : '';
+
+  ctm.form = {
+    taskId: '',
+    person: creatorName,
+    date: new Date().toISOString().slice(0, 10),
+    purpose: '',
+    handledBy: ''
+  };
+
   ctm.show = true;
   inChecklistDropdownOpen.value = false;
 };
@@ -842,6 +1052,7 @@ const filteredChecklist = computed(() => {
 
 // ── Pagination (5 per page) ────────────────────────────────────────────────
 const PAGE_SIZE     = 5;
+const TRACKER_SIZE  = 5;
 const checklistPage = ref(1);
 
 const totalChecklistPages = computed(() =>
@@ -855,6 +1066,29 @@ const paginatedChecklist = computed(() => {
 
 watch(filteredChecklist, () => { checklistPage.value = 1; });
 
+// ── Tracker table pagination ───────────────────────────────────────────────
+const folderTrackerPage     = ref(1);
+const checklistTrackerPage  = ref(1);
+
+const totalFolderTrackerPages = computed(() =>
+  Math.max(1, Math.ceil(props.folderHistory.length / TRACKER_SIZE))
+);
+const totalChecklistTrackerPages = computed(() =>
+  Math.max(1, Math.ceil(props.checklistHistory.length / TRACKER_SIZE))
+);
+
+const paginatedFolderHistory = computed(() => {
+  const start = (folderTrackerPage.value - 1) * TRACKER_SIZE;
+  return props.folderHistory.slice(start, start + TRACKER_SIZE);
+});
+const paginatedChecklistHistory = computed(() => {
+  const start = (checklistTrackerPage.value - 1) * TRACKER_SIZE;
+  return props.checklistHistory.slice(start, start + TRACKER_SIZE);
+});
+
+watch(() => props.folderHistory,    () => { folderTrackerPage.value    = 1; });
+watch(() => props.checklistHistory, () => { checklistTrackerPage.value = 1; });
+
 // ── Done percent ───────────────────────────────────────────────────────────
 const donePercent = computed(() => {
   if (!props.checklist.length) return 0;
@@ -862,7 +1096,7 @@ const donePercent = computed(() => {
 });
 
 // ── Watchers ───────────────────────────────────────────────────────────────
-watch(() => props.show, (v) => { if (!v) { tm.show = false; ctm.show = false; fm.show = false; closeDropdowns(); clearFilters(); } });
+watch(() => props.show, (v) => { if (!v) { tm.show = false; ctm.show = false; fm.show = false; closeDropdowns(); clearFilters(); folderTrackerPage.value = 1; checklistTrackerPage.value = 1; } });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const resolveClerk = (id) => {
@@ -937,4 +1171,7 @@ const categoryBadgeClass = (c) => CATEGORY_COLORS[c] ?? 'bg-slate-100 text-slate
 .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
 .overflow-y-auto::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
 .overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+.toast-enter-active, .toast-leave-active { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.toast-enter-from, .toast-leave-to       { opacity: 0; transform: scale(0.95) translateY(8px); }
 </style>

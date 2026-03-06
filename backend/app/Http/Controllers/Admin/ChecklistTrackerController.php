@@ -14,7 +14,7 @@ class ChecklistTrackerController extends Controller
     public function index(Cases $case): JsonResponse
     {
         $records = ChecklistMovement::where('case_id', $case->id)
-            ->with('checklist:id,task,assigned_to')
+            ->with('checklist:id,task,assigned_to,is_out')
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -47,9 +47,43 @@ class ChecklistTrackerController extends Controller
             'handled_by'   => $validated['handled_by'] ?? null,
         ]);
 
+
+        // Flip is_out on the checklist item(s)
+        // OUT → document left the office  → is_out = true
+        // IN  → document returned         → is_out = false
+        $isOut = $validated['type'] === 'OUT';
+        if (!empty($validated['checklist_id'])) {
+            \App\Models\CaseChecklist::where('id', $validated['checklist_id'])
+                ->update(['is_out' => $isOut]);
+        } else {
+            \App\Models\CaseChecklist::where('case_id', $case->id)
+                ->update(['is_out' => $isOut]);
+        }
+
         return response()->json([
             'message' => 'Checklist movement recorded.',
-            'data'    => $record->load('checklist:id,task'),
+            'data'    => $record->load('checklist:id,task,is_out'),
         ], 201);
+    }
+
+    // PATCH /admin/cases/{case}/checklist-tracker/{movement}/approve
+    public function approve(Request $request, Cases $case, ChecklistMovement $movement): JsonResponse
+    {
+        abort_if($movement->case_id !== $case->id, 404, 'Movement not found for this case.');
+
+        $validated = $request->validate([
+            'approval_status' => ['required', 'in:APPROVED,REJECTED'],
+        ]);
+
+        $movement->update([
+            'approval_status' => $validated['approval_status'],
+            'approved_by'     => $request->user()->id,
+            'approved_at'     => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Movement ' . strtolower($validated['approval_status']) . '.',
+            'data'    => $movement->fresh()->load('checklist:id,task,is_out'),
+        ]);
     }
 }

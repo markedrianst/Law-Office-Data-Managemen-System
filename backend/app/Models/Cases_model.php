@@ -31,4 +31,8 @@ class Cases extends Model
     public function activityLogs()  { return $this->hasMany(CaseActivityLog::class); }
     public function currentStage()  { return $this->belongsTo(CaseStage::class, 'current_stage_id'); }  // ← NEW
     public function stageHistories(){ return $this->hasMany(CaseStageHistory::class); }                  // ← NEW
+       public function checklists()
+   {
+       return $this->hasMany(\App\Models\CaseChecklist::class, 'case_id');
+   }
 }

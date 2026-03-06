@@ -235,6 +235,7 @@
   :clerks="clerks"
   :folder-history="folderHistory"
   :checklist-history="checklistHistory"
+  :current-user="currentUser"
   @close="showViewModal = false"
   @edit="(c) => { openEdit(c); showViewModal = false; }"
   @add-task="addChecklistTask"
@@ -270,6 +271,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import api              from '@/services/api';
 import * as CaseService   from '@/services/caseService';
 import * as ClientService from '@/services/clientService';
 
@@ -359,6 +361,7 @@ const clientErrors       = reactive({ first_name: '', last_name: '', email: '', 
 // View modal
 const showViewModal  = ref(false);
 const viewCase       = ref(null);
+const currentUser    = ref(null);
 const stageHistory   = ref([]);
 const showStageModal = ref(false);
 const stageSaving    = ref(false);
@@ -617,21 +620,17 @@ const loadChecklistTracker = async (caseId) => {
     checklistHistory.value = [];
   }
 };
-
-const handleFolderMovement = async ({ type, person, date, purpose, handledBy }) => {
-  if (!viewCase.value) return;
-  try {
-    await CaseService.createFolderTrackerEntry(viewCase.value.id, {
-      type:       type.toUpperCase(),
-      from_to:    person     || null,
-      date:       date       || null,
-      purpose:    purpose    || null,
-      handled_by: handledBy  || null,
-    });
-    await loadFolderTracker(viewCase.value.id);
-  } catch (e) {
-    console.error('handleFolderMovement:', e);
-  }
+// ✅ Correct — match what the modal actually emits
+const handleFolderMovement = async ({ type, from_to, date, purpose, handled_by }) => {
+  await CaseService.createFolderTrackerEntry(viewCase.value.id, {
+    type:       type.toUpperCase(),
+    from_to:    from_to   || null,
+    date:       date      || null,
+    purpose:    purpose   || null,
+    handled_by: handled_by || null,
+  });
+  viewCase.value = { ...viewCase.value, is_out: type.toUpperCase() === 'OUT' ? 1 : 0 };
+  await loadFolderTracker(viewCase.value.id);
 };
 
 const handleChecklistMovement = async ({ type, taskId, taskName, person, date, purpose, handledBy }) => {
@@ -645,7 +644,11 @@ const handleChecklistMovement = async ({ type, taskId, taskName, person, date, p
       purpose:      purpose   || null,
       handled_by:   handledBy || null,
     });
-    await loadChecklistTracker(viewCase.value.id);
+    // Reload both so is_out state is fresh in the dropdown filters
+    await Promise.all([
+      loadChecklistTracker(viewCase.value.id),
+      loadChecklist(viewCase.value.id),
+    ]);
   } catch (e) {
     console.error('handleChecklistMovement:', e);
   }
@@ -661,7 +664,9 @@ const addChecklistTask = async (taskData) => {
     status:             taskData.status             ?? 'todo',
     due_date:           taskData.due_date           ?? null,
     assigned_clerk_id:  taskData.assigned_clerk_id  ?? null,
+    assigned_to:        taskData.assigned_to        ?? null,
     notes:              taskData.notes              ?? '',
+    is_out:             false,  // new tasks always start in-office
   };
   checklist.value = [...checklist.value, tempTask];
   try {
@@ -927,12 +932,10 @@ const updateCaseStage = async ({ stage_id, stage_name }) => {
 
 // ── Lifecycle
 onMounted(() => {
-  // Wait for nextTick so Vue Router's initial navigation is fully settled
-  // before firing API requests. Without this, requests fire mid-navigation
-  // and get aborted ("Request aborted" AxiosError).
   nextTick(() => {
     loadCases();
     loadLookups();
+    api.get('/user').then(res => { currentUser.value = res.data; }).catch(() => {});
   });
 });
 

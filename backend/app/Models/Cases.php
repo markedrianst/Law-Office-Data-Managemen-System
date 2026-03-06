@@ -16,6 +16,7 @@ class Cases extends Model
         'title',
         'category_id',
         'client_id',
+        'is_out',
         'court_or_office',
         'docket_no',
         'assigned_lawyer_id',
@@ -63,4 +64,9 @@ class Cases extends Model
     {
         return $this->hasMany(CaseStageHistory::class, 'case_id');
     }
+
+       public function checklists()
+   {
+       return $this->hasMany(\App\Models\CaseChecklist::class, 'case_id');
+   }
 }

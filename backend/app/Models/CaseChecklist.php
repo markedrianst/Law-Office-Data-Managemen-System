@@ -22,11 +22,13 @@ class CaseChecklist extends Model
         'assigned_clerk_id',
         'notes',
         'completed_at',
+        'is_out',
     ];
 
     protected $casts = [
         'due_date'     => 'date:Y-m-d',
         'completed_at' => 'datetime',
+        'is_out'       => 'boolean',
     ];
 
     // ── Relationships ──────────────────────────────────────────────────────

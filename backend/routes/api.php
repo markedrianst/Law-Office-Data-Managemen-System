@@ -124,10 +124,11 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     });
 
     Route::prefix('cases/{case}')->group(function () {
-        Route::get ('checklist-tracker', [ChecklistTrackerController::class, 'index']);
-        Route::post('checklist-tracker', [ChecklistTrackerController::class, 'store']);
-        Route::get ('folder-tracker',    [FolderTrackerController::class,    'index']);
-        Route::post('folder-tracker',    [FolderTrackerController::class,    'store']);
+        Route::get  ('checklist-tracker',                          [ChecklistTrackerController::class, 'index']);
+        Route::post ('checklist-tracker',                          [ChecklistTrackerController::class, 'store']);
+        Route::patch('checklist-tracker/{movement}/approve',       [ChecklistTrackerController::class, 'approve']);
+        Route::get  ('folder-tracker',                             [FolderTrackerController::class,    'index']);
+        Route::post ('folder-tracker',                             [FolderTrackerController::class,    'store']);
     });
 
     Route::prefix('documents')->controller(DocumentController::class)->group(function () {
