@@ -9,6 +9,8 @@ import CaseMaster         from "@/pages/Admin/cases/CaseMaster.vue";
 import CaseCategory       from "@/pages/Admin/MasterData/CasesCategory.vue";
 import CourtMaster         from "@/pages/Admin/MasterData/CourtMaster.vue";
 import Documents         from "@/pages/Admin/MasterData/Documents.vue";
+import ApprovalStatusBadge from "@/pages/Admin/Approvals.vue";
+import ClerkTrackerPage from "@/pages/Clerks/ClerkTrackerPage.vue";
 const routes = [
   {
     path: "/",
@@ -22,7 +24,18 @@ const routes = [
     component: AccountPage,
     meta: { requiresAuth: true },
   },
-
+  {
+    path: "/clerkstracker",
+    name: "ClerkTrackerPage",
+    component: ClerkTrackerPage,
+    meta: { requiresAuth: true, role: "clerk" },
+  },
+  {
+    path: "/approvals",
+    name: "ApprovalStatusBadge",
+    component: ApprovalStatusBadge,
+    meta: { requiresAuth: true, role: "admin" },
+  },
   {
     path: "/usermanagement",
     name: "AdminUserManagement",
@@ -51,7 +64,7 @@ const routes = [
     path: "/casemaster",
     name: "CaseMaster",
     component: CaseMaster,
-    meta: { requiresAuth: true, role: "admin" },
+    meta: { requiresAuth: true},
   },
   {
     path: "/audittrail",

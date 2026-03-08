@@ -18,27 +18,44 @@ class FolderMovement extends Model
         'purpose',
         'handled_by',
         'is_current',
+        // Approval columns (added via 2026_03_06 migration)
+        'approval_status',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
-        'date'       => 'date',
-        'is_current' => 'boolean',
+        'date'        => 'date',
+        'is_current'  => 'boolean',
+        'approved_at' => 'datetime',
     ];
 
     public function case(): BelongsTo
     {
         return $this->belongsTo(Cases::class, 'case_id');
     }
-    
-    public function cases(): BelongsTo
-{
-    return $this->belongsTo(Cases::class, 'case_id');
-}
 
+    // Used by controllers and eager loads as ->recorder
+    public function recorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
 
-
+    // Alias kept for any legacy code that calls ->recordedBy
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    // Used by controllers and eager loads as ->approver
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    // Alias kept for any legacy code that calls ->approvedBy
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 }

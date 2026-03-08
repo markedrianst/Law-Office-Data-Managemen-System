@@ -43,6 +43,8 @@
             <option value="">All Stages</option>
             <option v-for="s in stages" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
+
+          <!-- New Case -->
           <button @click="openCreate"
             class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-br from-[#1a4972] to-[#0f2f4a] shadow-lg shadow-[#1a4972]/30 hover:shadow-xl hover:shadow-[#1a4972]/40 active:scale-95 transition-all whitespace-nowrap">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,6 +52,54 @@
             </svg>
             New Case
           </button>
+
+          <!-- Export dropdown -->
+          <div class="relative" ref="exportDropdownRef">
+            <button
+              @click="showExportMenu = !showExportMenu"
+              :disabled="exportLoading"
+              class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#1a4972] border border-[#1a4972]/30 bg-white hover:bg-[#1a4972]/5 active:scale-95 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg v-if="!exportLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              <svg v-else class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"/>
+              </svg>
+              Export
+              <svg class="w-3 h-3 transition-transform" :class="showExportMenu ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+
+            <transition name="dropdown">
+              <div v-if="showExportMenu"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden">
+                <div class="px-3 py-2 border-b border-slate-100">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Export filtered results</p>
+                </div>
+                <button @click="exportCases('xlsx')"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  Excel (.xlsx)
+                </button>
+                <button @click="exportCases('pdf')"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors">
+                  <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                  </svg>
+                  PDF
+                </button>
+              </div>
+            </transition>
+          </div>
+
         </div>
       </div>
     </div>
@@ -57,7 +107,6 @@
     <!-- Cases Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 
-      <!-- Data table -->
       <div class="overflow-x-auto relative">
         <table class="min-w-full">
           <thead>
@@ -81,23 +130,20 @@
 
           <tbody class="divide-y divide-slate-50">
             <tr v-for="c in cases" :key="c.id" class="hover:bg-blue-50/30 transition-colors duration-100">
-              <!-- Case Code / Title -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2 mb-0.5">
                   <p class="text-xs font-bold tracking-wider" :class="getCategoryTextClass(c.category)">{{ c.case_code }}</p>
-                  <span v-if="c.category" class="px-2 py-0.5 text-[10px] font-semibold rounded-full border" :class="getCategoryBadgeClass(c.category)">{{ c.category }}</span>
+                  <span v-if="c.category && c.category !== '—'" class="px-2 py-0.5 text-[10px] font-semibold rounded-full border" :class="getCategoryBadgeClass(c.category)">{{ c.category }}</span>
                 </div>
                 <p class="text-sm font-semibold text-slate-800 max-w-[200px] truncate" :title="c.title">{{ c.title }}</p>
                 <p class="text-xs text-slate-400 mt-0.5">Case #{{ c.case_no }}</p>
               </td>
-              <!-- Client -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2">
                   <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" :class="getCategoryBgClass(c.category)">{{ getInitials(c.client) }}</div>
                   <span class="text-sm text-slate-700 font-medium whitespace-nowrap">{{ c.client }}</span>
                 </div>
               </td>
-              <!-- Assigned To -->
               <td class="px-4 py-4">
                 <div class="flex flex-col gap-1.5">
                   <div class="flex items-center gap-1.5">
@@ -112,7 +158,6 @@
                   </div>
                 </div>
               </td>
-              <!-- Stage -->
               <td class="px-4 py-4">
                 <span v-if="c.stage" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 whitespace-nowrap">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -120,18 +165,15 @@
                 </span>
                 <span v-else class="text-xs text-slate-400 italic">No stage set</span>
               </td>
-              <!-- Priority -->
               <td class="px-4 py-4">
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg" :class="priorityClass(c.priority)">
                   <span class="w-1.5 h-1.5 rounded-full" :class="priorityDotClass(c.priority)"></span>
                   {{ capitalize(c.priority) }}
                 </span>
               </td>
-              <!-- Status -->
               <td class="px-4 py-4">
                 <span class="px-2.5 py-1 text-xs font-semibold rounded-lg" :class="caseStatusClass(c.case_status)">{{ capitalize(c.case_status) }}</span>
               </td>
-              <!-- Actions -->
               <td class="px-4 py-4">
                 <div class="flex items-center gap-1">
                   <button @click="openView(c)" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] transition-colors hover-navy-bg">
@@ -146,7 +188,6 @@
               </td>
             </tr>
 
-            <!-- Empty state -->
             <tr v-if="cases.length === 0">
               <td :colspan="columns.length" class="px-6 py-16 text-center">
                 <div class="flex flex-col items-center">
@@ -188,11 +229,7 @@
       </div>
     </div>
 
-    <!-- ================================================================ -->
-    <!-- MODALS                                                            -->
-    <!-- ================================================================ -->
-
-    <!-- Create / Edit Case -->
+    <!-- MODALS -->
     <CaseForm
       :show="showFormModal"
       :is-editing="isEditing"
@@ -215,7 +252,6 @@
       @open-new-client="openNewClient"
     />
 
-    <!-- New Client -->
     <ClientModal
       :show="showNewClientModal"
       :client-saving="clientSaving"
@@ -225,28 +261,27 @@
       @save="saveNewClient"
     />
 
-<CaseViewModal
-  ref="viewModalRef"
-  :show="showViewModal"
-  :view-case="viewCase"
-  :active-stages="activeStages"
-  :stage-history="stageHistory"
-  :checklist="checklist"
-  :clerks="clerks"
-  :folder-history="folderHistory"
-  :checklist-history="checklistHistory"
-  :current-user="currentUser"
-  @close="showViewModal = false"
-  @edit="(c) => { openEdit(c); showViewModal = false; }"
-  @add-task="addChecklistTask"
-  @update-task="updateChecklistTask"
-  @delete-task="deleteChecklistTask"
-  @update-stage="updateCaseStage"
-  @checklist-movement="handleChecklistMovement"
-  @folder-movement="handleFolderMovement"
-/>
+    <CaseViewModal
+      ref="viewModalRef"
+      :show="showViewModal"
+      :view-case="viewCase"
+      :active-stages="activeStages"
+      :stage-history="stageHistory"
+      :checklist="checklist"
+      :clerks="clerks"
+      :folder-history="folderHistory"
+      :checklist-history="checklistHistory"
+      :current-user="currentUser"
+      @close="showViewModal = false"
+      @edit="(c) => { openEdit(c); showViewModal = false; }"
+      @add-task="addChecklistTask"
+      @update-task="updateChecklistTask"
+      @delete-task="deleteChecklistTask"
+      @update-stage="updateCaseStage"
+      @checklist-movement="handleChecklistMovement"
+      @folder-movement="handleFolderMovement"
+    />
 
-    <!-- Stage Change -->
     <CaseStageModal
       :show="showStageModal"
       :stage-saving="stageSaving"
@@ -257,7 +292,6 @@
       @save="saveStageChange"
     />
 
-    <!-- Add New Category -->
     <CaseCategoryModal
       :show="showCategoryModal"
       :category="null"
@@ -275,13 +309,12 @@ import api              from '@/services/api';
 import * as CaseService   from '@/services/caseService';
 import * as ClientService from '@/services/clientService';
 
-// Import modals (same as before)
 import CaseCategoryModal from '@/components/Modals/Admin/CaseMaster/CaseCategoryModal.vue';
 import CaseForm          from '@/components/Modals/Admin/CaseMaster/CaseFormModal.vue';
 import CaseViewModal     from '@/components/Modals/Admin/CaseMaster/CaseViewModal.vue';
 import ClientModal       from '@/components/Modals/Admin/CaseMaster/NewClientModal.vue';
 
-// ── Columns (static - never changes)
+// ── Columns ─────────────────────────────────────────────────────────────────
 const columns = [
   { label: 'Case Code / Title', field: 'case_code',   sortable: true  },
   { label: 'Client',            field: 'client',      sortable: true  },
@@ -292,7 +325,7 @@ const columns = [
   { label: 'Actions',           field: 'actions',     sortable: false },
 ];
 
-// ── Category map (static)
+// ── Category colour map ──────────────────────────────────────────────────────
 const categoryMap = {
   'criminal':      { text: 'text-red-700',    bg: 'bg-red-600',    badge: 'bg-red-50 text-red-700 border-red-200' },
   'annulment':     { text: 'text-purple-700', bg: 'bg-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
@@ -304,12 +337,12 @@ const categoryMap = {
 };
 const defaultCat = { text: 'text-[#1a4972]', bg: 'bg-[#1a4972]', badge: 'bg-blue-50 text-[#1a4972] border-blue-200' };
 
-const getCategoryEntry    = (cat) => cat ? (categoryMap[cat.toLowerCase().trim()] ?? defaultCat) : defaultCat;
+const getCategoryEntry      = (cat) => cat && cat !== '—' ? (categoryMap[cat.toLowerCase().trim()] ?? defaultCat) : defaultCat;
 const getCategoryTextClass  = (cat) => getCategoryEntry(cat).text;
 const getCategoryBgClass    = (cat) => getCategoryEntry(cat).bg;
 const getCategoryBadgeClass = (cat) => getCategoryEntry(cat).badge;
 
-// ── State
+// ── State ────────────────────────────────────────────────────────────────────
 const categories = ref([]);
 const clients    = ref([]);
 const lawyers    = ref([]);
@@ -320,7 +353,7 @@ const cases      = ref([]);
 const showCategoryModal = ref(false);
 const prevCategoryId    = ref('');
 
-// Filter state
+// Filters
 const searchQuery    = ref('');
 const filterStatus   = ref('');
 const filterPriority = ref('');
@@ -330,17 +363,22 @@ const sortDirection  = ref('desc');
 const currentPage    = ref(1);
 const pagination     = ref({ current_page: 1, last_page: 1, per_page: 10, total: 0, from: 0, to: 0 });
 
-// Modal states
-const showFormModal       = ref(false);
-const isEditing           = ref(false);
-const editingId           = ref(null);
-const formLoading         = ref(false);
-const newlyCreatedClient  = ref('');
-const courtNA             = ref(false);
-const docketNA            = ref(false);
-const clientSearchInit    = ref('');
+// Modals
+const showFormModal      = ref(false);
+const isEditing          = ref(false);
+const editingId          = ref(null);
+const formLoading        = ref(false);
+const newlyCreatedClient = ref('');
+const courtNA            = ref(false);
+const docketNA           = ref(false);
+const clientSearchInit   = ref('');
 
-// Form defaults
+// Export
+const showExportMenu    = ref(false);
+const exportLoading     = ref(false);
+const exportDropdownRef = ref(null);
+
+// Form
 const defaultForm = () => ({
   case_no: '', title: '', category_id: '', client_id: '',
   court_or_office: '', docket_no: '',
@@ -359,29 +397,25 @@ const clientForm         = reactive(defaultCF());
 const clientErrors       = reactive({ first_name: '', last_name: '', email: '', contact_no: '' });
 
 // View modal
-const showViewModal  = ref(false);
-const viewCase       = ref(null);
-const currentUser    = ref(null);
-const stageHistory   = ref([]);
-const showStageModal = ref(false);
-const stageSaving    = ref(false);
-const stageForm      = reactive({ stage_id: '', remarks: '' });
-const stageErrors    = reactive({ stage_id: '' });
-const checklist      = ref([]);
-const viewModalRef = ref(null);
-const folderHistory = ref([]);
-const checklistHistory = ref([]);
-// ── Computed
-const activeStages = computed(() => {
-  const s = stages.value;
-  return s && s.length ? s.filter(s => s.is_active) : [];
-});
+const showViewModal    = ref(false);
+const viewCase         = ref(null);
+const currentUser      = ref(null);
+const stageHistory     = ref([]);
+const showStageModal   = ref(false);
+const stageSaving      = ref(false);
+const stageForm        = reactive({ stage_id: '', remarks: '' });
+const stageErrors      = reactive({ stage_id: '' });
+const checklist        = ref([]);   // kept for legacy prop binding; modal self-fetches
+const folderHistory    = ref([]);   // same
+const checklistHistory = ref([]);   // same
+const viewModalRef     = ref(null);
+
+// ── Computed ─────────────────────────────────────────────────────────────────
+const activeStages = computed(() => stages.value.filter(s => s.is_active));
 
 const displayedPages = computed(() => {
+  const max = 5, total = pagination.value.last_page || 1, current = pagination.value.current_page || 1;
   const pages = [];
-  const max   = 5;
-  const total   = pagination.value?.last_page    || 1;
-  const current = pagination.value?.current_page || 1;
   if (total <= max) {
     for (let i = 1; i <= total; i++) pages.push(i);
   } else {
@@ -394,10 +428,10 @@ const displayedPages = computed(() => {
 });
 
 const previewCode = computed(() =>
-  `${new Date().getFullYear()}-${String((pagination.value?.total || 0) + 1).padStart(4, '0')}`
+  `${new Date().getFullYear()}-${String((pagination.value.total || 0) + 1).padStart(4, '0')}`
 );
 
-// ── Utilities
+// ── Utilities ────────────────────────────────────────────────────────────────
 const toArray = (v) => {
   if (Array.isArray(v)) return v;
   if (v?.data?.data) return v.data.data;
@@ -405,31 +439,50 @@ const toArray = (v) => {
   return [];
 };
 
-const getInitials  = (n) => n ? (n.split(' ')[0]?.[0] || '') + (n.split(' ')[1]?.[0] || '') : '??';
-const capitalize   = (s) => s ? s[0].toUpperCase() + s.slice(1) : '';
+const getInitials = (n) => n && n !== '—' ? (n.split(' ')[0]?.[0] || '') + (n.split(' ')[1]?.[0] || '') : '??';
+const capitalize  = (s) => s ? s[0].toUpperCase() + s.slice(1) : '';
 
-const priorityClass = (p) => ({
-  urgent: 'bg-red-50 text-red-700',
-  normal: 'bg-blue-50 text-blue-700',
-  low:    'bg-slate-100 text-slate-600',
-}[p] || 'bg-slate-100 text-slate-500');
+const priorityClass    = (p) => ({ urgent: 'bg-red-50 text-red-700', normal: 'bg-blue-50 text-blue-700', low: 'bg-slate-100 text-slate-600' }[p] || 'bg-slate-100 text-slate-500');
+const priorityDotClass = (p) => ({ urgent: 'bg-red-500', normal: 'bg-blue-500', low: 'bg-slate-400' }[p] || 'bg-slate-400');
+const caseStatusClass  = (s) => ({ active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', closed: 'bg-red-50 text-red-700 ring-1 ring-red-200', archived: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' }[s] || 'bg-slate-100 text-slate-500');
 
-const priorityDotClass = (p) => ({
-  urgent: 'bg-red-500',
-  normal: 'bg-blue-500',
-  low:    'bg-slate-400',
-}[p] || 'bg-slate-400');
+// ── Export ───────────────────────────────────────────────────────────────────
+const exportCases = async (format) => {
+  showExportMenu.value = false;
+  exportLoading.value  = true;
+  try {
+    const params = new URLSearchParams({ format });
+    if (searchQuery.value)    params.set('search',      searchQuery.value);
+    if (filterStatus.value)   params.set('case_status', filterStatus.value);
+    if (filterPriority.value) params.set('priority',    filterPriority.value);
+    if (filterStage.value)    params.set('stage_id',    filterStage.value);
+    params.set('sort_by',        sortField.value);
+    params.set('sort_direction', sortDirection.value);
 
-const caseStatusClass = (s) => ({
-  active:   'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  closed:   'bg-red-50 text-red-700 ring-1 ring-red-200',
-  archived: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-}[s] || 'bg-slate-100 text-slate-500');
+    const res  = await api.get(`/admin/cases/export?${params}`, { responseType: 'blob' });
+    const mime = format === 'xlsx'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf';
+    const url  = URL.createObjectURL(new Blob([res.data], { type: mime }));
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.setAttribute('download', `cases_export_${new Date().toISOString().slice(0, 10)}.${format}`);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Export failed:', e);
+    alert('Export failed. Please try again.');
+  } finally {
+    exportLoading.value = false;
+  }
+};
 
-// ── Category handlers
+// ── Category handlers ────────────────────────────────────────────────────────
 const onCategoryChange = (val) => {
   if (val === '__add_new__') {
-    form.category_id = prevCategoryId.value;
+    form.category_id    = prevCategoryId.value;
     showCategoryModal.value = true;
   } else {
     prevCategoryId.value = val;
@@ -440,10 +493,10 @@ const onCategoryChange = (val) => {
 const onCategoryCreated = async () => {
   showCategoryModal.value = false;
   try {
-    CaseService.clearCache?.();
+    CaseService.clearCategoriesCache();
     const res = await CaseService.getCategories(true);
     categories.value = toArray(res);
-    const newest = categories.value.sort((a, b) => b.id - a.id)[0];
+    const newest = [...categories.value].sort((a, b) => b.id - a.id)[0];
     if (newest) {
       form.category_id     = String(newest.id);
       prevCategoryId.value = String(newest.id);
@@ -453,14 +506,13 @@ const onCategoryCreated = async () => {
   }
 };
 
-// ── Cases loader
-// ── Stale-while-revalidate cache key for the current filter state
+// ── Cases loader ─────────────────────────────────────────────────────────────
 const casesCacheKey = () =>
   'cm_cases_' + JSON.stringify({
-    s: searchQuery.value    || '',
-    st: filterStatus.value  || '',
-    p: filterPriority.value || '',
-    sg: filterStage.value   || '',
+    s:  searchQuery.value    || '',
+    st: filterStatus.value   || '',
+    p:  filterPriority.value || '',
+    sg: filterStage.value    || '',
     sf: sortField.value,
     sd: sortDirection.value,
     pg: currentPage.value,
@@ -484,16 +536,14 @@ const applyCasesResponse = (responseData) => {
 
 const loadCases = async () => {
   const key = casesCacheKey();
-
-  // 1. Paint instantly from sessionStorage if we have cached data
+  // Show stale data immediately while fresh request runs
   try {
     const cached = sessionStorage.getItem(key);
     if (cached) applyCasesResponse(JSON.parse(cached));
   } catch (_) {}
 
-  // 2. Fetch fresh data in the background — update silently when ready
   try {
-    const params = {
+    const res  = await CaseService.getCases({
       search:         searchQuery.value    || undefined,
       case_status:    filterStatus.value   || undefined,
       priority:       filterPriority.value || undefined,
@@ -501,11 +551,9 @@ const loadCases = async () => {
       sort_by:        sortField.value,
       sort_direction: sortDirection.value,
       page:           currentPage.value,
-    };
-    const res          = await CaseService.getCases(params);
+    });
     const responseData = res.data ?? res;
     applyCasesResponse(responseData);
-    // Persist for next visit / navigation
     try { sessionStorage.setItem(key, JSON.stringify(responseData)); } catch (_) {}
   } catch (e) {
     console.error('loadCases:', e);
@@ -513,9 +561,7 @@ const loadCases = async () => {
   }
 };
 
-// ── Lookups loader — fetches users (clerks + lawyers) fresh from the API.
-// Called on mount AND every time a modal that has a clerk/lawyer picker opens,
-// so newly-added users always appear without a page refresh.
+// ── Lookups loader ───────────────────────────────────────────────────────────
 const applyLookups = (lookups, clientList) => {
   categories.value = lookups.categories || [];
   stages.value     = lookups.stages     || [];
@@ -526,15 +572,15 @@ const applyLookups = (lookups, clientList) => {
 };
 
 const loadLookups = async () => {
-  // 1. Paint instantly from sessionStorage
+  // Show from sessionStorage while network catches up
   try {
     const cachedL = sessionStorage.getItem('cm_lookups');
     const cachedC = sessionStorage.getItem('cm_clients');
     if (cachedL) applyLookups(JSON.parse(cachedL), cachedC ? JSON.parse(cachedC) : []);
   } catch (_) {}
 
-  // 2. Fetch fresh in background
   try {
+    // Parallel: lookups + clients together
     const [lookups, clientRes] = await Promise.all([
       CaseService.loadAllLookups(),
       ClientService.getAll(),
@@ -550,87 +596,52 @@ const loadLookups = async () => {
   }
 };
 
-// HOT-RELOAD: Force-refresh users by passing forceRefresh=true to bust the
-// 5-minute cache in caseService.js. Without this, loadAllLookups() returns
-// stale data for up to 5 minutes after a new clerk/lawyer is added.
+// Only refreshes users (not categories/stages) — called on modal open
 const refreshUsers = async () => {
   try {
-    const res   = await CaseService.getAssignableUsers(true); // true = bust cache
+    CaseService.clearUsersCache();
+    const res   = await CaseService.getAssignableUsers(true);
     const users = res.data || [];
     lawyers.value = users.filter(u => u?.role === 'lawyer');
     clerks.value  = users.filter(u => u?.role === 'clerk');
-    // Also bust the lookups sessionStorage so stale user lists don't show on next mount
     sessionStorage.removeItem('cm_lookups');
   } catch (e) {
     console.error('refreshUsers:', e);
   }
 };
 
-// ── HOT-RELOAD watchers:
-// Whenever the CaseForm modal (create/edit) opens, refresh the user list so
-// any clerks added in User Management since the last load are available.
-watch(showFormModal, (isOpen) => {
-  if (isOpen) refreshUsers();
-});
+// Refresh users when any modal opens (ensures fresh lawyer/clerk lists)
+watch(showFormModal, (isOpen) => { if (isOpen) refreshUsers(); });
+watch(showViewModal, (isOpen) => { if (isOpen) refreshUsers(); });
 
-// Same for the CaseViewModal — it passes :clerks to the inner TaskModal.
-watch(showViewModal, (isOpen) => {
-  if (isOpen) refreshUsers();
-});
+// ── Stage history / checklist / trackers ─────────────────────────────────────
+const unwrapTask = (res) => res?.data?.data ?? res?.data ?? res;
 
-// ── Stage history / checklist
 const loadStageHistory = async (caseId) => {
   try {
-    const res         = await CaseService.getStageHistory(caseId);
-    stageHistory.value = toArray(res);
+    stageHistory.value = toArray(await CaseService.getStageHistory(caseId));
   } catch (e) {
     console.error('loadStageHistory:', e);
     stageHistory.value = [];
   }
 };
 
-const unwrapTask = (res) => res?.data?.data ?? res?.data ?? res;
-
-const loadChecklist = async (caseId) => {
-  try {
-    const res       = await CaseService.getChecklist(caseId);
-    checklist.value = unwrapTask(res) || [];
-  } catch (e) {
-    console.error('loadChecklist:', e);
-    checklist.value = [];
-  }
-};
-
-const loadFolderTracker = async (caseId) => {
-  try {
-    const res          = await CaseService.getFolderTracker(caseId);
-    folderHistory.value = unwrapTask(res) || [];
-  } catch (e) {
-    console.error('loadFolderTracker:', e);
-    folderHistory.value = [];
-  }
-};
-
-const loadChecklistTracker = async (caseId) => {
-  try {
-    const res              = await CaseService.getChecklistTracker(caseId);
-    checklistHistory.value = unwrapTask(res) || [];
-  } catch (e) {
-    console.error('loadChecklistTracker:', e);
-    checklistHistory.value = [];
-  }
-};
-// ✅ Correct — match what the modal actually emits
+// ── Tracker movement handlers ────────────────────────────────────────────────
 const handleFolderMovement = async ({ type, from_to, date, purpose, handled_by }) => {
-  await CaseService.createFolderTrackerEntry(viewCase.value.id, {
-    type:       type.toUpperCase(),
-    from_to:    from_to   || null,
-    date:       date      || null,
-    purpose:    purpose   || null,
-    handled_by: handled_by || null,
-  });
-  viewCase.value = { ...viewCase.value, is_out: type.toUpperCase() === 'OUT' ? 1 : 0 };
-  await loadFolderTracker(viewCase.value.id);
+  try {
+    await CaseService.createFolderTrackerEntry(viewCase.value.id, {
+      type:       type.toUpperCase(),
+      from_to:    from_to    || null,
+      date:       date       || null,
+      purpose:    purpose    || null,
+      handled_by: handled_by || null,
+    });
+    viewCase.value = { ...viewCase.value, is_out: type.toUpperCase() === 'OUT' ? 1 : 0 };
+    // Delegate the re-fetch to the modal's own refresh helper
+    viewModalRef.value?.refreshFolderTracker();
+  } catch (e) {
+    console.error('handleFolderMovement:', e);
+  }
 };
 
 const handleChecklistMovement = async ({ type, taskId, taskName, person, date, purpose, handledBy }) => {
@@ -644,55 +655,32 @@ const handleChecklistMovement = async ({ type, taskId, taskName, person, date, p
       purpose:      purpose   || null,
       handled_by:   handledBy || null,
     });
-    // Reload both so is_out state is fresh in the dropdown filters
-    await Promise.all([
-      loadChecklistTracker(viewCase.value.id),
-      loadChecklist(viewCase.value.id),
-    ]);
+    // Modal refreshes its own checklist + tracker data
+    viewModalRef.value?.refreshChecklistTracker();
+    viewModalRef.value?.refreshChecklist();
   } catch (e) {
     console.error('handleChecklistMovement:', e);
   }
 };
 
-// ── Checklist operations (optimistic)
+// ── Checklist CRUD (delegated to modal's internal refresh) ────────────────────
 const addChecklistTask = async (taskData) => {
   if (!viewCase.value) return;
-  const tempId   = `__temp_${Date.now()}`;
-  const tempTask = {
-    id: tempId,
-    task:               taskData.task,
-    status:             taskData.status             ?? 'todo',
-    due_date:           taskData.due_date           ?? null,
-    assigned_clerk_id:  taskData.assigned_clerk_id  ?? null,
-    assigned_to:        taskData.assigned_to        ?? null,
-    notes:              taskData.notes              ?? '',
-    is_out:             false,  // new tasks always start in-office
-  };
-  checklist.value = [...checklist.value, tempTask];
   try {
-    const res     = await CaseService.createChecklistTask(viewCase.value.id, taskData);
-    const created = unwrapTask(res);
-    const idx     = checklist.value.findIndex(t => t.id === tempId);
-    if (idx !== -1) checklist.value.splice(idx, 1, created);
+    await CaseService.createChecklistTask(viewCase.value.id, taskData);
+    viewModalRef.value?.refreshChecklist();
   } catch (e) {
     console.error('addChecklistTask:', e);
-    checklist.value = checklist.value.filter(t => t.id !== tempId);
   }
 };
 
 const updateChecklistTask = async (taskData) => {
   if (!viewCase.value) return;
-  const idx  = checklist.value.findIndex(t => t.id === taskData.id);
-  const prev = idx !== -1 ? { ...checklist.value[idx] } : null;
-  if (idx !== -1) checklist.value.splice(idx, 1, { ...checklist.value[idx], ...taskData });
   try {
-    const res     = await CaseService.updateChecklistTask(viewCase.value.id, taskData.id, taskData);
-    const updated = unwrapTask(res);
-    const i2      = checklist.value.findIndex(t => t.id === taskData.id);
-    if (i2 !== -1) checklist.value.splice(i2, 1, updated);
+    await CaseService.updateChecklistTask(viewCase.value.id, taskData.id, taskData);
+    viewModalRef.value?.refreshChecklist();
   } catch (e) {
     console.error('updateChecklistTask:', e);
-    if (idx !== -1 && prev) checklist.value.splice(idx, 1, prev);
   }
 };
 
@@ -700,66 +688,42 @@ const deleteChecklistTask = async (taskId) => {
   if (!viewCase.value) return;
   try {
     await CaseService.deleteChecklistTask(viewCase.value.id, taskId);
-    checklist.value = checklist.value.filter(t => t.id !== taskId);
+    viewModalRef.value?.refreshChecklist();
   } catch (e) {
     console.error('deleteChecklistTask:', e);
   }
 };
 
-// ── Debounced search + filter events
-let searchTimer = null;
-const debouncedSearch = () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { currentPage.value = 1; loadCases(); }, 300);
-};
-
+// ── Filter / sort / pagination ────────────────────────────────────────────────
+let _searchTimer = null;
+const debouncedSearch   = () => { clearTimeout(_searchTimer); _searchTimer = setTimeout(() => { currentPage.value = 1; loadCases(); }, 300); };
 const handleFilterChange = () => { currentPage.value = 1; loadCases(); };
-
 const sortBy = (field) => {
-  sortDirection.value = sortField.value === field
-    ? (sortDirection.value === 'asc' ? 'desc' : 'asc')
-    : 'asc';
+  sortDirection.value = sortField.value === field ? (sortDirection.value === 'asc' ? 'desc' : 'asc') : 'asc';
   sortField.value = field;
   loadCases();
 };
+const previousPage = () => { if (pagination.value.current_page > 1) { currentPage.value--; loadCases(); } };
+const nextPage     = () => { if (pagination.value.current_page < pagination.value.last_page) { currentPage.value++; loadCases(); } };
+const goToPage     = (page) => { currentPage.value = page; loadCases(); };
 
-const previousPage = () => {
-  if (pagination.value.current_page > 1) { currentPage.value--; loadCases(); }
-};
-
-const nextPage = () => {
-  if (pagination.value.current_page < pagination.value.last_page) { currentPage.value++; loadCases(); }
-};
-
-const goToPage = (page) => { currentPage.value = page; loadCases(); };
-
-// ── Form operations
-const clearErrors = () => {
-  errors.title = '';
-  errors.assigned_lawyer_id = '';
-  errors.case_no  = '';
-  errors.client_id = '';
-};
-
-const closeForm = () => { showFormModal.value = false; };
+// ── Form operations ───────────────────────────────────────────────────────────
+const clearErrors = () => Object.assign(errors, { title: '', assigned_lawyer_id: '', case_no: '', client_id: '' });
+const closeForm   = () => { showFormModal.value = false; };
 
 const openCreate = () => {
-  isEditing.value          = false;
-  editingId.value          = null;
-  newlyCreatedClient.value = '';
-  courtNA.value            = false;
-  docketNA.value           = false;
+  isEditing.value = false; editingId.value = null;
+  newlyCreatedClient.value = ''; courtNA.value = false; docketNA.value = false;
   Object.assign(form, defaultForm());
-  form.current_stage_id = activeStages.value[0]?.id ?? '';
-  prevCategoryId.value  = '';
+  form.current_stage_id  = activeStages.value[0]?.id ?? '';
+  prevCategoryId.value   = '';
   clientSearchInit.value = '';
   clearErrors();
-  showFormModal.value = true;   // watcher fires → refreshUsers()
+  showFormModal.value = true;
 };
 
 const openEdit = (c) => {
-  isEditing.value          = true;
-  editingId.value          = c.id;
+  isEditing.value = true; editingId.value = c.id;
   newlyCreatedClient.value = '';
   Object.assign(form, {
     case_no:            c.case_no,
@@ -780,16 +744,15 @@ const openEdit = (c) => {
   docketNA.value         = c.docket_no === 'N/A';
   clientSearchInit.value = clients.value?.find(x => x.id === c.client_id)?.full_name || '';
   clearErrors();
-  showFormModal.value = true;   // watcher fires → refreshUsers()
+  showFormModal.value = true;
 };
 
 const validateForm = () => {
-  clearErrors();
-  let ok = true;
-  if (!form.title?.trim())          { errors.title               = 'Case title is required'; ok = false; }
-  if (!form.case_no)                { errors.case_no             = 'Case number is required'; ok = false; }
-  if (!form.assigned_lawyer_id)     { errors.assigned_lawyer_id  = 'Assign a lawyer'; ok = false; }
-  if (!form.client_id)              { errors.client_id           = 'Client is required'; ok = false; }
+  clearErrors(); let ok = true;
+  if (!form.title?.trim())      { errors.title              = 'Case title is required'; ok = false; }
+  if (!form.case_no)            { errors.case_no            = 'Case number is required'; ok = false; }
+  if (!form.assigned_lawyer_id) { errors.assigned_lawyer_id = 'Assign a lawyer'; ok = false; }
+  if (!form.client_id)          { errors.client_id          = 'Client is required'; ok = false; }
   return ok;
 };
 
@@ -809,8 +772,8 @@ const submitForm = async () => {
     } else {
       await CaseService.store(payload);
     }
-    CaseService.clearCache?.();
-    // Bust the sessionStorage cases cache so the table reloads fresh after mutation
+    // Bust caches and reload
+    CaseService.clearCache();
     for (const k of Object.keys(sessionStorage)) { if (k.startsWith('cm_cases_')) sessionStorage.removeItem(k); }
     await loadCases();
     closeForm();
@@ -824,13 +787,8 @@ const submitForm = async () => {
   }
 };
 
-// ── Client operations
-const openNewClient = () => {
-  Object.assign(clientForm, defaultCF());
-  Object.assign(clientErrors, { first_name: '', last_name: '', email: '', contact_no: '' });
-  showNewClientModal.value = true;
-};
-
+// ── Client modal ──────────────────────────────────────────────────────────────
+const openNewClient  = () => { Object.assign(clientForm, defaultCF()); Object.assign(clientErrors, { first_name: '', last_name: '', email: '', contact_no: '' }); showNewClientModal.value = true; };
 const closeNewClient = () => { showNewClientModal.value = false; };
 
 const validateClient = () => {
@@ -838,12 +796,8 @@ const validateClient = () => {
   let ok = true;
   if (!clientForm.first_name?.trim()) { clientErrors.first_name = 'Required'; ok = false; }
   if (!clientForm.last_name?.trim())  { clientErrors.last_name  = 'Required'; ok = false; }
-  if (clientForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientForm.email)) {
-    clientErrors.email = 'Invalid email'; ok = false;
-  }
-  if (clientForm.contact_no?.length > 0 && clientForm.contact_no.length < 10) {
-    clientErrors.contact_no = 'Min 10 digits'; ok = false;
-  }
+  if (clientForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientForm.email)) { clientErrors.email = 'Invalid email'; ok = false; }
+  if (clientForm.contact_no?.length > 0 && clientForm.contact_no.length < 10)   { clientErrors.contact_no = 'Min 10 digits'; ok = false; }
   return ok;
 };
 
@@ -856,10 +810,9 @@ const saveNewClient = async () => {
     const nc        = res?.data?.data ?? res?.data ?? res;
     const client    = { ...nc, full_name: nc.full_name ?? full_name };
     clients.value   = [...clients.value, client];
-    form.client_id      = client.id;
-    clientSearchInit.value  = client.full_name;
+    form.client_id           = client.id;
+    clientSearchInit.value   = client.full_name;
     newlyCreatedClient.value = client.full_name;
-    // Bust client sessionStorage so next mount shows the new client
     sessionStorage.removeItem('cm_clients');
     closeNewClient();
   } catch (e) {
@@ -871,16 +824,14 @@ const saveNewClient = async () => {
   }
 };
 
-// ── View modal operations
-const openView = async (c) => {
+// ── View modal ────────────────────────────────────────────────────────────────
+// Opens instantly — CaseViewModal self-fetches checklist, folder tracker,
+// and checklist tracker in parallel internally. Stage history is still
+// fetched here since CaseMaster needs it for the stage-change flow.
+const openView = (c) => {
   viewCase.value      = c;
-  showViewModal.value = true;   // watcher fires → refreshUsers()
-  await Promise.allSettled([
-    loadStageHistory(c.id),
-    loadChecklist(c.id),
-    loadFolderTracker(c.id),
-    loadChecklistTracker(c.id),
-  ]);
+  showViewModal.value = true;
+  loadStageHistory(c.id);  // non-blocking, fire-and-forget
 };
 
 const closeStageModal = () => { showStageModal.value = false; };
@@ -908,39 +859,34 @@ const updateCaseStage = async ({ stage_id, stage_name }) => {
   if (!viewCase.value) return;
   try {
     await CaseService.updateStage(viewCase.value.id, { stage_id });
-
-    // Update the modal's viewCase so the dropdown reflects the new value instantly
     viewCase.value = { ...viewCase.value, current_stage_id: stage_id, stage: stage_name };
-
-    // Update the matching row in the cases table
     const idx = cases.value.findIndex(c => c.id === viewCase.value.id);
-    if (idx !== -1) {
-      cases.value[idx] = { ...cases.value[idx], current_stage_id: stage_id, stage: stage_name };
-    }
-
-    // Bust stale sessionStorage cache
-    for (const k of Object.keys(sessionStorage)) {
-      if (k.startsWith('cm_cases_')) sessionStorage.removeItem(k);
-    }
+    if (idx !== -1) cases.value[idx] = { ...cases.value[idx], current_stage_id: stage_id, stage: stage_name };
+    for (const k of Object.keys(sessionStorage)) { if (k.startsWith('cm_cases_')) sessionStorage.removeItem(k); }
   } catch (e) {
     console.error('updateCaseStage failed:', e);
   } finally {
-    // Always stop the spinner in the modal
     viewModalRef.value?.finishStageUpdate();
   }
 };
 
-// ── Lifecycle
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(() => {
   nextTick(() => {
-    loadCases();
-    loadLookups();
+    // Fire cases + lookups in parallel on mount — no sequential blocking
+    Promise.allSettled([loadCases(), loadLookups()]);
     api.get('/user').then(res => { currentUser.value = res.data; }).catch(() => {});
+  });
+
+  document.addEventListener('click', (e) => {
+    if (exportDropdownRef.value && !exportDropdownRef.value.contains(e.target)) {
+      showExportMenu.value = false;
+    }
   });
 });
 
 onBeforeUnmount(() => {
-  clearTimeout(searchTimer);
+  clearTimeout(_searchTimer);
 });
 </script>
 
@@ -949,4 +895,6 @@ onBeforeUnmount(() => {
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .hover-navy-bg:hover { background-color: rgba(26, 73, 114, 0.08); }
 .navy-bg-8 { background-color: rgba(26, 73, 114, 0.08); }
+.dropdown-enter-active, .dropdown-leave-active { transition: all 0.15s ease; }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 </style>

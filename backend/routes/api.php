@@ -13,17 +13,17 @@ use App\Http\Controllers\Admin\CaseMaster\DocumentController;
 use App\Http\Controllers\Admin\CaseChecklistController;
 use App\Http\Controllers\Admin\ChecklistTrackerController;
 use App\Http\Controllers\Admin\FolderTrackerController;
-
+use App\Http\Controllers\Admin\ApprovalsController;
+use App\Http\Controllers\Admin\NotificationController;
 
 
 Route::post('/login',         [AuthenticatedSessionController::class, 'login']);
 Route::post('/logout',        [AuthenticatedSessionController::class, 'logout']);
-Route::put('/changepassword', [AuthenticatedSessionController::class, 'change']);
+Route::put ('/changepassword', [AuthenticatedSessionController::class, 'change']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+
+    Route::get('/user', fn(Request $request) => $request->user());
 
     Route::post('/logout', [AuthenticatedSessionController::class, 'logout']);
 
@@ -35,109 +35,150 @@ Route::middleware(['auth:sanctum'])->group(function () {
         if (!$freshUser) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
-
         if ($freshUser->status !== 'active') {
             return response()->json([
-                'message' => 'Your account has been deactivated. Please contact the administrator.'
+                'message' => 'Your account has been deactivated. Please contact the administrator.',
             ], 403);
         }
-
         $tokenUser = $request->user();
         if ($tokenUser->getAuthPassword() !== $freshUser->password) {
             return response()->json([
-                'message' => 'Your credentials have been changed. Please log in again.'
+                'message' => 'Your credentials have been changed. Please log in again.',
             ], 401);
         }
-
         return response()->json([
             'status' => 'active',
             'role'   => $freshUser->role->name ?? null,
         ]);
     });
 
-    Route::get('/users',           [UserManagementController::class, 'index']);
-    Route::post('/users',          [UserManagementController::class, 'store']);
-    Route::get('/users/{user}',    [UserManagementController::class, 'show']);
-    Route::put('/users/{user}',    [UserManagementController::class, 'update']);
-    Route::delete('/users/{user}', [UserManagementController::class, 'destroy']);
+    // ── User management (admin only) ──────────────────────────────────────────
+    Route::get   ('/users',           [UserManagementController::class, 'index']);
+    Route::post  ('/users',           [UserManagementController::class, 'store']);
+    Route::get   ('/users/{user}',    [UserManagementController::class, 'show']);
+    Route::put   ('/users/{user}',    [UserManagementController::class, 'update']);
+    Route::delete('/users/{user}',    [UserManagementController::class, 'destroy']);
 
+    // ── Audit logs ────────────────────────────────────────────────────────────
     Route::get('/audit-logs',                 [AuditLogController::class, 'index']);
     Route::get('/audit-logs/export/csv',      [AuditLogController::class, 'export']);
     Route::get('/audit-logs/filters/actions', [AuditLogController::class, 'getActions']);
     Route::get('/audit-logs/{id}',            [AuditLogController::class, 'show']);
+
+    // ── In-app notifications (all authenticated users) ────────────────────────
+    Route::prefix('notifications')->group(function () {
+        Route::get ('/',          [NotificationController::class, 'index']);      // paginated list
+        Route::get ('/unread-count', [NotificationController::class, 'unreadCount']); // badge
+        Route::patch('/{id}/read', [NotificationController::class, 'markRead']);  // mark one read
+        Route::post ('/read-all', [NotificationController::class, 'readAll']);    // mark all read
+    });
 });
 
+// =============================================================================
+// ADMIN ROUTES
+// All protected by auth:sanctum.
+// Role checks are enforced inside each controller method.
+// All three roles (admin, lawyer, clerk) are permitted to reach this prefix;
+// individual controllers abort with 403 where clerk access is not allowed.
+// =============================================================================
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
-    // Audit Logs
+    // ── Audit Logs ────────────────────────────────────────────────────────────
     Route::get('audit-logs/case-activity', [AuditLogController::class, 'caseActivityLogs']);
     Route::get('audit-logs/case-actions',  [AuditLogController::class, 'getCaseActions']);
 
-    // Cases
-    Route::get('cases',                    [CaseController::class, 'index']);
-    Route::post('cases',                   [CaseController::class, 'store']);
-    Route::get('cases/{id}',               [CaseController::class, 'show']);
-    Route::put('cases/{id}',               [CaseController::class, 'update']);
-    Route::patch('cases/{id}/archive',     [CaseController::class, 'archive']);
-    Route::get('cases/{id}/activity-logs', [CaseController::class, 'activityLogs']);
+    // ── Cases ─────────────────────────────────────────────────────────────────
+    // READ  → admin, lawyer, clerk (clerk sees only their assigned cases — enforced in controller)
+    // WRITE → admin, lawyer only  (enforced inside CaseController)
+    Route::get   ('cases',                    [CaseController::class, 'index']);
+    Route::post  ('cases',                    [CaseController::class, 'store']);          // admin/lawyer
+    Route::get   ('cases/export',             [CaseController::class, 'export']);         // admin/lawyer
+    Route::get   ('cases/{id}',               [CaseController::class, 'show']);
+    Route::put   ('cases/{id}',               [CaseController::class, 'update']);         // admin/lawyer
+    Route::patch ('cases/{id}/archive',       [CaseController::class, 'archive']);        // admin/lawyer
+    Route::get   ('cases/{id}/activity-logs', [CaseController::class, 'activityLogs']);
 
-    // Case Stage - per-case actions
+    // ── Case Stage — per-case actions ─────────────────────────────────────────
     Route::get('cases/{caseId}/stages/history', [CaseStageController::class, 'history']);
-    Route::put('cases/{caseId}/stage',          [CaseStageController::class, 'updateCaseStage']);
+    Route::put('cases/{caseId}/stage',          [CaseStageController::class, 'updateCaseStage']); // admin/lawyer
 
-    // Master Data - Case Stages
-    // IMPORTANT: reorder must be before {id} or Laravel matches "reorder" as an ID
-    Route::get('master-data/case-stages',               [CaseStageController::class, 'index']);
-    Route::post('master-data/case-stages',              [CaseStageController::class, 'store']);
-    Route::patch('master-data/case-stages/reorder',     [CaseStageController::class, 'reorder']);
-    Route::put('master-data/case-stages/{id}',          [CaseStageController::class, 'update']);
-    Route::patch('master-data/case-stages/{id}/toggle', [CaseStageController::class, 'toggle']);
+    // ── Master Data — Case Stages ─────────────────────────────────────────────
+    Route::get   ('master-data/case-stages',             [CaseStageController::class, 'index']);
+    Route::post  ('master-data/case-stages',             [CaseStageController::class, 'store']);
+    Route::patch ('master-data/case-stages/reorder',     [CaseStageController::class, 'reorder']);
+    Route::put   ('master-data/case-stages/{id}',        [CaseStageController::class, 'update']);
+    Route::patch ('master-data/case-stages/{id}/toggle', [CaseStageController::class, 'toggle']);
 
-    // Lookups
+    // ── Lookups ───────────────────────────────────────────────────────────────
     Route::get('case-categories',  [CaseController::class, 'categories']);
     Route::get('users/assignable', [CaseController::class, 'assignableUsers']);
 
-    // Clients
-    Route::get('clients',  [CaseController::class, 'listClients']);
-    Route::post('clients', [CaseController::class, 'quickCreateClient']);
+    // ── Clients ───────────────────────────────────────────────────────────────
+    Route::get ('clients', [CaseController::class, 'listClients']);
+    Route::post('clients', [CaseController::class, 'quickCreateClient']); // admin/lawyer only
 
-// Case Categories
+    // ── Case Categories ───────────────────────────────────────────────────────
     Route::apiResource('case-categories', CaseCategoryController::class);
-    Route::patch('case-categories/{id}/toggle',[CaseCategoryController::class, 'toggleStatus']);
-    Route::get('courts-offices', [CaseController::class, 'courtsOffices']);
+    Route::patch('case-categories/{id}/toggle', [CaseCategoryController::class, 'toggleStatus']);
+    Route::get  ('courts-offices',              [CaseController::class, 'courtsOffices']);
 
-    // ✅ CORRECT ORDER — static routes FIRST
+    // ── Courts / Offices ──────────────────────────────────────────────────────
     Route::get   ('courts/active',             [CourtOfficeController::class, 'active']);
     Route::get   ('courts/types',              [CourtOfficeController::class, 'types']);
     Route::post  ('courts/reorder',            [CourtOfficeController::class, 'reorder']);
     Route::patch ('courts/{id}/toggle-active', [CourtOfficeController::class, 'toggleActive']);
     Route::apiResource('courts', CourtOfficeController::class);
 
-
+    // ── Checklist ─────────────────────────────────────────────────────────────
+    // READ  → all roles (clerk sees own cases only)
+    // WRITE → admin/lawyer only (enforced in CaseChecklistController)
     Route::prefix('cases/{case}/checklist')->group(function () {
-        Route::get('/',                      [CaseChecklistController::class, 'index']);
-        Route::post('/',                     [CaseChecklistController::class, 'store']);
-        Route::get('/{checklist}',           [CaseChecklistController::class, 'show']);
-        Route::put('/{checklist}',           [CaseChecklistController::class, 'update']);
-        Route::delete('/{checklist}',        [CaseChecklistController::class, 'destroy']);
-        Route::patch('/{checklist}/status',  [CaseChecklistController::class, 'updateStatus']);
+        Route::get   ('/',                   [CaseChecklistController::class, 'index']);
+        Route::post  ('/',                   [CaseChecklistController::class, 'store']);          // admin/lawyer
+        Route::get   ('/{checklist}',        [CaseChecklistController::class, 'show']);
+        Route::put   ('/{checklist}',        [CaseChecklistController::class, 'update']);         // admin/lawyer
+        Route::delete('/{checklist}',        [CaseChecklistController::class, 'destroy']);        // admin/lawyer
+        Route::patch ('/{checklist}/status', [CaseChecklistController::class, 'updateStatus']);   // admin/lawyer
     });
 
+    // ── Checklist Tracker & Folder Tracker ────────────────────────────────────
+    // ALL ROLES may record movements.
+    //   admin/lawyer → auto-APPROVED
+    //   clerk        → PENDING until approved
+    // APPROVE endpoint → admin/lawyer only (enforced in controller)
     Route::prefix('cases/{case}')->group(function () {
-        Route::get  ('checklist-tracker',                          [ChecklistTrackerController::class, 'index']);
-        Route::post ('checklist-tracker',                          [ChecklistTrackerController::class, 'store']);
-        Route::patch('checklist-tracker/{movement}/approve',       [ChecklistTrackerController::class, 'approve']);
-        Route::get  ('folder-tracker',                             [FolderTrackerController::class,    'index']);
-        Route::post ('folder-tracker',                             [FolderTrackerController::class,    'store']);
+
+        // -- Checklist Tracker -------------------------------------------------
+        Route::get  ('checklist-tracker',                    [ChecklistTrackerController::class, 'index']);
+        Route::post ('checklist-tracker',                    [ChecklistTrackerController::class, 'store']);
+        Route::get  ('checklist-tracker/pending',            [ChecklistTrackerController::class, 'pending']);
+        Route::patch('checklist-tracker/{movement}/approve', [ChecklistTrackerController::class, 'approve']); // admin/lawyer
+
+        // -- Folder Tracker ----------------------------------------------------
+        Route::get  ('folder-tracker',                       [FolderTrackerController::class, 'index']);
+        Route::post ('folder-tracker',                       [FolderTrackerController::class, 'store']);
+        Route::get  ('folder-tracker/pending',               [FolderTrackerController::class, 'pending']);
+        Route::patch('folder-tracker/{movement}/approve',    [FolderTrackerController::class, 'approve']); // admin/lawyer
     });
 
+    // =========================================================================
+    // GLOBAL APPROVALS MODULE
+    // Admin & lawyer only — enforced inside ApprovalsController (role checked).
+    // =========================================================================
+    Route::prefix('approvals')->group(function () {
+        Route::get  ('pending-count',                [ApprovalsController::class, 'pendingCount']);
+        Route::get  ('/',                            [ApprovalsController::class, 'index']);
+        Route::patch('/{source}/{movement}/approve', [ApprovalsController::class, 'approve']); // admin/lawyer
+    });
+
+    // ── Documents ─────────────────────────────────────────────────────────────
     Route::prefix('documents')->controller(DocumentController::class)->group(function () {
-        Route::get('/',                           'index');
-        Route::get('/active',                     'active');
-        Route::get('/{document}',                 'show');
-        Route::post('/',                          'store');
-        Route::put('/{document}',                 'update');
-        Route::patch('/{document}/toggle-active', 'toggleActive');
+        Route::get   ('/',                         'index');
+        Route::get   ('/active',                   'active');
+        Route::get   ('/{document}',               'show');
+        Route::post  ('/',                         'store');
+        Route::put   ('/{document}',               'update');
+        Route::patch ('/{document}/toggle-active', 'toggleActive');
     });
 
 });

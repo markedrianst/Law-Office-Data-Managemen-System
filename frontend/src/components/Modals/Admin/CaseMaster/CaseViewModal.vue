@@ -148,13 +148,13 @@
               <div class="flex items-center gap-3">
                 <div class="w-1 h-5 bg-violet-500 rounded-full"></div>
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Case Checklist</h3>
-                <span v-if="checklist.length" class="px-2 py-0.5 text-xs font-bold bg-violet-100 text-violet-700 rounded-full">
-                  {{ checklist.length }}
+                <span v-if="internalChecklist.length" class="px-2 py-0.5 text-xs font-bold bg-violet-100 text-violet-700 rounded-full">
+                  {{ internalChecklist.length }}
                 </span>
               </div>
               <div class="flex items-center gap-3">
                 <!-- Progress bar -->
-                <div v-if="checklist.length" class="flex items-center gap-2">
+                <div v-if="internalChecklist.length" class="flex items-center gap-2">
                   <div class="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div class="h-full bg-emerald-500 rounded-full transition-all duration-500"
                       :style="{ width: `${donePercent}%` }"></div>
@@ -211,7 +211,7 @@
 
             <!-- Table -->
             <div class="overflow-x-auto">
-              <div v-if="checklistLoading" class="py-16 flex items-center justify-center gap-3 text-gray-400">
+              <div v-if="checklistLoading_" class="py-16 flex items-center justify-center gap-3 text-gray-400">
                 <svg class="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -225,8 +225,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                   </svg>
                 </div>
-                <p class="text-sm font-semibold text-gray-400">{{ checklist.length ? 'No matching tasks' : 'No tasks added yet' }}</p>
-                <button v-if="checklist.length" @click="clearFilters" class="mt-1 text-xs text-blue-500 hover:text-blue-700 font-medium">Clear filters</button>
+                <p class="text-sm font-semibold text-gray-400">{{ internalChecklist.length ? 'No matching tasks' : 'No tasks added yet' }}</p>
+                <button v-if="internalChecklist.length" @click="clearFilters" class="mt-1 text-xs text-blue-500 hover:text-blue-700 font-medium">Clear filters</button>
               </div>
 
               <table v-else class="w-full">
@@ -303,7 +303,7 @@
             </div>
 
             <!-- Checklist Footer: centered pagination + completion -->
-            <div v-if="checklist.length" class="px-6 py-4 bg-gray-50/80 border-t border-gray-100">
+            <div v-if="internalChecklist.length" class="px-6 py-4 bg-gray-50/80 border-t border-gray-100">
               <!-- Completion row -->
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs text-gray-400 font-medium">
@@ -311,7 +311,7 @@
                 </span>
                 <span class="text-xs font-bold text-emerald-600 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                  {{ checklist.filter(t => t.status === 'done').length }} of {{ checklist.length }} completed
+                  {{ internalChecklist.filter(t => t.status === 'done').length }} of {{ internalChecklist.length }} completed
                 </span>
               </div>
               <!-- Centered pagination -->
@@ -412,11 +412,22 @@
 
               <!-- Table -->
               <div class="overflow-x-auto">
-                <table class="w-full">
+                <!-- Folder tracker skeleton -->
+                <div v-if="folderLoading_" class="py-10 flex flex-col gap-3 px-6">
+                  <div v-for="n in 3" :key="n" class="flex gap-4 items-center animate-pulse">
+                    <div class="h-4 bg-gray-100 rounded w-24"></div>
+                    <div class="h-5 bg-gray-100 rounded w-10"></div>
+                    <div class="h-4 bg-gray-100 rounded w-20"></div>
+                    <div class="h-4 bg-gray-100 rounded flex-1"></div>
+                    <div class="h-4 bg-gray-100 rounded w-28"></div>
+                  </div>
+                </div>
+                <table v-else class="w-full">
                   <thead class="border-y border-gray-100">
                     <tr class="bg-white">
                       <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">Date</th>
                       <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">Type</th>
+                      <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">Approval Status</th>
                       <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">From / To</th>
                       <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">Purpose</th>
                       <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">Handled By</th>
@@ -435,13 +446,28 @@
                           {{ record.type }}
                         </span>
                       </td>
+                       <td>
+                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border"
+                          :class="record.approval_status === 'PENDING'
+                            ? 'border-amber-400 text-amber-400'
+                            : record.approval_status === 'APPROVED'
+                              ? 'border-emerald-400 text-emerald-400'
+                              : 'border-rose-400 text-rose-400'">
+                          <span v-if="record.approval_status === 'PENDING'" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                          {{ record.approval_status }}
+                        </span>
+                        <p v-if="record.approval_status !== 'PENDING' && record.approver?.full_name"
+                          class="text-[10px] text-slate-400 mt-0.5">
+                          by {{ record.approver.full_name }}
+                        </p>
+                      </td>
                       <td class="px-6 py-3 text-sm text-gray-700">
                         <span class="text-gray-400 mr-1">{{ record.type === 'OUT' ? 'From:' : 'To:' }}</span>{{ record.from_to || '—' }}
                       </td>
                       <td class="px-6 py-3 text-sm text-gray-700">{{ record.purpose || '—' }}</td>
                       <td class="px-6 py-3 text-sm font-semibold text-gray-800">{{ record.handled_by || '—' }}</td>
                     </tr>
-                    <tr v-if="!folderHistory.length">
+                    <tr v-if="!internalFolderHistory.length">
                       <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-400">
                         No folder movements recorded
                       </td>
@@ -450,9 +476,9 @@
                 </table>
               </div>
               <!-- Folder Tracker Pagination -->
-              <div v-if="folderHistory.length > TRACKER_SIZE" class="px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+              <div v-if="internalFolderHistory.length > TRACKER_SIZE" class="px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
                 <span class="text-xs text-gray-400">
-                  {{ (folderTrackerPage - 1) * TRACKER_SIZE + 1 }}–{{ Math.min(folderTrackerPage * TRACKER_SIZE, folderHistory.length) }} of {{ folderHistory.length }}
+                  {{ (folderTrackerPage - 1) * TRACKER_SIZE + 1 }}–{{ Math.min(folderTrackerPage * TRACKER_SIZE, internalFolderHistory.length) }} of {{ internalFolderHistory.length }}
                 </span>
                 <div class="flex items-center gap-1">
                   <button @click="folderTrackerPage = 1" :disabled="folderTrackerPage === 1"
@@ -521,7 +547,17 @@
 
               <!-- Movement history table — same style as Folder Tracker -->
               <div class="overflow-x-auto">
-                <table class="w-full">
+                <!-- Checklist tracker skeleton -->
+                <div v-if="checklistTrackerLoading_" class="py-10 flex flex-col gap-3 px-6">
+                  <div v-for="n in 3" :key="n" class="flex gap-4 items-center animate-pulse">
+                    <div class="h-4 bg-gray-100 rounded w-24"></div>
+                    <div class="h-5 bg-gray-100 rounded w-10"></div>
+                    <div class="h-4 bg-gray-100 rounded w-20"></div>
+                    <div class="h-4 bg-gray-100 rounded w-32"></div>
+                    <div class="h-4 bg-gray-100 rounded flex-1"></div>
+                  </div>
+                </div>
+                <table v-else class="w-full">
                   <thead class="border-y border-gray-100">
                     <tr class="bg-white">
                       <th class="px-6 py-2.5 text-left text-xs font-semibold text-gray-500">Date</th>
@@ -556,7 +592,7 @@
                       <td class="px-6 py-3 text-sm text-gray-700">{{ record.purpose || '—' }}</td>
                       <td class="px-6 py-3 text-sm font-semibold text-gray-800">{{ record.handled_by || '—' }}</td>
                     </tr>
-                    <tr v-if="!checklistHistory.length">
+                    <tr v-if="!internalChecklistHistory.length">
                       <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
                         No checklist movements recorded
                       </td>
@@ -565,9 +601,9 @@
                 </table>
               </div>
               <!-- Checklist Tracker Pagination -->
-              <div v-if="checklistHistory.length > TRACKER_SIZE" class="px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+              <div v-if="internalChecklistHistory.length > TRACKER_SIZE" class="px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
                 <span class="text-xs text-gray-400">
-                  {{ (checklistTrackerPage - 1) * TRACKER_SIZE + 1 }}–{{ Math.min(checklistTrackerPage * TRACKER_SIZE, checklistHistory.length) }} of {{ checklistHistory.length }}
+                  {{ (checklistTrackerPage - 1) * TRACKER_SIZE + 1 }}–{{ Math.min(checklistTrackerPage * TRACKER_SIZE, internalChecklistHistory.length) }} of {{ internalChecklistHistory.length }}
                 </span>
                 <div class="flex items-center gap-1">
                   <button @click="checklistTrackerPage = 1" :disabled="checklistTrackerPage === 1"
@@ -753,7 +789,7 @@
             <!-- OUT: only items currently IN (is_out = false) -->
             <template v-if="ctm.type === 'out'">
               <option
-                v-for="task in props.checklist.filter(t => !t.is_out)"
+                v-for="task in internalChecklist.filter(t => !t.is_out)"
                 :key="task.id"
                 :value="task.id"
               >
@@ -763,7 +799,7 @@
             <!-- IN: only items currently OUT (is_out = true) -->
             <template v-else-if="ctm.type === 'in'">
               <option
-                v-for="task in props.checklist.filter(t => !!t.is_out)"
+                v-for="task in internalChecklist.filter(t => !!t.is_out)"
                 :key="task.id"
                 :value="task.id"
               >
@@ -817,28 +853,117 @@
   </Transition>
 </template>
 
+
 <script setup>
 import { ref, computed, reactive, watch } from 'vue';
 import CaseTaskModal from './CaseTaskModal.vue';
+import * as CaseService from '@/services/caseService';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 const props = defineProps({
-  show:                { type: Boolean, default: false },
-  viewCase:            { type: Object,  default: null  },
-  activeStages:        { type: Array,   default: () => [] },
+  show:         { type: Boolean, default: false },
+  viewCase:     { type: Object,  default: null  },
+  activeStages: { type: Array,   default: () => [] },
+  clerks:       { type: Array,   default: () => [] },
+  currentUser:  { type: Object,  default: null  },
+  // kept for backwards-compat but no longer used — modal fetches its own data
   stageHistory:        { type: Array,   default: () => [] },
   stageHistoryLoading: { type: Boolean, default: false },
   checklist:           { type: Array,   default: () => [] },
   checklistLoading:    { type: Boolean, default: false },
-  clerks:              { type: Array,   default: () => [] },
   folderHistory:       { type: Array,   default: () => [] },
   checklistHistory:    { type: Array,   default: () => [] },
-  currentUser:         { type: Object,  default: null  },
-  cases:              { type: Array,   default: () => [] },
-  errors:              { type: Object,  default: () => ({ task: '', due_date: '', status: '' }) },
 });
 
 const emit = defineEmits(['close', 'edit', 'add-task', 'update-task', 'delete-task', 'update-stage', 'checklist-movement', 'folder-movement', 'update:viewCase']);
+
+// ── Internal data (self-fetched) ───────────────────────────────────────────
+const internalChecklist        = ref([]);
+const internalFolderHistory    = ref([]);
+const internalChecklistHistory = ref([]);
+
+const checklistLoading_        = ref(false);
+const folderLoading_           = ref(false);
+const checklistTrackerLoading_ = ref(false);
+
+const unwrap = (res) => res?.data?.data ?? res?.data ?? res ?? [];
+
+const fetchChecklist = async (caseId) => {
+  checklistLoading_.value = true;
+  try {
+    internalChecklist.value = unwrap(await CaseService.getChecklist(caseId)) || [];
+  } catch (e) {
+    console.error('CaseViewModal fetchChecklist:', e);
+    internalChecklist.value = [];
+  } finally {
+    checklistLoading_.value = false;
+  }
+};
+
+const fetchFolderTracker = async (caseId) => {
+  folderLoading_.value = true;
+  try {
+    internalFolderHistory.value = unwrap(await CaseService.getFolderTracker(caseId)) || [];
+  } catch (e) {
+    console.error('CaseViewModal fetchFolderTracker:', e);
+    internalFolderHistory.value = [];
+  } finally {
+    folderLoading_.value = false;
+  }
+};
+
+const fetchChecklistTracker = async (caseId) => {
+  checklistTrackerLoading_.value = true;
+  try {
+    internalChecklistHistory.value = unwrap(await CaseService.getChecklistTracker(caseId)) || [];
+  } catch (e) {
+    console.error('CaseViewModal fetchChecklistTracker:', e);
+    internalChecklistHistory.value = [];
+  } finally {
+    checklistTrackerLoading_.value = false;
+  }
+};
+
+// Kick off all three fetches in parallel the moment the modal opens
+watch(
+  () => props.show,
+  (visible) => {
+    if (visible && props.viewCase?.id) {
+      const id = props.viewCase.id;
+      // Fire all three simultaneously — each section renders as its data arrives
+      fetchChecklist(id);
+      fetchFolderTracker(id);
+      fetchChecklistTracker(id);
+    }
+    if (!visible) {
+      // Reset on close
+      internalChecklist.value        = [];
+      internalFolderHistory.value    = [];
+      internalChecklistHistory.value = [];
+      tm.show = false; ctm.show = false; fm.show = false;
+      closeDropdowns(); clearFilters();
+      folderTrackerPage.value = 1; checklistTrackerPage.value = 1;
+    }
+  },
+  { immediate: false }
+);
+
+// Also re-fetch when viewCase changes while modal is open (e.g. navigating cases)
+watch(
+  () => props.viewCase?.id,
+  (newId) => {
+    if (props.show && newId) {
+      fetchChecklist(newId);
+      fetchFolderTracker(newId);
+      fetchChecklistTracker(newId);
+    }
+  }
+);
+
+// ── Expose refresh helpers so parent can trigger targeted re-fetches ───────
+const refreshChecklist        = () => props.viewCase?.id && fetchChecklist(props.viewCase.id);
+const refreshFolderTracker    = () => props.viewCase?.id && fetchFolderTracker(props.viewCase.id);
+const refreshChecklistTracker = () => props.viewCase?.id && fetchChecklistTracker(props.viewCase.id);
 
 const tabs      = ['Folder Tracker', 'Checklist Tracker'];
 const activeTab = ref('Folder Tracker');
@@ -846,8 +971,6 @@ const activeTab = ref('Folder Tracker');
 // ── Dropdown state ─────────────────────────────────────────────────────────
 const inDropdownOpen          = ref(false);
 const inChecklistDropdownOpen = ref(false);
-
-// Close dropdowns when clicking outside
 const closeDropdowns = () => { inDropdownOpen.value = false; inChecklistDropdownOpen.value = false; };
 
 // ── Toast notification ─────────────────────────────────────────────────────
@@ -865,10 +988,7 @@ const fm = reactive({ show: false, type: 'out', form: { person: '', date: '', pu
 
 const openFolderModal = (type) => {
   type = type.toLowerCase();
-
-  // cases.is_out: 0 = folder IN office, 1 = folder OUT of office
   const folderIsOut = !!props.viewCase?.is_out;
-
   if (type === 'out' && folderIsOut) {
     showToast('The folder is already OUT of the office. Receive it back IN first.');
     return;
@@ -877,12 +997,8 @@ const openFolderModal = (type) => {
     showToast('The folder is already IN the office. Nothing to receive.', 'info');
     return;
   }
-
   fm.type = type;
-  const creatorName = props.currentUser
-    ? (props.currentUser.full_name ?? props.currentUser.name ?? '')
-    : '';
-  // Auto-fill Handled By: prefer the case's assigned clerk, fall back to logged-in user
+  const creatorName = props.currentUser ? (props.currentUser.full_name ?? props.currentUser.name ?? '') : '';
   const handledBy = props.viewCase?.clerk || creatorName;
   fm.form = { person: creatorName, date: new Date().toISOString().slice(0, 10), purpose: '', handledBy };
   fm.show = true;
@@ -892,15 +1008,15 @@ const openFolderModal = (type) => {
 const submitFolderModal = () => {
   emit('folder-movement', {
     type:       fm.type,
-    from_to:    fm.form.person,   // map person → from_to for the backend
+    from_to:    fm.form.person,
     date:       fm.form.date,
     purpose:    fm.form.purpose,
     handled_by: fm.form.handledBy,
   });
-  // Patch viewCase.is_out immediately so guards reflect the new state
-  // without waiting for the parent to re-fetch the case.
   emit('update:viewCase', { ...props.viewCase, is_out: fm.type === 'out' ? 1 : 0 });
   fm.show = false;
+  // Optimistically re-fetch folder tracker after a short delay for the server to commit
+  setTimeout(() => refreshFolderTracker(), 600);
 };
 
 // ── Stage update ───────────────────────────────────────────────────────────
@@ -912,7 +1028,7 @@ const onStageChange = (stageId) => {
   emit('update-stage', { stage_id: stage.id, stage_name: stage.name });
 };
 const finishStageUpdate = () => { stageUpdating.value = false; };
-defineExpose({ finishStageUpdate });
+defineExpose({ finishStageUpdate, refreshChecklist, refreshFolderTracker, refreshChecklistTracker });
 
 // ── Task modal ─────────────────────────────────────────────────────────────
 const tm = reactive({ show: false, mode: 'add', task: null });
@@ -925,9 +1041,14 @@ const onTaskSave = ({ mode, data }) => {
   if (mode === 'add')  emit('add-task',    data);
   if (mode === 'edit') emit('update-task', data);
   tm.show = false;
+  // Re-fetch checklist immediately after save so new task appears without waiting for parent
+  setTimeout(() => refreshChecklist(), 300);
 };
 const toggleDone = (task) => {
   emit('update-task', { ...task, status: task.status === 'done' ? 'todo' : 'done' });
+  // Optimistic update in local list
+  const idx = internalChecklist.value.findIndex(t => t.id === task.id);
+  if (idx !== -1) internalChecklist.value[idx] = { ...internalChecklist.value[idx], status: task.status === 'done' ? 'todo' : 'done' };
 };
 
 // ── Checklist Tracker Modal ────────────────────────────────────────────────
@@ -939,63 +1060,41 @@ const ctm = reactive({
 
 const openChecklistTracker = (type) => {
   type = type.toLowerCase();
-
-  // Guard 1: cases.is_out — the physical folder must be IN before releasing
-  // checklist items OUT. If the folder is already out, block the OUT action.
   const folderIsOut = !!props.viewCase?.is_out;
-
   if (type === 'out' && folderIsOut) {
     showToast('The case folder is currently OUT of the office. Receive it back IN before releasing checklist items.');
     return;
   }
-
-  // Guard 2: case_checklists.is_out — per-item state
-  // OUT → need at least one item still IN the office (is_out = 0)
-  // IN  → need at least one item currently OUT       (is_out = 1)
-  const anyIn  = props.checklist.some(t => !t.is_out);   // at least one item still in office
-  const anyOut = props.checklist.some(t => !!t.is_out);  // at least one item currently out
-
+  const anyIn  = internalChecklist.value.some(t => !t.is_out);
+  const anyOut = internalChecklist.value.some(t => !!t.is_out);
   if (type === 'out' && !anyIn) {
     showToast('All checklist items are already OUT of the office. Nothing to release.');
     return;
   }
-
   if (type === 'in' && !anyOut) {
     showToast('No checklist items are currently OUT. Nothing to receive.', 'info');
     return;
   }
-
   ctm.type = type;
-
-  const creatorName = props.currentUser
-    ? (props.currentUser.full_name ?? props.currentUser.name ?? '')
-    : '';
-
-  ctm.form = {
-    taskId: '',
-    person: creatorName,
-    date: new Date().toISOString().slice(0, 10),
-    purpose: '',
-    handledBy: ''
-  };
-
+  const creatorName = props.currentUser ? (props.currentUser.full_name ?? props.currentUser.name ?? '') : '';
+  ctm.form = { taskId: '', person: creatorName, date: new Date().toISOString().slice(0, 10), purpose: '', handledBy: '' };
   ctm.show = true;
   inChecklistDropdownOpen.value = false;
 };
 
 const submitChecklistTracker = () => {
   const taskName = ctm.form.taskId
-    ? (props.checklist.find(t => t.id === ctm.form.taskId)?.task
-      ?? props.checklist.find(t => t.id === ctm.form.taskId)?.document_type
+    ? (internalChecklist.value.find(t => t.id === ctm.form.taskId)?.task
+      ?? internalChecklist.value.find(t => t.id === ctm.form.taskId)?.document_type
       ?? '—')
     : null;
   emit('checklist-movement', { type: ctm.type, taskName, ...ctm.form });
   ctm.show = false;
+  setTimeout(() => refreshChecklistTracker(), 600);
 };
 
-// Auto-fill Handled By from the selected task's assigned_to
 const onCtmTaskChange = () => {
-  const task = props.checklist.find(t => t.id === ctm.form.taskId);
+  const task = internalChecklist.value.find(t => t.id === ctm.form.taskId);
   ctm.form.handledBy = task?.assigned_to ?? '';
 };
 
@@ -1018,8 +1117,7 @@ const hasActiveFilters = computed(() =>
 );
 
 const filteredChecklist = computed(() => {
-  return props.checklist.filter(task => {
-    // search across task text, notes, assigned_to
+  return internalChecklist.value.filter(task => {
     if (searchQuery.value) {
       const q     = searchQuery.value.toLowerCase();
       const name  = (task.task ?? '').toLowerCase();
@@ -1027,14 +1125,10 @@ const filteredChecklist = computed(() => {
       const clerk = (task.assigned_to ?? '').toLowerCase();
       if (!name.includes(q) && !notes.includes(q) && !clerk.includes(q)) return false;
     }
-    // status filter
     if (statusFilter.value !== 'all' && task.status !== statusFilter.value) return false;
-    // assignee text filter
     if (clerkFilter.value) {
-      const match = (task.assigned_to ?? '').toLowerCase().includes(clerkFilter.value.toLowerCase());
-      if (!match) return false;
+      if (!(task.assigned_to ?? '').toLowerCase().includes(clerkFilter.value.toLowerCase())) return false;
     }
-    // date filter
     if (dateFilter.value !== 'all') {
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const due   = task.due_date ? (() => { const d = new Date(task.due_date); d.setHours(0,0,0,0); return d; })() : null;
@@ -1050,7 +1144,7 @@ const filteredChecklist = computed(() => {
   });
 });
 
-// ── Pagination (5 per page) ────────────────────────────────────────────────
+// ── Pagination ─────────────────────────────────────────────────────────────
 const PAGE_SIZE     = 5;
 const TRACKER_SIZE  = 5;
 const checklistPage = ref(1);
@@ -1058,45 +1152,38 @@ const checklistPage = ref(1);
 const totalChecklistPages = computed(() =>
   Math.max(1, Math.ceil(filteredChecklist.value.length / PAGE_SIZE))
 );
-
 const paginatedChecklist = computed(() => {
   const start = (checklistPage.value - 1) * PAGE_SIZE;
   return filteredChecklist.value.slice(start, start + PAGE_SIZE);
 });
-
 watch(filteredChecklist, () => { checklistPage.value = 1; });
 
-// ── Tracker table pagination ───────────────────────────────────────────────
-const folderTrackerPage     = ref(1);
-const checklistTrackerPage  = ref(1);
+const folderTrackerPage    = ref(1);
+const checklistTrackerPage = ref(1);
 
 const totalFolderTrackerPages = computed(() =>
-  Math.max(1, Math.ceil(props.folderHistory.length / TRACKER_SIZE))
+  Math.max(1, Math.ceil(internalFolderHistory.value.length / TRACKER_SIZE))
 );
 const totalChecklistTrackerPages = computed(() =>
-  Math.max(1, Math.ceil(props.checklistHistory.length / TRACKER_SIZE))
+  Math.max(1, Math.ceil(internalChecklistHistory.value.length / TRACKER_SIZE))
 );
-
 const paginatedFolderHistory = computed(() => {
   const start = (folderTrackerPage.value - 1) * TRACKER_SIZE;
-  return props.folderHistory.slice(start, start + TRACKER_SIZE);
+  return internalFolderHistory.value.slice(start, start + TRACKER_SIZE);
 });
 const paginatedChecklistHistory = computed(() => {
   const start = (checklistTrackerPage.value - 1) * TRACKER_SIZE;
-  return props.checklistHistory.slice(start, start + TRACKER_SIZE);
+  return internalChecklistHistory.value.slice(start, start + TRACKER_SIZE);
 });
 
-watch(() => props.folderHistory,    () => { folderTrackerPage.value    = 1; });
-watch(() => props.checklistHistory, () => { checklistTrackerPage.value = 1; });
+watch(internalFolderHistory,    () => { folderTrackerPage.value    = 1; });
+watch(internalChecklistHistory, () => { checklistTrackerPage.value = 1; });
 
 // ── Done percent ───────────────────────────────────────────────────────────
 const donePercent = computed(() => {
-  if (!props.checklist.length) return 0;
-  return Math.round((props.checklist.filter(t => t.status === 'done').length / props.checklist.length) * 100);
+  if (!internalChecklist.value.length) return 0;
+  return Math.round((internalChecklist.value.filter(t => t.status === 'done').length / internalChecklist.value.length) * 100);
 });
-
-// ── Watchers ───────────────────────────────────────────────────────────────
-watch(() => props.show, (v) => { if (!v) { tm.show = false; ctm.show = false; fm.show = false; closeDropdowns(); clearFilters(); folderTrackerPage.value = 1; checklistTrackerPage.value = 1; } });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const resolveClerk = (id) => {
@@ -1104,35 +1191,24 @@ const resolveClerk = (id) => {
   const found = props.clerks.find(c => c.id === id);
   return found ? (found.name ?? found.full_name ?? '—') : '—';
 };
-
 const getInitials = (name) =>
   name && name !== '—' ? name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() : '?';
-
 const isOverdue = (d) => {
   if (!d) return false;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const due   = new Date(d); due.setHours(0, 0, 0, 0);
   return due < today;
 };
-
 const formatDate = (d) => {
   if (!d) return '—';
-
   const dt = new Date(d);
   if (isNaN(dt)) return d;
-
-  return dt.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
-
 const formatStatus = (status) => {
   if (!status) return '—';
   return { active: 'IN: In Office', closed: 'CLOSED', archived: 'ARCHIVED' }[status] || status;
 };
-
 const statusBadgeClass = (status) => ({
   active:   'bg-emerald-600 text-white',
   closed:   'bg-red-500 text-white',
@@ -1140,13 +1216,11 @@ const statusBadgeClass = (status) => ({
 }[status] ?? 'bg-gray-200 text-gray-700');
 
 const taskStatusLabel = (s) => ({ todo: 'To-Do', 'in-progress': 'In Progress', done: 'Done' }[s] ?? s);
-
 const taskStatusClass = (s) => ({
   todo:          'bg-blue-100 text-blue-700 border border-blue-200',
   'in-progress': 'bg-orange-100 text-orange-700 border border-orange-200',
   done:          'bg-emerald-100 text-emerald-700 border border-emerald-200',
 }[s] ?? 'bg-gray-100 text-gray-500');
-
 const taskStatusDot = (s) => ({
   todo:          'bg-blue-500',
   'in-progress': 'bg-orange-500',

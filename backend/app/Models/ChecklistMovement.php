@@ -38,11 +38,25 @@ class ChecklistMovement extends Model
         return $this->belongsTo(CaseChecklist::class, 'checklist_id');
     }
 
+    // Used by controllers and eager loads as ->recorder
+    public function recorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    // Alias kept for any legacy code that calls ->recordedBy
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
     }
 
+    // Used by controllers and eager loads as ->approver
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    // Alias kept for any legacy code that calls ->approvedBy
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
