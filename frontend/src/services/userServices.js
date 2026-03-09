@@ -77,30 +77,36 @@ const UserService = {
     return { success: true, message: 'Export successful' };
   },
 
-  formatUserDataForApi(userData, isUpdate = false) {
+ formatUserDataForApi(userData, isUpdate = false) {
     const { firstName, middleName, lastName, address, contact, email, role, password, status } = userData;
     const nameParts = [firstName, middleName, lastName].filter(n => n?.trim());
     const fullName = nameParts.join(' ').trim();
     const formattedData = {
-      name: fullName || undefined,
-      email: email || undefined,
-      role: role || undefined,
-      address: address || undefined,
-      contact_number: contact?.replace(/\D/g, '') || undefined,
+        name: fullName || undefined,
+        email: email || undefined,
+        role: role || undefined,
+        address: address || undefined,
+        contact_number: contact?.replace(/\D/g, '') || undefined,
     };
-    if (password?.trim() && (!isUpdate || (isUpdate && password !== 'temppass1'))) {
-      formattedData.password = password;
+    
+    // Handle password - only send if it's provided AND not empty
+    if (password?.trim()) {
+        formattedData.password = password;
     }
+    
     if (status) {
-      formattedData.status = status;
+        formattedData.status = status;
     }
+    
+    // Remove undefined/empty values
     Object.keys(formattedData).forEach(key => {
-      if (formattedData[key] === undefined || formattedData[key] === '') {
-        delete formattedData[key];
-      }
+        if (formattedData[key] === undefined || formattedData[key] === '') {
+            delete formattedData[key];
+        }
     });
+    
     return formattedData;
-  },
+},
 
   formatUserDataForForm(apiData) {
     if (!apiData) return {};

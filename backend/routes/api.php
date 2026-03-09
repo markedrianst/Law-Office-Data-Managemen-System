@@ -25,8 +25,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/user', fn(Request $request) => $request->user());
 
-    Route::post('/logout', [AuthenticatedSessionController::class, 'logout']);
-
     // ── User management (admin only) ──────────────────────────────────────────
     Route::get   ('/users',           [UserManagementController::class, 'index']);
     Route::post  ('/users',           [UserManagementController::class, 'store']);
@@ -79,6 +77,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
     // ── Lookups ───────────────────────────────────────────────────────────────
     Route::get('case-categories',  [CaseController::class, 'categories']);
+    Route::get('case-stages',      [CaseController::class, 'stages']);
     Route::get('users/assignable', [CaseController::class, 'assignableUsers']);
 
     // ── Clients ───────────────────────────────────────────────────────────────
@@ -88,7 +87,6 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     // ── Case Categories ───────────────────────────────────────────────────────
     Route::apiResource('case-categories', CaseCategoryController::class);
     Route::patch('case-categories/{id}/toggle', [CaseCategoryController::class, 'toggleStatus']);
-    Route::get  ('courts-offices',              [CaseController::class, 'courtsOffices']);
 
     // ── Courts / Offices ──────────────────────────────────────────────────────
     Route::get   ('courts/active',             [CourtOfficeController::class, 'active']);
@@ -96,6 +94,8 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::post  ('courts/reorder',            [CourtOfficeController::class, 'reorder']);
     Route::patch ('courts/{id}/toggle-active', [CourtOfficeController::class, 'toggleActive']);
     Route::apiResource('courts', CourtOfficeController::class);
+    // Backward-compat alias — CaseFormModal.vue calls this URL directly
+    Route::get   ('courts-offices',            [CourtOfficeController::class, 'active']);
 
     // ── Checklist ─────────────────────────────────────────────────────────────
     // READ  → all roles (clerk sees own cases only)

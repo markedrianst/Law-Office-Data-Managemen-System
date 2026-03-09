@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class CourtOffice extends Model
 {
@@ -35,5 +36,29 @@ class CourtOffice extends Model
     public function scopeOfType($query, $type)
     {
         return $query->where('type', $type);
+    }
+
+    // ── Cached Lookups ────────────────────────────────────────────────────────
+
+    /**
+     * All active courts/offices ordered by name, cached for 5 minutes.
+     * Used by: CaseController index() lookups block.
+     */
+    public static function cachedActive(): \Illuminate\Support\Collection
+    {
+        return Cache::remember('courts_active', 300, fn() =>
+            static::active()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'type'])
+        );
+    }
+
+    /**
+     * Bust the courts cache. Call after create / update / toggle.
+     */
+    public static function bustCache(): void
+    {
+        Cache::forget('courts_active');
     }
 }

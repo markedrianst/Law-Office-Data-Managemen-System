@@ -670,6 +670,8 @@ const submitForm = async () => {
   
   try {
     const payload = { ...form };
+    console.log('Submitting payload:', payload); // Debug log
+    
     if (isEditing.value) {
       await UserService.updateUser(editingUserId.value, payload);
     } else {
@@ -678,6 +680,7 @@ const submitForm = async () => {
     await loadUsers();
     closeModal();
   } catch (error) {
+    console.error('Form submission error:', error); // Debug log
     const handledError = UserService.handleApiError(error);
     apiError.value = handledError.message;
     
@@ -698,7 +701,8 @@ const submitForm = async () => {
         }
       });
     }
-  } finally {
+    
+    // Don't close modal on error
     formLoading.value = false;
   }
 };

@@ -363,14 +363,7 @@ const fetchDocuments = async () => {
   documentsLoading.value = true;
   try {
     const res = await getActiveDocuments();
-    documents.value = res.data?.data ?? [];
-
-    // FIX: Re-sync after documents load so edit mode pre-fill resolves correctly.
-    // Without this, syncTask() runs before the fetch completes, leaving
-    // document_type_id unresolved and triggering the "Please select a document type" error.
-    if (props.show && props.mode !== 'add' && props.task) {
-      syncTask();
-    }
+    documents.value = res.data?.data || res.data || [];
   } catch (e) {
     console.error('fetchDocuments:', e);
   } finally {

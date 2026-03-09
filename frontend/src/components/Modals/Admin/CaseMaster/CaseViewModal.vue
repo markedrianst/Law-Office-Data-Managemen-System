@@ -20,10 +20,6 @@
 
           <div class="flex items-center gap-3">
             <!-- Live badge -->
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Live
-            </div>
             <button @click="$emit('close')" class="p-2 hover:bg-gray-100 rounded-xl transition text-gray-400 hover:text-gray-600">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -643,44 +639,58 @@ const internalChecklistHistory = ref([]);
 // ── Dirty flags (one per slice) ────────────────────────────────────────────
 const dirty = reactive({ checklist: false, folder: false, checklistTracker: false });
 
+// ── In-flight guards — prevents duplicate concurrent requests per slice ────
+const _fetching = { checklist: false, folder: false, checklistTracker: false };
+
+// True once the first loadAll() completes; gates visibility revalidation
 let initialLoadDone = false;
 
 // ─── FETCHERS ─────────────────────────────────────────────────────────────
-// Each fetcher compares incoming IDs against the current list.
-// Brand-new rows get _flash = true so they glow yellow for 1.5 s,
-// making it obvious to other users that someone just added something.
+// Each fetcher is guarded: if a request is already in-flight for that slice,
+// the second caller simply returns — no duplicate network call is made.
+// New rows get _flash = true so they glow for 1.5 s in multi-tab scenarios.
 
 async function fetchChecklist(id) {
+  if (_fetching.checklist) return;
+  _fetching.checklist = true;
   try {
     const fresh    = unwrap(await CaseService.getChecklist(id)) || [];
     const existing = new Set(internalChecklist.value.map(t => t.id));
-    internalChecklist.value = fresh.map(t => ({ ...t, _flash: !existing.has(t.id) }));
-    setTimeout(() => { internalChecklist.value = internalChecklist.value.map(t => ({ ...t, _flash: false })); }, 1500);
+    internalChecklist.value = fresh.map(t => ({ ...t, _flash: initialLoadDone && !existing.has(t.id) }));
+    if (initialLoadDone) setTimeout(() => { internalChecklist.value = internalChecklist.value.map(t => ({ ...t, _flash: false })); }, 1500);
     dirty.checklist = false;
   } catch (e) { console.error('[CaseViewModal] fetchChecklist:', e); }
+  finally { _fetching.checklist = false; }
 }
 
 async function fetchFolderTracker(id) {
+  if (_fetching.folder) return;
+  _fetching.folder = true;
   try {
     const fresh    = unwrap(await CaseService.getFolderTracker(id)) || [];
     const existing = new Set(internalFolderHistory.value.map(r => r.id));
-    internalFolderHistory.value = fresh.map(r => ({ ...r, _flash: !existing.has(r.id) }));
-    setTimeout(() => { internalFolderHistory.value = internalFolderHistory.value.map(r => ({ ...r, _flash: false })); }, 1500);
+    internalFolderHistory.value = fresh.map(r => ({ ...r, _flash: initialLoadDone && !existing.has(r.id) }));
+    if (initialLoadDone) setTimeout(() => { internalFolderHistory.value = internalFolderHistory.value.map(r => ({ ...r, _flash: false })); }, 1500);
     dirty.folder = false;
   } catch (e) { console.error('[CaseViewModal] fetchFolderTracker:', e); }
+  finally { _fetching.folder = false; }
 }
 
 async function fetchChecklistTracker(id) {
+  if (_fetching.checklistTracker) return;
+  _fetching.checklistTracker = true;
   try {
     const fresh    = unwrap(await CaseService.getChecklistTracker(id)) || [];
     const existing = new Set(internalChecklistHistory.value.map(r => r.id));
-    internalChecklistHistory.value = fresh.map(r => ({ ...r, _flash: !existing.has(r.id) }));
-    setTimeout(() => { internalChecklistHistory.value = internalChecklistHistory.value.map(r => ({ ...r, _flash: false })); }, 1500);
+    internalChecklistHistory.value = fresh.map(r => ({ ...r, _flash: initialLoadDone && !existing.has(r.id) }));
+    if (initialLoadDone) setTimeout(() => { internalChecklistHistory.value = internalChecklistHistory.value.map(r => ({ ...r, _flash: false })); }, 1500);
     dirty.checklistTracker = false;
   } catch (e) { console.error('[CaseViewModal] fetchChecklistTracker:', e); }
+  finally { _fetching.checklistTracker = false; }
 }
 
-// Full parallel load — called once on modal open
+// Full parallel load — called ONCE on modal open.
+// Poll and visibility revalidation are both blocked until this completes.
 async function loadAll(id) {
   await Promise.allSettled([
     fetchChecklist(id),
@@ -690,9 +700,9 @@ async function loadAll(id) {
   initialLoadDone = true;
 }
 
-// Re-fetch only dirty slices — called after mutations + on focus
+// Re-fetch only dirty slices — called on tab focus regain (Layer 2)
 async function revalidateDirty(id) {
-  if (!id) return;
+  if (!id || !initialLoadDone) return;
   const tasks = [];
   if (dirty.checklist)        tasks.push(fetchChecklist(id));
   if (dirty.folder)           tasks.push(fetchFolderTracker(id));
@@ -701,15 +711,17 @@ async function revalidateDirty(id) {
 }
 
 // ─── LAYER 1: BroadcastChannel — instant cross-tab sync ───────────────────
+// A unique channel ID per session prevents self-echo: messages sent by THIS
+// tab are ignored (BroadcastChannel does not deliver to the sender by spec,
+// but the guard on _fetching provides a second layer of protection).
 let bc = null;
 
 function openChannel(caseId) {
   closeChannel();
   bc = new BroadcastChannel(`case_modal_${caseId}`);
-  // Receive signal from another tab and immediately re-fetch that slice
   bc.onmessage = ({ data }) => {
     const id = props.viewCase?.id;
-    if (!id) return;
+    if (!id || !initialLoadDone) return;   // ignore signals before initial load
     if (data.slice === 'checklist')        fetchChecklist(id);
     if (data.slice === 'folder')           fetchFolderTracker(id);
     if (data.slice === 'checklistTracker') fetchChecklistTracker(id);
@@ -717,11 +729,11 @@ function openChannel(caseId) {
 }
 
 function closeChannel() { bc?.close(); bc = null; }
-
-// Send signal to all other tabs that a slice changed
 function broadcast(slice) { bc?.postMessage({ slice }); }
 
 // ─── LAYER 2: Visibility revalidation ─────────────────────────────────────
+// Uses dirty flags — only re-fetches slices that were mutated while hidden.
+// Guarded by initialLoadDone so it never fires during the initial open.
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return;
   const id = props.viewCase?.id;
@@ -729,18 +741,20 @@ function onVisibilityChange() {
 }
 document.addEventListener('visibilitychange', onVisibilityChange);
 
-// ─── LAYER 3: 15-second poll (cross-machine sync) ─────────────────────────
+// ─── LAYER 3: 30-second poll (cross-machine sync) ─────────────────────────
+// Increased to 30 s (was 15 s) — halves background request count.
+// Poll only starts AFTER loadAll() completes to prevent overlap.
+// Skipped entirely if tab is hidden.
 let pollTimer = null;
 
 function startPolling(id) {
   stopPolling();
   pollTimer = setInterval(() => {
-    // Skip silently if tab is hidden — no wasted requests
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible' || !initialLoadDone) return;
     fetchChecklist(id);
     fetchFolderTracker(id);
     fetchChecklistTracker(id);
-  }, 15000);
+  }, 30_000);
 }
 
 function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
@@ -751,28 +765,9 @@ function resetState() {
   internalFolderHistory.value    = [];
   internalChecklistHistory.value = [];
   dirty.checklist = dirty.folder = dirty.checklistTracker = false;
+  _fetching.checklist = _fetching.folder = _fetching.checklistTracker = false;
   initialLoadDone = false;
 }
-
-watch(
-  () => [props.show, props.viewCase?.id],
-  ([visible, id]) => {
-    if (visible && id) {
-      resetState();
-      loadAll(id);
-      openChannel(id);
-      startPolling(id);
-    } else {
-      stopPolling();
-      closeChannel();
-      resetState();
-      tm.show = false; ctm.show = false; fm.show = false;
-      closeDropdowns(); clearFilters();
-      folderTrackerPage.value = 1; checklistTrackerPage.value = 1;
-    }
-  },
-  { immediate: false }
-);
 
 onUnmounted(() => {
   stopPolling();
@@ -781,9 +776,31 @@ onUnmounted(() => {
 });
 
 // ── Expose for parent ──────────────────────────────────────────────────────
+// open(id) replaces watch([show, viewCase.id]) — called directly from openView()
+// in CaseMaster. Zero watcher overhead, instant response.
 const stageUpdating = ref(false);
 const finishStageUpdate = () => { stageUpdating.value = false; };
+
+const openModal = (id) => {
+  resetState();
+  // Start polling only after initial load completes — prevents poll from
+  // firing concurrently with the initial 3 requests on modal open.
+  loadAll(id).then(() => startPolling(id));
+  openChannel(id);
+};
+
+const closeModal = () => {
+  stopPolling();
+  closeChannel();
+  resetState();
+  tm.show = false; ctm.show = false; fm.show = false;
+  closeDropdowns(); clearFilters();
+  folderTrackerPage.value = 1; checklistTrackerPage.value = 1;
+};
+
 defineExpose({
+  openModal,
+  closeModal,
   finishStageUpdate,
   refreshChecklist:        () => props.viewCase?.id && fetchChecklist(props.viewCase.id),
   refreshFolderTracker:    () => props.viewCase?.id && fetchFolderTracker(props.viewCase.id),
@@ -826,8 +843,9 @@ const onTaskSave = ({ mode, data }) => {
   if (mode === 'edit') emit('update-task', data);
   tm.show = false;
   dirty.checklist = true;
-  // Re-fetch after API settles, then broadcast to other tabs
-  setTimeout(() => { fetchChecklist(props.viewCase.id); broadcast('checklist'); }, 300);
+  // Fetch immediately — in-flight guard prevents any duplicate call.
+  // broadcast() notifies other tabs after the local fetch settles.
+  fetchChecklist(props.viewCase.id).then(() => broadcast('checklist'));
 };
 
 const toggleDone = (task) => {
@@ -860,7 +878,7 @@ const submitFolderModal = () => {
   emit('update:viewCase', { ...props.viewCase, is_out: fm.type === 'out' ? 1 : 0 });
   fm.show = false;
   dirty.folder = true;
-  setTimeout(() => { fetchFolderTracker(props.viewCase.id); broadcast('folder'); }, 600);
+  fetchFolderTracker(props.viewCase.id).then(() => broadcast('folder'));
 };
 
 // ── Checklist tracker modal ────────────────────────────────────────────────
@@ -891,7 +909,7 @@ const submitChecklistTracker = () => {
   emit('checklist-movement', { type: ctm.type, taskName, ...ctm.form });
   ctm.show = false;
   dirty.checklistTracker = true;
-  setTimeout(() => { fetchChecklistTracker(props.viewCase.id); broadcast('checklistTracker'); }, 600);
+  fetchChecklistTracker(props.viewCase.id).then(() => broadcast('checklistTracker'));
 };
 
 // ── Checklist filters ──────────────────────────────────────────────────────

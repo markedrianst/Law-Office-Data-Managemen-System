@@ -282,7 +282,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import api from '@/services/api';
 
 const props = defineProps({
@@ -319,10 +319,23 @@ const clientSearch = ref(props.initClientSearch);
 const clientDropdownOpen = ref(false);
 const clientDropdownRef = ref(null);
 
-// ==================== WATCHERS ====================
-// initClientSearch is used for newly-created-client display; keep in sync
+// Keep clientSearch in sync when parent injects a newly-created client name
 watch(() => props.initClientSearch, (v) => { if (v) clientSearch.value = v; });
 
+// ── Public method: called by parent right before showing the modal ─────────
+// Replaces watch(props.show) — zero delay, no watcher overhead.
+const syncFromProps = () => {
+  const val      = props.form.court_or_office;
+  courtNA.value  = props.initCourtNA  || val === 'N/A';
+  docketNA.value = props.initDocketNA || props.form.docket_no === 'N/A';
+  courtSearch.value          = (val && val !== 'N/A') ? val : '';
+  courtDropdownOpen.value    = false;
+  clientSearch.value         = props.initClientSearch || '';
+  clientDropdownOpen.value   = false;
+  // Reload courts list if it failed to load earlier (no extra call if list is fresh)
+  if (courts.value.length === 0 && !courtLoading.value) loadCourts();
+};
+defineExpose({ syncFromProps });
 // ==================== COMPUTED PROPERTIES ====================
 const filteredCourts = computed(() => {
   if (!courtSearch.value) return courts.value;
@@ -423,49 +436,14 @@ const handleClickOutside = (event) => {
   }
 };
 
-// Initialize
+// Eagerly load courts at mount — list is ready before the modal ever opens
 onMounted(() => {
-  nextTick(() => loadCourts());
+  loadCourts();
   document.addEventListener('mousedown', handleClickOutside);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside);
-});
-
-// Reload courts list if dropdown opens and list is empty (e.g. previous load failed)
-watch(courtDropdownOpen, (isOpen) => {
-  if (isOpen && courts.value.length === 0 && !courtLoading.value) {
-    loadCourts();
-  }
-});
-
-// When modal opens, sync courtSearch with the current form value
-watch(() => props.show, (isOpen) => {
-  if (isOpen) {
-    const val = props.form.court_or_office;
-    courtNA.value = val === 'N/A';
-    courtSearch.value = (val && val !== 'N/A') ? val : '';
-    courtDropdownOpen.value = false;
-
-    const docketVal = props.form.docket_no;
-    docketNA.value = docketVal === 'N/A';
-
-    clientSearch.value = props.initClientSearch || '';
-    clientDropdownOpen.value = false;
-  }
-});
-
-// Keep courtSearch in sync if form.court_or_office changes externally (e.g. parent resets)
-watch(() => props.form.court_or_office, (newVal) => {
-  if (newVal === 'N/A') {
-    courtNA.value = true;
-    courtSearch.value = '';
-  } else if (newVal && courtSearch.value !== newVal) {
-    courtSearch.value = newVal;
-  } else if (!newVal) {
-    courtSearch.value = '';
-  }
 });
 </script>
 

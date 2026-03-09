@@ -10,14 +10,17 @@ const _cache = {
   categories:        null,
   stages:            null,
   users:             null,
+  courts:            null,
   categoriesTs:      0,
   stagesTs:          0,
   usersTs:           0,
+  courtsTs:          0,
 
   // In-flight promise refs — prevents duplicate concurrent requests
   categoriesPromise: null,
   stagesPromise:     null,
   usersPromise:      null,
+  courtsPromise:     null,
 };
 
 /** True if a cached value exists and is still within TTL. */
@@ -27,12 +30,6 @@ const _fresh = (ts) => ts > 0 && Date.now() - ts < TTL;
 // CASES  (CaseMaster.vue → CaseController@index / show / store / update / archive)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * GET /admin/courts-offices
- * Used by CaseFormModal.vue court/office dropdown.
- */
-export const getCourts = (params = {}) =>
-  api.get('/admin/courts-offices', { params });
 
 /**
  * GET /admin/cases
@@ -93,73 +90,64 @@ export const getActivityLogs = (caseId, params = {}) =>
   api.get(`/admin/cases/${caseId}/activity-logs`, { params });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STAGES  (CaseFormModal.vue dropdown + CaseViewModal.vue inline stage change)
+// STAGES  (CaseViewModal.vue inline stage change — still needed directly)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * GET /admin/master-data/case-stages
- *
- * Returns a promise that resolves to { data: Stage[] }.
- * - Synchronous cache hit: resolves immediately, no network call.
- * - In-flight deduplication: callers waiting while a request is already
- *   running receive the same promise.
- * - forceRefresh=true: busts cache and fires a fresh request.
- */
-export const getStages = (forceRefresh = false) => {
-  if (forceRefresh) {
-    _cache.stages        = null;
-    _cache.stagesTs      = 0;
-    _cache.stagesPromise = null;
-  }
-
-  // Serve from cache if still fresh
-  if (_cache.stages && _fresh(_cache.stagesTs)) {
-    return Promise.resolve({ data: _cache.stages });
-  }
-
-  // Deduplicate in-flight
-  if (_cache.stagesPromise) return _cache.stagesPromise;
-
-  _cache.stagesPromise = api
-    .get('/admin/master-data/case-stages', { params: { fields: 'id,name,is_active' } })
-    .then(res => {
-      const data        = res.data?.data ?? res.data ?? [];
-      _cache.stages     = data;
-      _cache.stagesTs   = Date.now();
-      _cache.stagesPromise = null;
-      return { data };
-    })
-    .catch(err => {
-      _cache.stagesPromise = null;
-      return Promise.reject(err);
-    });
-
-  return _cache.stagesPromise;
-};
-
-/**
  * GET /admin/cases/:caseId/stages/history
- * Used by CaseMaster.vue → loadStageHistory() → CaseViewModal.vue stageHistory prop.
  */
 export const getStageHistory = (caseId) =>
   api.get(`/admin/cases/${caseId}/stages/history`);
 
 /**
  * PUT /admin/cases/:caseId/stage
- * Used by CaseViewModal.vue inline stage dropdown → CaseMaster.vue updateCaseStage().
  */
 export const updateStage = (caseId, payload) =>
   api.put(`/admin/cases/${caseId}/stage`, payload);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LOOKUPS  (CaseFormModal.vue dropdowns — categories, users, clients)
+// LOOKUPS CACHE  — populated from the index() response on first page load.
+// Individual fetch functions kept for forceRefresh cases (e.g. new category).
 // ─────────────────────────────────────────────────────────────────────────────
 
+
 /**
- * GET /admin/case-categories
- *
- * Same deduplication + TTL pattern as getStages().
- * forceRefresh=true is called from CaseMaster.vue onCategoryCreated().
+ * GET /admin/master-data/case-stages  — cached, used by loadAllLookups.
+ */
+const _fetchStages = (forceRefresh = false) => {
+  if (forceRefresh) { _cache.stages = null; _cache.stagesTs = 0; _cache.stagesPromise = null; }
+  if (_cache.stages && _fresh(_cache.stagesTs)) return Promise.resolve({ data: _cache.stages });
+  if (_cache.stagesPromise) return _cache.stagesPromise;
+  _cache.stagesPromise = api
+    .get('/admin/master-data/case-stages', { params: { fields: 'id,name,is_active' } })
+    .then(res => {
+      const data = res.data?.data ?? res.data ?? [];
+      _cache.stages = data; _cache.stagesTs = Date.now(); _cache.stagesPromise = null;
+      return { data };
+    })
+    .catch(err => { _cache.stagesPromise = null; return Promise.reject(err); });
+  return _cache.stagesPromise;
+};
+
+
+export const loadAllLookups = async () => {
+  const [catRes, stagesRes, usersRes, courtsRes] = await Promise.all([
+    getCategories(),
+    _fetchStages(),
+    getAssignableUsers(),
+    getCourts(),
+  ]);
+  return {
+    categories: catRes.data ?? [],
+    stages:     stagesRes.data ?? [],
+    users:      usersRes.data ?? [],
+    courts:     courtsRes.data ?? [],
+  };
+};
+
+/**
+ * GET /admin/case-categories  — only called when forceRefresh is needed
+ * (e.g. after onCategoryCreated).
  */
 export const getCategories = (forceRefresh = false) => {
   if (forceRefresh) {
@@ -167,105 +155,57 @@ export const getCategories = (forceRefresh = false) => {
     _cache.categoriesTs      = 0;
     _cache.categoriesPromise = null;
   }
-
   if (_cache.categories && _fresh(_cache.categoriesTs)) {
     return Promise.resolve({ data: _cache.categories });
   }
-
   if (_cache.categoriesPromise) return _cache.categoriesPromise;
-
   _cache.categoriesPromise = api
     .get('/admin/case-categories', { params: { fields: 'id,name' } })
     .then(res => {
-      const data             = res.data?.data ?? res.data ?? [];
-      _cache.categories      = data;
-      _cache.categoriesTs    = Date.now();
-      _cache.categoriesPromise = null;
+      const data = res.data?.data ?? res.data ?? [];
+      _cache.categories = data; _cache.categoriesTs = Date.now(); _cache.categoriesPromise = null;
       return { data };
     })
-    .catch(err => {
-      _cache.categoriesPromise = null;
-      return Promise.reject(err);
-    });
-
+    .catch(err => { _cache.categoriesPromise = null; return Promise.reject(err); });
   return _cache.categoriesPromise;
 };
 
 /**
- * GET /admin/users/assignable
- *
- * forceRefresh=true is used by CaseMaster.vue refreshUsers() which fires
- * whenever the form or view modal opens to ensure the user list is current.
- * Cache-busting adds _t param so api.js's 5-second axios cache is also skipped.
+ * GET /admin/users/assignable  — only called when forceRefresh is needed.
  */
 export const getAssignableUsers = (forceRefresh = false) => {
-  if (forceRefresh) {
-    _cache.users        = null;
-    _cache.usersTs      = 0;
-    _cache.usersPromise = null;
-  }
-
-  if (_cache.users && _fresh(_cache.usersTs)) {
-    return Promise.resolve({ data: _cache.users });
-  }
-
+  if (forceRefresh) { _cache.users = null; _cache.usersTs = 0; _cache.usersPromise = null; }
+  if (_cache.users && _fresh(_cache.usersTs)) return Promise.resolve({ data: _cache.users });
   if (_cache.usersPromise) return _cache.usersPromise;
-
   const params = { limit: 100 };
-  // _t bypasses both the axios in-memory cache AND pendingRequests dedup
   if (forceRefresh) params._t = Date.now();
-
   _cache.usersPromise = api
     .get('/admin/users/assignable', { params })
     .then(res => {
-      const data          = res.data?.data ?? res.data ?? [];
-      _cache.users        = data;
-      _cache.usersTs      = Date.now();
-      _cache.usersPromise = null;
+      const data = res.data?.data ?? res.data ?? [];
+      _cache.users = data; _cache.usersTs = Date.now(); _cache.usersPromise = null;
       return { data };
     })
-    .catch(err => {
-      _cache.usersPromise = null;
-      return Promise.reject(err);
-    });
-
+    .catch(err => { _cache.usersPromise = null; return Promise.reject(err); });
   return _cache.usersPromise;
 };
 
 /**
- * Load ALL lookups in parallel.
- * Called once on CaseMaster.vue mount via loadLookups().
- * Returns already-cached data immediately if still fresh (zero network calls).
- *
- * Returns: { categories: [], stages: [], users: [] }
+ * GET /admin/courts/active  — only called when forceRefresh is needed.
  */
-export const loadAllLookups = async (forceRefresh = false) => {
-  // Serve fully from cache — no network at all
-  if (
-    !forceRefresh &&
-    _cache.categories && _fresh(_cache.categoriesTs) &&
-    _cache.stages     && _fresh(_cache.stagesTs)     &&
-    _cache.users      && _fresh(_cache.usersTs)
-  ) {
-    return {
-      categories: _cache.categories,
-      stages:     _cache.stages,
-      users:      _cache.users,
-    };
-  }
-
-  // Fire all three requests concurrently
-  const [catRes, stageRes, userRes] = await Promise.allSettled([
-    getCategories(forceRefresh),
-    getStages(forceRefresh),
-    getAssignableUsers(forceRefresh),
-  ]);
-
-  return {
-    categories: catRes.status   === 'fulfilled' ? (catRes.value.data   ?? []) : (_cache.categories ?? []),
-    stages:     stageRes.status === 'fulfilled' ? (stageRes.value.data ?? []) : (_cache.stages     ?? []),
-    users:      userRes.status  === 'fulfilled' ? (userRes.value.data  ?? []) : (_cache.users      ?? []),
-  };
+export const getCourts = (forceRefresh = false) => {
+  if (forceRefresh) { _cache.courts = null; _cache.courtsTs = 0; _cache.courtsPromise = null; }
+  if (_cache.courts && _fresh(_cache.courtsTs)) return Promise.resolve({ data: _cache.courts });
+  if (_cache.courtsPromise) return _cache.courtsPromise;
+  _cache.courtsPromise = api
+    .get('/admin/courts/active')
+    .then(res => {
+      const data = res.data?.data ?? res.data ?? [];
+      _cache.courts = data; _cache.courtsTs = Date.now(); _cache.courtsPromise = null;
+      return { data };
+    })
+    .catch(err => { _cache.courtsPromise = null; return Promise.reject(err); });
+  return _cache.courtsPromise;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -279,10 +219,6 @@ export const getChecklist = (caseId) =>
 /** POST /admin/cases/:caseId/checklist */
 export const createChecklistTask = (caseId, payload) =>
   api.post(`/admin/cases/${caseId}/checklist`, payload);
-
-/** GET  /admin/cases/:caseId/checklist/:taskId */
-export const getChecklistTask = (caseId, taskId) =>
-  api.get(`/admin/cases/${caseId}/checklist/${taskId}`);
 
 /** PUT  /admin/cases/:caseId/checklist/:taskId */
 export const updateChecklistTask = (caseId, taskId, payload) =>
@@ -326,6 +262,13 @@ export const getFolderTracker = (caseId) =>
 /** POST /admin/cases/:caseId/folder-tracker */
 export const createFolderTrackerEntry = (caseId, payload) =>
   api.post(`/admin/cases/${caseId}/folder-tracker`, payload);
+
+/** PATCH /admin/cases/:caseId/folder-tracker/:movementId/approve */
+export const approveFolderMovement = (caseId, movementId, approval_status) =>
+  api.patch(
+    `/admin/cases/${caseId}/folder-tracker/${movementId}/approve`,
+    { approval_status }
+  );
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMATTERS  (used by CaseMaster.vue applyCasesResponse)
@@ -391,12 +334,15 @@ export const clearCache = () => {
   _cache.categories        = null;
   _cache.stages            = null;
   _cache.users             = null;
+  _cache.courts            = null;
   _cache.categoriesTs      = 0;
   _cache.stagesTs          = 0;
   _cache.usersTs           = 0;
+  _cache.courtsTs          = 0;
   _cache.categoriesPromise = null;
   _cache.stagesPromise     = null;
   _cache.usersPromise      = null;
+  _cache.courtsPromise     = null;
 };
 
 /**

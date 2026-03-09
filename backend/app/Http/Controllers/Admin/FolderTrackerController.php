@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cases;
+use App\Models\CaseChecklist;
 use App\Models\FolderMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,10 @@ class FolderTrackerController extends Controller
                 'id'     => $case->id,
                 'is_out' => $case->is_out,
             ],
+            'checklists' => CaseChecklist::where('case_id', $case->id)
+                ->select('id', 'task', 'is_out')
+                ->orderBy('created_at')
+                ->get(),
         ]);
     }
 

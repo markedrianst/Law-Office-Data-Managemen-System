@@ -135,7 +135,7 @@
     </div>
 
     <!-- ── Pagination info ── -->
-    <div v-if="!isLoading && pagination.total > 0" class="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-2 mb-4 text-xs text-slate-500">
+    <div v-if="pagination.total > 0" class="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-2 mb-4 text-xs text-slate-500">
       <span>
         Showing <strong class="text-slate-700">{{ pagination.from }}–{{ pagination.to }}</strong>
         of <strong class="text-slate-700">{{ pagination.total }}</strong> activities
@@ -153,20 +153,8 @@
       </div>
     </div>
 
-    <!-- ── Skeleton ── -->
-    <div v-if="isLoading" class="flex flex-col gap-3">
-      <div v-for="n in 6" :key="n" class="flex gap-4 p-5 bg-white rounded-2xl border border-slate-200">
-        <div class="w-11 h-11 rounded-full bg-slate-100 flex-shrink-0 animate-pulse"></div>
-        <div class="flex-1 flex flex-col gap-2.5 justify-center">
-          <div class="h-3 bg-slate-100 rounded-full w-2/5 animate-pulse"></div>
-          <div class="h-3 bg-slate-100 rounded-full w-3/5 animate-pulse"></div>
-          <div class="h-3 bg-slate-100 rounded-full w-1/4 animate-pulse"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Merged Timeline ── -->
-    <div v-else class="flex flex-col">
+ 
+    <div  class="flex flex-col">
       <template v-for="(group, date) in groupedMergedLogs" :key="date">
 
         <!-- Date separator -->
@@ -305,7 +293,6 @@ import * as XLSX from 'xlsx'
 // ── State ─────────────────────────────────────────────────────────
 const systemLogs  = ref([])
 const caseLogs    = ref([])
-const isLoading   = ref(false)
 const expanded    = ref([])
 const timeFilter  = ref('')
 const currentPage = ref(1)
@@ -363,7 +350,6 @@ const hasActiveFilters = computed(() =>
 
 // ── Load both sources in parallel ────────────────────────────────
 const loadAll = async () => {
-  isLoading.value = true
   try {
     const params = {
       search:    filters.search   || undefined,
@@ -407,7 +393,6 @@ const loadAll = async () => {
     systemLogs.value = []
     caseLogs.value   = []
   } finally {
-    isLoading.value = false
   }
 }
 

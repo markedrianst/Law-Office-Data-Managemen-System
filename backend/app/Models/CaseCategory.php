@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 
 class CaseCategory extends Model
 {
@@ -96,5 +97,26 @@ class CaseCategory extends Model
     public function getCasesCountAttribute(): int
     {
         return $this->cases()->count();
+    }
+
+    // ── Cached Lookups ────────────────────────────────────────────────────────
+
+    /**
+     * All categories ordered by name, cached for 5 minutes.
+     * Used by: CaseController::categories(), index() lookups block.
+     */
+    public static function cachedAll(): \Illuminate\Support\Collection
+    {
+        return Cache::remember('case_categories', 300, fn() =>
+            static::orderBy('name')->get(['id', 'name'])
+        );
+    }
+
+    /**
+     * Bust the categories cache. Call after create / update / toggle.
+     */
+    public static function bustCache(): void
+    {
+        Cache::forget('case_categories');
     }
 }

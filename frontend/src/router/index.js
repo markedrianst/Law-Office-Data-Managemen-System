@@ -1,16 +1,17 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from "vue-router";
-import Login              from "@/pages/Authentication/Login.vue";
-import Dashboard          from "@/pages/Dashboard.vue";
+import Login from "@/pages/Authentication/Login.vue";
+import Dashboard from "@/pages/Dashboard.vue";
 import AdminUserManagement from "@/pages/Admin/AdminUserManagement.vue";
-import AuditTrail         from "@/pages/Admin/AuditTrail.vue";
-import AccountPage        from "@/pages/AccountPage.vue";
-import CaseMaster         from "@/pages/Admin/cases/CaseMaster.vue";
-import CaseCategory       from "@/pages/Admin/MasterData/CasesCategory.vue";
-import CourtMaster         from "@/pages/Admin/MasterData/CourtMaster.vue";
-import Documents         from "@/pages/Admin/MasterData/Documents.vue";
-import ApprovalStatusBadge from "@/pages/Admin/Approvals.vue";
+import AuditTrail from "@/pages/Admin/AuditTrail.vue";
+import AccountPage from "@/pages/AccountPage.vue";
+import CaseMaster from "@/pages/Admin/cases/CaseMaster.vue";
+import CaseCategory from "@/pages/Admin/MasterData/CasesCategory.vue";
+import CourtMaster from "@/pages/Admin/MasterData/CourtMaster.vue";
+import Documents from "@/pages/Admin/MasterData/Documents.vue";
+import Approvals from "@/pages/Admin/Approvals.vue";
 import ClerkTrackerPage from "@/pages/Clerks/ClerkTrackerPage.vue";
+
 const routes = [
   {
     path: "/",
@@ -28,55 +29,82 @@ const routes = [
     path: "/clerkstracker",
     name: "ClerkTrackerPage",
     component: ClerkTrackerPage,
-    meta: { requiresAuth: true, role: "clerk" },
+    meta: { 
+      requiresAuth: true, 
+      roles: ["clerk"]  // Changed to array for consistency
+    },
   },
   {
     path: "/approvals",
-    name: "ApprovalStatusBadge",
-    component: ApprovalStatusBadge,
-    meta: { requiresAuth: true, role: "admin" },
+    name: "Approvals",
+    component: Approvals,
+    meta: { 
+      requiresAuth: true, 
+      roles: ["admin", "lawyer"]  // Both admin and lawyer can access
+    },
   },
   {
     path: "/usermanagement",
     name: "AdminUserManagement",
     component: AdminUserManagement,
-    meta: { requiresAuth: true, role: "admin" },
+    meta: { 
+      requiresAuth: true, 
+      roles: ["admin"] 
+    },
   },
   {
     path: "/courtmaster",
     name: "CourtMaster",
     component: CourtMaster,
-    meta: { requiresAuth: true, role: "admin" },
+    meta: { 
+      requiresAuth: true, 
+      roles: ["admin"] 
+    },
   },
   {
     path: "/casecategory",
     name: "CaseCategory",
     component: CaseCategory,
-    meta: { requiresAuth: true, role: "admin" },
+    meta: { 
+      requiresAuth: true, 
+      roles: ["admin"] 
+    },
   },
   {
     path: "/documents",
     name: "Documents",
     component: Documents,
-    meta: { requiresAuth: true, role: "admin" },
+    meta: { 
+      requiresAuth: true, 
+      roles: ["admin"] 
+    },
   },
   {
     path: "/casemaster",
     name: "CaseMaster",
     component: CaseMaster,
-    meta: { requiresAuth: true},
+    meta: { 
+      requiresAuth: true,
+      roles: ["admin", "lawyer", "clerk"]  // Specify who can access
+    },
   },
   {
     path: "/audittrail",
     name: "AuditTrail",
     component: AuditTrail,
-    meta: { requiresAuth: true },
+    meta: { 
+      requiresAuth: true,
+      roles: ["admin"]  // Usually only admin can view audit trail
+    },
   },
   {
     path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
-    meta: { requiresAuth: true },
+    meta: { 
+      requiresAuth: true,
+      roles: ["admin", "lawyer", "clerk"]  // All roles can access dashboard
+    },
   },
   {
     path: "/:pathMatch(.*)*",
@@ -99,7 +127,8 @@ function getUserRole() {
   try {
     const user = JSON.parse(sessionStorage.getItem("user"));
     // Handles both { role: { name: "admin" } } and { role: "Admin" }
-    return user?.role?.name ?? (typeof user?.role === "string" ? user.role.toLowerCase() : null);
+    const role = user?.role?.name ?? (typeof user?.role === "string" ? user.role.toLowerCase() : null);
+    return role?.toLowerCase(); // Normalize to lowercase
   } catch {
     return null;
   }
@@ -108,7 +137,13 @@ function getUserRole() {
 // ── Navigation Guard ──────────────────────────────────────────────
 router.beforeEach((to, from, next) => {
   const authenticated = isAuthenticated();
-  const userRole      = getUserRole();
+  const userRole = getUserRole();
+
+  // Debug logging (remove in production)
+  console.log('Navigation to:', to.path);
+  console.log('Authenticated:', authenticated);
+  console.log('User role:', userRole);
+  console.log('Route meta:', to.meta);
 
   // Not logged in → redirect to login
   if (to.meta.requiresAuth && !authenticated) {
@@ -120,9 +155,24 @@ router.beforeEach((to, from, next) => {
     return next("/dashboard");
   }
 
-  // Route requires a specific role the user doesn't have
-  if (to.meta.role && to.meta.role !== userRole) {
-    return next("/dashboard");
+  // Route requires specific roles
+  if (to.meta.roles) {
+    // Check if user has any of the required roles
+    const hasRequiredRole = to.meta.roles.some(role => 
+      role.toLowerCase() === userRole?.toLowerCase()
+    );
+    
+    if (!hasRequiredRole) {
+      console.warn(`Access denied: User role "${userRole}" not in allowed roles:`, to.meta.roles);
+      return next("/dashboard");
+    }
+  }
+  // Backward compatibility for single role
+  else if (to.meta.role) {
+    if (to.meta.role.toLowerCase() !== userRole?.toLowerCase()) {
+      console.warn(`Access denied: User role "${userRole}" does not match required role:`, to.meta.role);
+      return next("/dashboard");
+    }
   }
 
   next();

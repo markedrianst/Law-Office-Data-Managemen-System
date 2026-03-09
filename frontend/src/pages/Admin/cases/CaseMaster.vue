@@ -231,6 +231,7 @@
 
     <!-- MODALS -->
     <CaseForm
+      ref="formModalRef"
       :show="showFormModal"
       :is-editing="isEditing"
       :form-loading="formLoading"
@@ -240,6 +241,7 @@
       :clients="clients"
       :lawyers="lawyers"
       :clerks="clerks"
+      :courts="courts"
       :active-stages="activeStages"
       :preview-code="previewCode"
       :newly-created-client="newlyCreatedClient"
@@ -266,30 +268,16 @@
       :show="showViewModal"
       :view-case="viewCase"
       :active-stages="activeStages"
-      :stage-history="stageHistory"
-      :checklist="checklist"
       :clerks="clerks"
-      :folder-history="folderHistory"
-      :checklist-history="checklistHistory"
       :current-user="currentUser"
-      @close="showViewModal = false"
-      @edit="(c) => { openEdit(c); showViewModal = false; }"
+      @close="() => { showViewModal = false; viewModalRef?.closeModal(); }"
+      @edit="(c) => { viewModalRef?.closeModal(); showViewModal = false; openEdit(c); }"
       @add-task="addChecklistTask"
       @update-task="updateChecklistTask"
       @delete-task="deleteChecklistTask"
       @update-stage="updateCaseStage"
       @checklist-movement="handleChecklistMovement"
       @folder-movement="handleFolderMovement"
-    />
-
-    <CaseStageModal
-      :show="showStageModal"
-      :stage-saving="stageSaving"
-      :stage-form="stageForm"
-      :stage-errors="stageErrors"
-      :active-stages="activeStages"
-      @close="closeStageModal"
-      @save="saveStageChange"
     />
 
     <CaseCategoryModal
@@ -304,7 +292,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+
+// Persistent BroadcastChannel — notifies Approvals page + Sidebar badge
+// whenever a clerk successfully records a movement. Must be module-level so
+// the message is guaranteed to flush before the instance is GC'd.
+const approvalsBc = new BroadcastChannel('approvals_sync');
 import api              from '@/services/api';
 import * as CaseService   from '@/services/caseService';
 import * as ClientService from '@/services/clientService';
@@ -347,6 +340,7 @@ const categories = ref([]);
 const clients    = ref([]);
 const lawyers    = ref([]);
 const clerks     = ref([]);
+const courts     = ref([]);
 const stages     = ref([]);
 const cases      = ref([]);
 
@@ -401,14 +395,8 @@ const showViewModal    = ref(false);
 const viewCase         = ref(null);
 const currentUser      = ref(null);
 const stageHistory     = ref([]);
-const showStageModal   = ref(false);
-const stageSaving      = ref(false);
-const stageForm        = reactive({ stage_id: '', remarks: '' });
-const stageErrors      = reactive({ stage_id: '' });
-const checklist        = ref([]);   // kept for legacy prop binding; modal self-fetches
-const folderHistory    = ref([]);   // same
-const checklistHistory = ref([]);   // same
 const viewModalRef     = ref(null);
+const formModalRef     = ref(null);
 
 // ── Computed ─────────────────────────────────────────────────────────────────
 const activeStages = computed(() => stages.value.filter(s => s.is_active));
@@ -518,6 +506,8 @@ const casesCacheKey = () =>
     pg: currentPage.value,
   });
 
+const _lookupsSeeded = ref(false);
+
 const applyCasesResponse = (responseData) => {
   const data = responseData.data ?? [];
   const m    = responseData.meta ?? {};
@@ -531,6 +521,12 @@ const applyCasesResponse = (responseData) => {
       from:         (m.current_page - 1) * m.per_page + 1,
       to:           Math.min(m.current_page * m.per_page, m.total),
     };
+  }
+  // Seed lookups from the index response on first load — avoids 4 extra requests
+  if (!_lookupsSeeded.value && responseData.lookups) {
+    applyLookups(responseData.lookups, clients.value);
+    _lookupsSeeded.value = true;
+    try { sessionStorage.setItem('cm_lookups', JSON.stringify(responseData.lookups)); } catch (_) {}
   }
 };
 
@@ -565,6 +561,7 @@ const loadCases = async () => {
 const applyLookups = (lookups, clientList) => {
   categories.value = lookups.categories || [];
   stages.value     = lookups.stages     || [];
+  courts.value     = lookups.courts     || [];
   const users = lookups.users || [];
   lawyers.value = users.filter(u => u?.role === 'lawyer');
   clerks.value  = users.filter(u => u?.role === 'clerk');
@@ -572,47 +569,42 @@ const applyLookups = (lookups, clientList) => {
 };
 
 const loadLookups = async () => {
-  // Show from sessionStorage while network catches up
+  // Restore from sessionStorage immediately (zero network cost)
   try {
     const cachedL = sessionStorage.getItem('cm_lookups');
     const cachedC = sessionStorage.getItem('cm_clients');
-    if (cachedL) applyLookups(JSON.parse(cachedL), cachedC ? JSON.parse(cachedC) : []);
+    if (cachedL) {
+      applyLookups(JSON.parse(cachedL), cachedC ? JSON.parse(cachedC) : []);
+      _lookupsSeeded.value = true;
+    }
   } catch (_) {}
 
+  // Only fetch clients — categories/stages/courts/users come from the index response
   try {
-    // Parallel: lookups + clients together
-    const [lookups, clientRes] = await Promise.all([
-      CaseService.loadAllLookups(),
-      ClientService.getAll(),
-    ]);
+    const clientRes  = await ClientService.getAll();
     const clientList = toArray(clientRes);
-    applyLookups(lookups, clientList);
-    try {
-      sessionStorage.setItem('cm_lookups', JSON.stringify(lookups));
-      sessionStorage.setItem('cm_clients', JSON.stringify(clientList));
-    } catch (_) {}
+    clients.value = clientList;
+    try { sessionStorage.setItem('cm_clients', JSON.stringify(clientList)); } catch (_) {}
   } catch (e) {
-    console.error('Failed to load lookups:', e);
+    console.error('Failed to load clients:', e);
   }
 };
 
-// Only refreshes users (not categories/stages) — called on modal open
+// Refreshes users only when the cache is actually stale — not on every open.
+// getAssignableUsers() already has a 5-min TTL; calling it without forceRefresh
+// returns the cached copy instantly with zero network cost.
 const refreshUsers = async () => {
   try {
-    CaseService.clearUsersCache();
-    const res   = await CaseService.getAssignableUsers(true);
+    const res   = await CaseService.getAssignableUsers(); // uses cache if fresh
     const users = res.data || [];
     lawyers.value = users.filter(u => u?.role === 'lawyer');
     clerks.value  = users.filter(u => u?.role === 'clerk');
-    sessionStorage.removeItem('cm_lookups');
   } catch (e) {
     console.error('refreshUsers:', e);
   }
 };
 
-// Refresh users when any modal opens (ensures fresh lawyer/clerk lists)
-watch(showFormModal, (isOpen) => { if (isOpen) refreshUsers(); });
-watch(showViewModal, (isOpen) => { if (isOpen) refreshUsers(); });
+
 
 // ── Stage history / checklist / trackers ─────────────────────────────────────
 const unwrapTask = (res) => res?.data?.data ?? res?.data ?? res;
@@ -637,8 +629,8 @@ const handleFolderMovement = async ({ type, from_to, date, purpose, handled_by }
       handled_by: handled_by || null,
     });
     viewCase.value = { ...viewCase.value, is_out: type.toUpperCase() === 'OUT' ? 1 : 0 };
-    // Delegate the re-fetch to the modal's own refresh helper
     viewModalRef.value?.refreshFolderTracker();
+    approvalsBc.postMessage({ event: 'movement' });
   } catch (e) {
     console.error('handleFolderMovement:', e);
   }
@@ -655,9 +647,9 @@ const handleChecklistMovement = async ({ type, taskId, taskName, person, date, p
       purpose:      purpose   || null,
       handled_by:   handledBy || null,
     });
-    // Modal refreshes its own checklist + tracker data
     viewModalRef.value?.refreshChecklistTracker();
     viewModalRef.value?.refreshChecklist();
+    approvalsBc.postMessage({ event: 'movement' });
   } catch (e) {
     console.error('handleChecklistMovement:', e);
   }
@@ -720,6 +712,8 @@ const openCreate = () => {
   clientSearchInit.value = '';
   clearErrors();
   showFormModal.value = true;
+  nextTick(() => formModalRef.value?.syncFromProps());
+  refreshUsers(); // fire-and-forget, no await needed
 };
 
 const openEdit = (c) => {
@@ -745,6 +739,8 @@ const openEdit = (c) => {
   clientSearchInit.value = clients.value?.find(x => x.id === c.client_id)?.full_name || '';
   clearErrors();
   showFormModal.value = true;
+  nextTick(() => formModalRef.value?.syncFromProps());
+  refreshUsers(); // fire-and-forget
 };
 
 const validateForm = () => {
@@ -831,28 +827,8 @@ const saveNewClient = async () => {
 const openView = (c) => {
   viewCase.value      = c;
   showViewModal.value = true;
-  loadStageHistory(c.id);  // non-blocking, fire-and-forget
-};
-
-const closeStageModal = () => { showStageModal.value = false; };
-
-const saveStageChange = async () => {
-  stageErrors.stage_id = '';
-  if (!stageForm.stage_id) { stageErrors.stage_id = 'Please select a stage'; return; }
-  stageSaving.value = true;
-  try {
-    await CaseService.updateStage(viewCase.value.id, { stage_id: stageForm.stage_id, remarks: stageForm.remarks || undefined });
-    const stageName = activeStages.value.find(s => s.id == stageForm.stage_id)?.name || '';
-    viewCase.value = { ...viewCase.value, current_stage_id: stageForm.stage_id, stage: stageName };
-    const idx = cases.value.findIndex(c => c.id === viewCase.value.id);
-    if (idx !== -1) cases.value[idx] = { ...cases.value[idx], current_stage_id: stageForm.stage_id, stage: stageName };
-    closeStageModal();
-    await loadStageHistory(viewCase.value.id);
-  } catch (e) {
-    stageErrors.stage_id = e?.response?.data?.message ?? 'Failed to update stage.';
-  } finally {
-    stageSaving.value = false;
-  }
+  loadStageHistory(c.id);               // non-blocking, fire-and-forget
+  nextTick(() => viewModalRef.value?.openModal(c.id));
 };
 
 const updateCaseStage = async ({ stage_id, stage_name }) => {
@@ -887,6 +863,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(_searchTimer);
+  approvalsBc.close();
 });
 </script>
 

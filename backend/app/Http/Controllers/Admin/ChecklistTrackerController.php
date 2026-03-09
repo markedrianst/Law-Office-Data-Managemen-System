@@ -24,7 +24,17 @@ class ChecklistTrackerController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json(['data' => $records]);
+        // Include available checklist items so the frontend can populate
+        // the "Checklist Item" dropdown without a separate API call.
+        $checklists = CaseChecklist::where('case_id', $case->id)
+            ->select('id', 'task', 'is_out')
+            ->orderBy('created_at')
+            ->get();
+
+        return response()->json([
+            'data'       => $records,
+            'checklists' => $checklists,
+        ]);
     }
 
     // GET /admin/cases/{case}/checklist-tracker/pending

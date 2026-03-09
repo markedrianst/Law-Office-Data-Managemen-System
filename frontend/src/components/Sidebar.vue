@@ -28,7 +28,6 @@
       </transition>
 
       <template v-for="item in visibleNav" :key="item.label || item.path">
-        <!-- Regular nav item -->
         <router-link
           v-if="!item.isDropdown"
           :to="item.path"
@@ -40,7 +39,6 @@
           <transition name="fade-text">
             <span v-if="!collapsed" class="nav-text">{{ item.label }}</span>
           </transition>
-          <!-- Numeric badge (e.g. pending approvals) -->
           <transition name="fade-text">
             <span
               v-if="!collapsed && item.badgeRef !== undefined && item.badgeRef.value > 0"
@@ -49,7 +47,6 @@
               {{ item.badgeRef.value }}
             </span>
           </transition>
-          <!-- Notification dot badge for clerk pending requests -->
           <transition name="fade-text">
             <span
               v-if="!collapsed && item.dotBadgeRef !== undefined && item.dotBadgeRef.value"
@@ -59,7 +56,6 @@
           </transition>
         </router-link>
 
-        <!-- Dropdown item -->
         <div v-else class="nav-dropdown">
           <div
             class="nav-item dropdown-toggle"
@@ -128,8 +124,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-import { getPendingCount } from '@/services/approvalService'
-import { getClerkPendingCount } from '@/services/approvalService'
+import { getPendingCount, getClerkPendingCount } from '@/services/approvalService'
 
 const route = useRoute()
 const collapsed = ref(false)
@@ -138,11 +133,9 @@ const { userName, userRole, userInitials } = useAuth()
 
 defineEmits(['navigate'])
 
-// ── Approval badge (admin / lawyer) ──────────────────────────────────────────
+// ── Badge state ───────────────────────────────────────────────────────────────────────────────────
 const pendingApprovalCount = ref(0)
-
-// ── Pending dot (clerk: they have outgoing requests waiting) ─────────────────
-const clerkHasPending = ref(false)
+const clerkHasPending      = ref(false)
 
 const fetchPendingCount = async () => {
   const role = userRole.value?.toLowerCase()
@@ -150,7 +143,6 @@ const fetchPendingCount = async () => {
     pendingApprovalCount.value = await getPendingCount()
   }
   if (role === 'clerk') {
-    // Show a dot badge on Case Master when the clerk has PENDING requests
     try {
       const count = await getClerkPendingCount()
       clerkHasPending.value = count > 0
@@ -160,9 +152,53 @@ const fetchPendingCount = async () => {
   }
 }
 
-let badgeInterval = null
+// ─────────────────────────────────────────────────────────────────────────────
+// SMART SYNC LAYER (matching CaseViewModal pattern)
+//
+// Layer 1 — BroadcastChannel (instant, same browser)
+// Layer 2 — Visibility revalidation (same machine, tab regains focus)
+// Layer 3 — 30-second poll (cross-machine, different browsers/roles)
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ── SVG icons ─────────────────────────────────────────────────────────────────
+let _fetching = false
+let _dirty = false
+let initialLoadDone = false
+let pollTimer = null
+let bc = null
+
+const openChannel = () => {
+  closeChannel()
+  bc = new BroadcastChannel('approvals_sync')
+  bc.onmessage = () => {
+    if (!initialLoadDone) return
+    if (document.visibilityState === 'visible') {
+      fetchPendingCount()
+    } else {
+      _dirty = true
+    }
+  }
+}
+const closeChannel = () => { bc?.close(); bc = null }
+
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') return
+  if (_dirty && initialLoadDone) {
+    fetchPendingCount()
+    _dirty = false
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible' || !initialLoadDone) return
+    fetchPendingCount()
+  }, 30_000)
+}
+
+function stopPolling() { clearInterval(pollTimer); pollTimer = null }
+
+// ── SVG icons ─────────────────────────────────────────────────────────────────────────────────────
 const icons = {
   dashboard:    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
   users:        `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
@@ -173,37 +209,19 @@ const icons = {
   approvals:    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`,
 }
 
-// ── All nav items with per-role visibility ────────────────────────────────────
+// ── Nav items ─────────────────────────────────────────────────────────────────────────────────────
 const allNav = [
+  { path: '/dashboard',      label: 'Dashboard',    icon: icons.dashboard, roles: [] },
+  { path: '/usermanagement', label: 'Users',         icon: icons.users,     roles: ['admin'] },
+  { path: '/audittrail',     label: 'Activity Logs', icon: icons.logs,      roles: ['admin', 'lawyer'] },
   {
-    path: '/dashboard',
-    label: 'Dashboard',
-    icon: icons.dashboard,
-    roles: [],
-  },
-  {
-    path: '/usermanagement',
-    label: 'Users',
-    icon: icons.users,
-    roles: ['admin'],
-  },
-  {
-    path: '/audittrail',
-    label: 'Activity Logs',
-    icon: icons.logs,
-    roles: ['admin', 'lawyer'],
-  },
-  {
-    // Case Master is visible to ALL three roles
     path: '/casemaster',
     label: 'Case Master',
     icon: icons.cases,
     roles: ['admin', 'lawyer', 'clerk'],
-    // Clerk sees a yellow dot when they have pending requests
     dotBadgeRef: clerkHasPending,
   },
   {
-    // Approvals visible to admin AND lawyer (they can both approve)
     path: '/approvals',
     label: 'Approvals',
     icon: icons.approvals,
@@ -222,43 +240,36 @@ const allNav = [
       { path: '/documents',    label: 'Documents',        icon: icons.tasks },
     ],
   },
-  {
-    path: '/clerkstracker',
-    label: 'Clerks Tracker',
-    icon: icons.appointments,
-    roles: ['clerk'],
-  },
+  { path: '/clerkstracker', label: 'Clerks Tracker', icon: icons.appointments, roles: ['clerk'] },
 ]
 
 const visibleNav = computed(() => {
   const role = userRole.value?.toLowerCase() ?? ''
-  return allNav.filter(item => {
-    if (!item.roles || item.roles.length === 0) return true
-    return item.roles.includes(role)
-  })
+  return allNav.filter(item => !item.roles?.length || item.roles.includes(role))
 })
 
-const isDropdownActive = (item) =>
-  item.children?.some(child => route.path === child.path) ?? false
+const isDropdownActive = (item) => item.children?.some(c => route.path === c.path) ?? false
+const toggleDropdown   = (item) => { item.expanded.value = !item.expanded.value }
 
-const toggleDropdown = (item) => {
-  item.expanded.value = !item.expanded.value
-}
+const handleResize = () => { isMobile.value = window.innerWidth < 768 }
 
-const handleResize = () => {
-  isMobile.value = window.innerWidth < 768
-}
-
+// ── Lifecycle ─────────────────────────────────────────────────────────────────────────────────────
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   handleResize()
-  fetchPendingCount()
-  badgeInterval = setInterval(fetchPendingCount, 60_000)
+  fetchPendingCount().then(() => {
+    initialLoadDone = true
+    openChannel()
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    startPolling()
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  clearInterval(badgeInterval)
+  stopPolling()
+  closeChannel()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 
@@ -282,7 +293,6 @@ onUnmounted(() => {
   .sidebar, .sidebar.collapsed { width: 240px; }
 }
 
-/* Logo */
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -305,7 +315,6 @@ onUnmounted(() => {
 .logo-main { font-size: 11px; font-weight: 700; color: white; letter-spacing: .06em; }
 .logo-sub  { font-size: 9px;  font-weight: 500; color: rgba(255,255,255,.4); letter-spacing: .1em; }
 
-/* Nav */
 .sidebar-nav {
   flex: 1;
   padding: 16px 10px;
@@ -348,7 +357,6 @@ onUnmounted(() => {
 .nav-icon      { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; }
 .nav-text      { flex: 1; }
 
-/* Numeric badge */
 .nav-badge {
   font-size: 10px; font-weight: 700;
   padding: 1px 7px; border-radius: 99px;
@@ -359,7 +367,6 @@ onUnmounted(() => {
   animation: pulse-badge 2s infinite;
 }
 
-/* Dot badge for clerk pending requests */
 .nav-dot-badge {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -374,7 +381,6 @@ onUnmounted(() => {
   50%       { opacity: 0.65; }
 }
 
-/* Footer */
 .sidebar-footer {
   padding: 12px 10px;
   border-top: 1px solid rgba(255,255,255,.08);
@@ -405,13 +411,11 @@ onUnmounted(() => {
 }
 .collapse-btn:hover { background: rgba(255,255,255,.13); color: white; }
 
-/* Text fade */
 .fade-text-enter-active  { transition: opacity .2s .05s, transform .2s .05s; }
 .fade-text-leave-active  { transition: opacity .12s, transform .12s; }
 .fade-text-enter-from,
 .fade-text-leave-to      { opacity: 0; transform: translateX(-4px); }
 
-/* Dropdown */
 .nav-dropdown    { width: 100%; }
 .dropdown-toggle { cursor: pointer; position: relative; }
 .dropdown-arrow  { margin-left: auto; transition: transform .3s ease; display: flex; align-items: center; opacity: .6; flex-shrink: 0; }

@@ -44,7 +44,7 @@
         </select>
         <select v-model="filterDirection"
           class="flex-1 min-w-[100px] px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600">
-          <option value="ALL">In & Out</option>
+          <option value="ALL">In &amp; Out</option>
           <option value="OUT">OUT only</option>
           <option value="IN">IN only</option>
         </select>
@@ -75,17 +75,8 @@
       </button>
     </div>
 
-    <!-- ── Loading ── -->
-    <div v-if="loading" class="bg-white rounded-2xl shadow-sm border border-slate-100 py-24 flex flex-col items-center gap-4 text-slate-400">
-      <svg class="animate-spin w-8 h-8" viewBox="0 0 24 24" fill="none">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-      <span class="text-sm">Loading movements…</span>
-    </div>
-
     <!-- ── Empty ── -->
-    <div v-else-if="!visibleRows.length"
+    <div v-if="!visibleRows.length"
       class="bg-white rounded-2xl shadow-sm border border-slate-100 py-20 flex flex-col items-center gap-4 text-center px-4">
       <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
         <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,23 +196,19 @@
           class="p-4 transition-colors"
           :class="mv.approval_status === 'PENDING' ? 'bg-amber-50/30' : 'bg-white'">
 
-          <!-- Card top row: case + badges -->
           <div class="flex items-start justify-between gap-2 mb-3">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-sm font-bold text-[#1a4972]">{{ mv.case_code ?? `Case #${mv.case_id}` }}</span>
-              <!-- Type badge -->
               <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border"
                 :class="mv._source === 'checklist' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-600 border-slate-200'">
                 {{ mv._source === 'checklist' ? '📋' : '📁' }}
                 {{ mv._source === 'checklist' ? 'Checklist' : 'Folder' }}
               </span>
-              <!-- Direction badge -->
               <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-lg text-xs font-bold border"
                 :class="mv.type === 'OUT' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'">
                 {{ mv.type }}
               </span>
             </div>
-            <!-- Status badge -->
             <span class="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border"
               :class="statusClass(mv.approval_status)">
               <span v-if="mv.approval_status === 'PENDING'" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
@@ -229,12 +216,10 @@
             </span>
           </div>
 
-          <!-- Task / document name -->
           <p class="text-sm font-semibold text-slate-800 mb-2">
             {{ mv.checklist?.task ?? (mv.type === 'OUT' ? 'Physical folder sent out' : 'Physical folder returned') }}
           </p>
 
-          <!-- Meta grid -->
           <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-3">
             <div v-if="mv.from_to">
               <p class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">{{ mv.type === 'OUT' ? 'To' : 'From' }}</p>
@@ -258,14 +243,12 @@
             </div>
           </div>
 
-          <!-- Reviewed by (approved/rejected) -->
           <p v-if="mv.approval_status !== 'PENDING' && mv.approver?.full_name"
             class="text-xs text-slate-400 mb-3">
             {{ mv.approval_status === 'APPROVED' ? '✓ Approved' : '✗ Rejected' }} by
             <span class="font-medium text-slate-600">{{ mv.approver.full_name }}</span>
           </p>
 
-          <!-- Action buttons -->
           <div v-if="mv.approval_status === 'PENDING'" class="flex gap-2 pt-2 border-t border-amber-100">
             <button @click="decide(mv, 'APPROVED')"
               :disabled="processingId === `${mv._source}-${mv.id}`"
@@ -300,7 +283,7 @@
           Showing <span class="font-semibold text-slate-700">{{ visibleRows.length }}</span> of
           <span class="font-semibold text-slate-700">{{ allMovements.length }}</span> movements
         </p>
-        <button @click="loadAll"
+        <button @click="loadAll()"
           class="text-xs text-[#1a4972] hover:underline font-medium flex items-center gap-1">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -392,17 +375,17 @@
 
   </div>
 </template>
+
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue';
 import {
   getAllMovements,
   reviewChecklistMovement,
   reviewFolderMovement,
 } from '@/services/approvalService';
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────────────────
 const allMovements = ref([]);
-const loading      = ref(false);
 const processingId = ref(null);
 
 // Filters
@@ -418,27 +401,72 @@ const confirm = reactive({ show: false, mv: null, action: null, processing: fals
 // Toast
 const toast = reactive({ show: false, message: '', type: 'success' });
 
-// ── Load all movements via global approvals endpoint ──────────────────────────
-const loadAll = async () => {
-  loading.value = true;
+// ── Load ────────────────────────────────────────────────────────────────────────────────
+// In-flight guard prevents duplicate concurrent requests.
+// All re-fetches after initial load are silent (no spinner).
+let _fetching = false;
+let _dirty    = false;
+let initialLoadDone = false;
+let pollTimer = null;
+let bc = null;
+
+const loadAll = async (silent = false) => {
+  if (_fetching) { _dirty = true; return; }
+  _fetching = true;
   try {
     const res = await getAllMovements();
     allMovements.value = res.data;
+    _dirty = false;
   } catch (e) {
     showToast(e.message ?? 'Failed to load movements.', 'error');
   } finally {
-    loading.value = false;
+    _fetching = false;
   }
 };
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
+// ── Layer 1: BroadcastChannel — instant same-browser sync ──────────────────────────
+// CaseMaster.vue broadcasts on 'approvals_sync' after a clerk successfully
+// submits a folder or checklist movement. We re-fetch silently so the new
+// pending row appears immediately without any loading spinner.
+const openChannel = () => {
+  closeChannel();
+  bc = new BroadcastChannel('approvals_sync');
+  bc.onmessage = () => {
+    if (!initialLoadDone) return;
+    if (document.visibilityState === 'visible') {
+      loadAll(true);
+    } else {
+      _dirty = true;   // tab is hidden — mark dirty, reload on next focus
+    }
+  };
+};
+const closeChannel = () => { bc?.close(); bc = null; };
+
+// ── Layer 2: Visibility — catch up if tab was backgrounded when broadcast fired ────────
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') return;
+  if (_dirty && initialLoadDone) loadAll(true);
+};
+
+// ── Layer 3: 30-second poll (cross-machine sync) ──────────────────────────────────────
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible' || !initialLoadDone) return;
+    loadAll(true);
+  }, 30_000);
+}
+
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
+
+// ── Stats ─────────────────────────────────────────────────────────────────────────────────
 const stats = computed(() => ({
   pending:  allMovements.value.filter(m => m.approval_status === 'PENDING').length,
   approved: allMovements.value.filter(m => m.approval_status === 'APPROVED').length,
   rejected: allMovements.value.filter(m => m.approval_status === 'REJECTED').length,
 }));
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────────────────────────────
 const tabs = computed(() => [
   { key: 'PENDING',  label: 'Pending',  count: stats.value.pending  },
   { key: 'APPROVED', label: 'Approved', count: stats.value.approved },
@@ -446,7 +474,7 @@ const tabs = computed(() => [
   { key: 'ALL',      label: 'All',      count: allMovements.value.length },
 ]);
 
-// ── Filtered rows ─────────────────────────────────────────────────────────────
+// ── Filtered rows ─────────────────────────────────────────────────────────────────────────────
 const hasActiveFilters = computed(() =>
   searchQuery.value || filterType.value !== 'ALL' || filterDirection.value !== 'ALL'
 );
@@ -454,23 +482,16 @@ const hasActiveFilters = computed(() =>
 const visibleRows = computed(() => {
   let rows = allMovements.value;
 
-  // Tab filter
   if (activeTab.value !== 'ALL') {
     rows = rows.filter(m => m.approval_status === activeTab.value);
   }
 
-  // Status dropdown (secondary, only shows when tab is ALL)
   if (activeTab.value === 'ALL' && filterStatus.value !== 'ALL') {
     rows = rows.filter(m => m.approval_status === filterStatus.value);
   }
 
-  if (filterType.value !== 'ALL') {
-    rows = rows.filter(m => m._source === filterType.value);
-  }
-
-  if (filterDirection.value !== 'ALL') {
-    rows = rows.filter(m => m.type === filterDirection.value);
-  }
+  if (filterType.value !== 'ALL')      rows = rows.filter(m => m._source === filterType.value);
+  if (filterDirection.value !== 'ALL') rows = rows.filter(m => m.type === filterDirection.value);
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
@@ -494,7 +515,7 @@ const clearFilters = () => {
   filterStatus.value    = 'ALL';
 };
 
-// ── Approve / Reject ──────────────────────────────────────────────────────────
+// ── Approve / Reject ──────────────────────────────────────────────────────────────────────────────
 const decide = (mv, action) => {
   confirm.mv         = mv;
   confirm.action     = action;
@@ -531,7 +552,6 @@ const confirmDecide = async () => {
       action === 'APPROVED' ? 'Movement approved successfully.' : 'Movement rejected.',
       action === 'APPROVED' ? 'success' : 'error'
     );
-
   } catch (e) {
     showToast(e.message ?? 'Something went wrong. Please try again.', 'error');
   } finally {
@@ -540,7 +560,7 @@ const confirmDecide = async () => {
   }
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────────────────────
 const showToast = (message, type = 'success') => {
   toast.message = message;
   toast.type    = type;
@@ -566,25 +586,27 @@ const statusClass = (s) => ({
   REJECTED: 'bg-red-50 text-red-600 border-red-200',
 }[s] ?? 'bg-slate-100 text-slate-500 border-slate-200');
 
-// ── Sync tab ↔ filterStatus ───────────────────────────────────────────────────
-// Clicking a tab sets the dropdown too so they stay in sync
-const syncTab = (key) => {
-  activeTab.value    = key;
-  filterStatus.value = key; // keeps dropdown aligned
-};
+// ── Lifecycle ───────────────────────────────────────────────────────────────────────────────────
+onMounted(() => {
+  loadAll().then(() => {
+    initialLoadDone = true;
+    openChannel();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    startPolling();
+  });
+});
 
-// Override activeTab setter to also sync
-const setTab = (key) => { activeTab.value = key; };
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-onMounted(loadAll);
+onUnmounted(() => {
+  stopPolling();
+  closeChannel();
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+});
 </script>
 
 <style scoped>
 .modal-enter-active, .modal-leave-active { transition: all 0.2s ease; }
 .modal-enter-from, .modal-leave-to       { opacity: 0; transform: scale(0.97); }
 
-/* Modal slides up from bottom on mobile */
 @media (max-width: 639px) {
   .modal-enter-from, .modal-leave-to { opacity: 0; transform: translateY(100%); }
 }
@@ -594,11 +616,8 @@ onMounted(loadAll);
 .toast-enter-from   { opacity: 0; transform: translateY(8px) scale(0.98); }
 .toast-leave-to     { opacity: 0; transform: translateY(4px); }
 
-/* Table scrollbar */
 .overflow-x-auto::-webkit-scrollbar       { height: 4px; }
 .overflow-x-auto::-webkit-scrollbar-track { background: #f1f5f9; }
 .overflow-x-auto::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-
-/* Tab bar scrollbar (mobile) */
 .overflow-x-auto::-webkit-scrollbar { height: 0; }
 </style>
