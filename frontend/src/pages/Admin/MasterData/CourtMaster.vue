@@ -415,33 +415,6 @@ const confirmBtnText   = ref('');
 const actionLoading    = ref(false);
 const actionTarget     = ref(null);
 
-// ==================== SORT ORDER HELPERS ====================
-
-/**
- * RULES:
- * ─────────────────────────────────────────────────────────────
- * • "Others" (sort_order = 9999) is the permanent last item — it NEVER moves.
- * • All other courts start at sort_order = 1 and increment by 1.
- * • When a new court is added, it is inserted right before "Others":
- *     new sort_order = (highest non-Others sort_order) + 1
- *   This is always < 9999, so Others always stays last.
- * • No shifting of existing items needed — each new court simply
- *   takes the next available integer slot before 9999.
- *
- * EXAMPLE — before adding "Court C":
- *   1 · RTC Branch 16
- *   2 · MTC Capas
- *   3 · Office of the City Prosecutor
- *   9999 · Others
- *
- * After adding "Court C":
- *   1 · RTC Branch 16
- *   2 · MTC Capas
- *   3 · Office of the City Prosecutor
- *   4 · Court C   ← new, inserted before Others
- *   9999 · Others ← unchanged, still last
- */
-
 const OTHERS_SORT_ORDER = 9999;
 
 /** The "Others" anchor — identified by sort_order 9999 OR name "Others" */
@@ -463,11 +436,6 @@ const maxNonOtherSortOrder = computed(() =>
     : 0   // 0 + 1 = 1, so the very first court starts at 1
 );
 
-/**
- * sort_order for the new court.
- * Always starts at 1 for the first entry, then increments.
- * Capped at 9998 so it can never reach or exceed Others.
- */
 const computedNewSortOrder = computed(() =>
   Math.min(maxNonOtherSortOrder.value + 1, OTHERS_SORT_ORDER - 1)
 );

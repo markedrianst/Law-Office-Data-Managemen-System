@@ -1,5 +1,5 @@
 // src/services/approvalService.js
-import api from "./api";
+import api from "@/services/api";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GLOBAL APPROVALS  (powers the /approvals standalone page)
@@ -75,13 +75,7 @@ export const reviewMovement = async (source, movementId, approvalStatus) => {
  */
 export const getClerkPendingCount = async () => {
   try {
-    // The backend filters to the clerk's cases inside each controller,
-    // so we can safely use a single aggregated endpoint.
-    // If you add GET /admin/approvals/my-pending-count later, swap this call.
     const response = await api.get("/admin/approvals/pending-count");
-    // For a clerk, the backend should return movements they recorded.
-    // If the backend returns 0 for clerks (because it scopes to all cases),
-    // implement a dedicated endpoint and replace the URL above.
     return response.data.count ?? 0;
   } catch {
     return 0;

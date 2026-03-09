@@ -537,8 +537,10 @@ const loadDocuments = async () => {
     ]);
 
     // Client-side sort by sort_order to guarantee correct order regardless of backend
-    const mapped = (res.data?.data ?? []).map(DocumentService.formatDocument);
-    documents.value = sortField.value === 'sort_order'
+const mapped = (res.data ?? []).map(DocumentService.formatDocument);
+documents.value = mapped;
+const m = res.meta ?? {};    
+documents.value = sortField.value === 'sort_order'
       ? [...mapped].sort((a, b) =>
           sortDirection.value === 'asc'
             ? a.sort_order - b.sort_order
@@ -546,7 +548,6 @@ const loadDocuments = async () => {
         )
       : mapped;
 
-    const m = res.data?.meta ?? {};
     if (m.current_page) {
       pagination.value = {
         current_page: m.current_page,

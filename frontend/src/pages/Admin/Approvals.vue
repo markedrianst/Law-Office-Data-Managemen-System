@@ -11,22 +11,6 @@
           </div>
           <p class="text-sm ml-4 pl-3 text-slate-500">Review and approve pending document movements from clerks</p>
         </div>
-        <!-- Summary chips — wrap on small screens -->
-        <div class="flex items-center gap-2 flex-wrap">
-          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold"
-            :class="stats.pending > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-100 border-slate-200 text-slate-500'">
-            <span class="w-1.5 h-1.5 rounded-full" :class="stats.pending > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'"></span>
-            {{ stats.pending }} Pending
-          </div>
-          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            {{ stats.approved }} Approved
-          </div>
-          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-600">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-            {{ stats.rejected }} Rejected
-          </div>
-        </div>
       </div>
     </div>
 

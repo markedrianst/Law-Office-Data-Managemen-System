@@ -1,29 +1,3 @@
-/**
- * caseService.js
- *
- * Central service connecting ALL Vue components to the CaseController.
- *
- * Components that depend on this service:
- *   CaseMaster.vue         — list, filters, pagination, export, CRUD
- *   CaseFormModal.vue      — stages, categories, users, clients (lookups)
- *   CaseViewModal.vue      — stage update, checklist, folder/checklist tracker
- *   CaseTaskModal.vue      — createChecklistTask, updateChecklistTask
- *   NewClientModal.vue     — quickCreateClient (via clientService.create)
- *   ChecklistViewModal.vue — checklist read
- *
- * Optimizations vs. original:
- *   1. In-memory promise deduplication  — a second caller while a request is
- *      in flight gets the SAME promise, not a duplicate HTTP request.
- *   2. TTL cache with stale-while-revalidate — lookups are served instantly
- *      from cache; a background refresh keeps data fresh (5 min TTL).
- *   3. Parallel lookup loading  — categories + stages + users fetched together
- *      in one Promise.all, NOT sequentially.
- *   4. Granular cache invalidation  — only bust what actually changed.
- *   5. Error resilience  — every call catches errors, clears its inflight
- *      promise so the next call retries cleanly.
- *   6. Formatters are pure functions with zero allocations for empty arrays.
- */
-
 import api from '@/services/api';
 
 // ─────────────────────────────────────────────────────────────────────────────

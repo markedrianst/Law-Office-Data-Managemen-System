@@ -27,31 +27,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/logout', [AuthenticatedSessionController::class, 'logout']);
 
-    Route::get('/check-status', function (Request $request) {
-        $freshUser = \App\Models\User::select('id', 'status', 'role_id', 'password_hash')
-            ->with('role:id,name')
-            ->find($request->user()->id);
-
-        if (!$freshUser) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-        if ($freshUser->status !== 'active') {
-            return response()->json([
-                'message' => 'Your account has been deactivated. Please contact the administrator.',
-            ], 403);
-        }
-        $tokenUser = $request->user();
-        if ($tokenUser->getAuthPassword() !== $freshUser->password) {
-            return response()->json([
-                'message' => 'Your credentials have been changed. Please log in again.',
-            ], 401);
-        }
-        return response()->json([
-            'status' => 'active',
-            'role'   => $freshUser->role->name ?? null,
-        ]);
-    });
-
     // ── User management (admin only) ──────────────────────────────────────────
     Route::get   ('/users',           [UserManagementController::class, 'index']);
     Route::post  ('/users',           [UserManagementController::class, 'store']);
@@ -74,13 +49,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 });
 
-// =============================================================================
-// ADMIN ROUTES
-// All protected by auth:sanctum.
-// Role checks are enforced inside each controller method.
-// All three roles (admin, lawyer, clerk) are permitted to reach this prefix;
-// individual controllers abort with 403 where clerk access is not allowed.
-// =============================================================================
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
     // ── Audit Logs ────────────────────────────────────────────────────────────

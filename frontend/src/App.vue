@@ -6,7 +6,7 @@ import MainLayout from "@/layouts/Layout.vue";
 const route = useRoute();
 
 const useLayout = computed(() => {
-  const noLayoutNames = ["Login", "Register", "NotFound"];
+  const noLayoutNames = ["Login", "Register", ];
   return !noLayoutNames.includes(route.name);
 });
 </script>

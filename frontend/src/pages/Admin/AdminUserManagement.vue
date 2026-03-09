@@ -1,4 +1,4 @@
-<!-- Light Theme User Management with PH Phone Formatter + Skeleton Loaders -->
+<!-- Light Theme User Management with PH Phone Formatter - Static but Dynamic Feel -->
 <template>
   <div class="min-h-screen p-6" style="background: #f0f4f8; font-family: 'Segoe UI', sans-serif;">
 
@@ -12,28 +12,28 @@
     </div>
 
     <!-- Search and Add Bar -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4 transition-all duration-300 hover:shadow-md">
       <div class="flex flex-col sm:flex-row gap-3">
-        <div class="relative flex-1">
+        <div class="relative flex-1 group">
           <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-4 w-4 text-slate-400 transition-colors duration-200 group-focus-within:text-[#1a4972]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
           <input v-model="searchQuery" @input="debouncedSearch" type="text"
             placeholder="Search by name or email..."
-            class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] transition-all placeholder-slate-400" />
+            class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] focus:bg-white transition-all duration-200 placeholder-slate-400" />
         </div>
         <select v-model="roleFilter" @change="handleFilterChange"
-          class="px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] transition-all text-slate-600">
+          class="px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] focus:bg-white transition-all duration-200 text-slate-600 cursor-pointer hover:bg-slate-100">
           <option value="">All Roles</option>
           <option value="Lawyer">Lawyer</option>
           <option value="Clerk">Clerk</option>
         </select>
         <button @click="openAddUserModal"
-          class="text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center transition-all duration-200 whitespace-nowrap active:scale-95"
+          class="text-white px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center transition-all duration-200 whitespace-nowrap hover:shadow-lg active:scale-95"
           :style="{ background: 'linear-gradient(135deg, #1a4972, #0f2f4a)', boxShadow: '0 4px 12px rgba(26,73,114,0.3)' }">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 mr-2 transition-transform duration-200 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
           </svg>
           Add New User
@@ -42,7 +42,7 @@
     </div>
 
     <!-- Users Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-300 hover:shadow-md">
       <table class="min-w-full">
         <thead>
           <tr class="border-b border-slate-100" style="background: rgba(26,73,114,0.04);">
@@ -52,10 +52,10 @@
               @click="col.sortable ? sortBy(col.field) : null">
               <div class="flex items-center gap-1.5">
                 {{ col.label }}
-                <svg v-if="col.sortable && sortField === col.field" class="w-3.5 h-3.5" style="color: #1a4972;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-if="col.sortable && sortField === col.field" class="w-3.5 h-3.5 transition-transform duration-200" style="color: #1a4972;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path :d="sortDirection === 'desc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <svg v-else-if="col.sortable" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-else-if="col.sortable" class="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
                 </svg>
               </div>
@@ -64,106 +64,78 @@
         </thead>
 
         <tbody class="divide-y divide-slate-50">
-
-          <!-- ===== SKELETON ROWS ===== -->
-          <template v-if="isLoading">
-            <tr v-for="i in itemsPerPage" :key="'sk-' + i" class="animate-pulse">
-              <td class="px-5 py-4">
-                <div class="h-4 w-36 bg-slate-200 rounded mb-2"></div>
-                <div class="h-3 w-44 bg-slate-100 rounded"></div>
-              </td>
-              <td class="px-5 py-4">
-                <div class="h-6 w-16 bg-slate-200 rounded-lg"></div>
-              </td>
-              <td class="px-5 py-4">
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-slate-200 flex-shrink-0"></div>
-                  <div class="h-3 w-12 bg-slate-200 rounded"></div>
-                </div>
-              </td>
-              <td class="px-5 py-4">
-                <div class="h-3 w-32 bg-slate-100 rounded"></div>
-              </td>
-              <td class="px-5 py-4">
-                <div class="h-3 w-28 bg-slate-100 rounded"></div>
-              </td>
-              <td class="px-5 py-4">
-                <div class="flex gap-2">
-                  <div class="h-7 w-14 bg-slate-200 rounded-lg"></div>
-                  <div class="h-7 w-16 bg-slate-100 rounded-lg"></div>
-                </div>
-              </td>
-            </tr>
-          </template>
-
-          <!-- ===== ACTUAL ROWS ===== -->
-          <template v-else>
-            <tr v-for="user in users" :key="user.id" class="transition-colors duration-100 hover:bg-blue-50/30 group">
-              <td class="px-5 py-4">
-                <p class="text-sm font-semibold text-slate-800">{{ user.name }}</p>
-                <p class="text-xs text-slate-400">{{ user.email }}</p>
-              </td>
-              <td class="px-5 py-4">
-                <span class="px-2.5 py-1 text-xs font-semibold rounded-lg"
-                  :style="user.role === 'Lawyer'
-                    ? { background: 'rgba(26,73,114,0.1)', color: '#1a4972' }
-                    : { background: 'rgba(16,185,129,0.1)', color: '#065f46' }">
-                  {{ user.role }}
+          <!-- Actual rows with fade-in animation -->
+          <tr v-for="(user, index) in users" :key="user.id" 
+            class="transition-all duration-300 hover:bg-blue-50/30 group"
+            :style="{ animation: `fadeIn 0.3s ease-out ${index * 0.05}s both` }">
+            <td class="px-5 py-4">
+              <p class="text-sm font-semibold text-slate-800">{{ user.name }}</p>
+              <p class="text-xs text-slate-400">{{ user.email }}</p>
+            </td>
+            <td class="px-5 py-4">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 hover:scale-105 inline-block"
+                :style="user.role === 'Lawyer'
+                  ? { background: 'rgba(26,73,114,0.1)', color: '#1a4972' }
+                  : { background: 'rgba(16,185,129,0.1)', color: '#065f46' }">
+                {{ user.role }}
+              </span>
+            </td>
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-1.5">
+                <div class="w-1.5 h-1.5 rounded-full transition-all duration-300" 
+                  :style="{ 
+                    background: user.status === 'Active' ? '#10b981' : '#ef4444',
+                    boxShadow: user.status === 'Active' ? '0 0 8px rgba(16,185,129,0.5)' : '0 0 8px rgba(239,68,68,0.5)'
+                  }"></div>
+                <span class="text-xs font-medium" :style="{ color: user.status === 'Active' ? '#065f46' : '#b91c1c' }">
+                  {{ user.status }}
                 </span>
-              </td>
-              <td class="px-5 py-4">
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full" :style="{ background: user.status === 'Active' ? '#10b981' : '#ef4444' }"></div>
-                  <span class="text-xs font-medium" :style="{ color: user.status === 'Active' ? '#065f46' : '#b91c1c' }">
-                    {{ user.status }}
-                  </span>
-                </div>
-              </td>
-              <td class="px-5 py-4 text-sm text-slate-400">{{ formatDate(user.created_at) }}</td>
-              <td class="px-5 py-4 text-sm text-slate-400">{{ formatLastLogin(user.last_login) }}</td>
-              <td class="px-5 py-4">
-                <div class="flex items-center gap-2">
-                  <button @click="editUser(user)"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                    :style="{ color: '#1a4972' }"
-                    @mouseover="e => e.currentTarget.style.background = 'rgba(26,73,114,0.07)'"
-                    @mouseleave="e => e.currentTarget.style.background = 'transparent'">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                    Edit
-                  </button>
-                  <button @click="confirmDeleteUser(user)"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-red-600 text-sm font-semibold transition-all hover:bg-red-50">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
+              </div>
+            </td>
+            <td class="px-5 py-4 text-sm text-slate-400">{{ formatDate(user.created_at) }}</td>
+            <td class="px-5 py-4 text-sm text-slate-400">{{ formatLastLogin(user.last_login) }}</td>
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity duration-200">
+                <button @click="editUser(user)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+                  :style="{ color: '#1a4972' }"
+                  @mouseover="e => e.currentTarget.style.background = 'rgba(26,73,114,0.07)'"
+                  @mouseleave="e => e.currentTarget.style.background = 'transparent'">
+                  <svg class="w-4 h-4 transition-transform duration-200 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                  Edit
+                </button>
+                <button @click="confirmDeleteUser(user)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-red-600 text-sm font-semibold transition-all hover:bg-red-50 hover:scale-105">
+                  <svg class="w-4 h-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>
 
-            <!-- Empty state -->
-            <tr v-if="users.length === 0">
-              <td :colspan="columns.length" class="px-6 py-16 text-center">
-                <div class="flex flex-col items-center">
-                  <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style="background: rgba(26,73,114,0.07);">
-                    <svg class="w-7 h-7" style="color: #1a4972; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                  </div>
-                  <p class="text-sm font-semibold text-slate-700 mb-1">No users found</p>
-                  <p class="text-xs text-slate-400">Try adjusting your search or add a new user</p>
+          <!-- Empty state with animation -->
+          <tr v-if="users.length === 0">
+            <td :colspan="columns.length" class="px-6 py-16 text-center">
+              <div class="flex flex-col items-center animate-fadeIn">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 hover:scale-110 hover:shadow-lg" 
+                  style="background: rgba(26,73,114,0.07);">
+                  <svg class="w-7 h-7 transition-all duration-300" style="color: #1a4972; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                  </svg>
                 </div>
-              </td>
-            </tr>
-          </template>
-
+                <p class="text-sm font-semibold text-slate-700 mb-1">No users found</p>
+                <p class="text-xs text-slate-400">Try adjusting your search or add a new user</p>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
 
-      <!-- Pagination -->
+      <!-- Pagination with smooth transitions -->
       <div v-if="pagination.total > 0" class="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50/50">
         <p class="text-xs text-slate-500">
           Showing <span class="font-semibold text-slate-700">{{ pagination.from }}</span> to
@@ -172,19 +144,25 @@
         </p>
         <div class="flex items-center gap-1">
           <button @click="previousPage" :disabled="pagination.current_page === 1"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-            :class="pagination.current_page === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200'">
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+            :class="pagination.current_page === 1 
+              ? 'text-slate-300 cursor-not-allowed' 
+              : 'text-slate-600 hover:bg-slate-200 hover:scale-105 active:scale-95'">
             ← Prev
           </button>
           <button v-for="page in displayedPages" :key="page" @click="goToPage(page)"
-            class="w-7 h-7 rounded-lg text-xs font-medium transition-all"
-            :style="pagination.current_page === page ? { background: 'linear-gradient(135deg,#1a4972,#0f2f4a)', color: 'white' } : {}"
+            class="w-7 h-7 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-110 active:scale-95"
+            :style="pagination.current_page === page 
+              ? { background: 'linear-gradient(135deg,#1a4972,#0f2f4a)', color: 'white', boxShadow: '0 2px 8px rgba(26,73,114,0.3)' } 
+              : {}"
             :class="pagination.current_page !== page ? 'text-slate-600 hover:bg-slate-200' : ''">
             {{ page }}
           </button>
           <button @click="nextPage" :disabled="pagination.current_page === pagination.last_page"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-            :class="pagination.current_page === pagination.last_page ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200'">
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+            :class="pagination.current_page === pagination.last_page 
+              ? 'text-slate-300 cursor-not-allowed' 
+              : 'text-slate-600 hover:bg-slate-200 hover:scale-105 active:scale-95'">
             Next →
           </button>
         </div>
@@ -192,213 +170,169 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- ADD / EDIT MODAL                                             -->
+    <!-- ADD / EDIT MODAL - Without loading skeletons                -->
     <!-- ============================================================ -->
     <Transition name="modal">
       <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeModal">
-        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-[1000px] max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-[1000px] max-h-[90vh] flex flex-col overflow-hidden transform transition-all duration-300 scale-100 opacity-100">
 
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 flex-shrink-0">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(26,73,114,0.1);">
-                <svg class="w-6 h-6" style="color: #1a4972;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-md" 
+                style="background: rgba(26,73,114,0.1);">
+                <svg class="w-6 h-6 transition-transform duration-300" style="color: #1a4972;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
                 </svg>
               </div>
               <div>
-                <template v-if="modalLoading">
-                  <div class="h-5 w-24 bg-slate-200 rounded animate-pulse mb-1.5"></div>
-                  <div class="h-3 w-48 bg-slate-100 rounded animate-pulse"></div>
-                </template>
-                <template v-else>
-                  <h2 class="text-lg font-bold text-slate-800">{{ isEditing ? 'Edit User' : 'Add New User' }}</h2>
-                  <p class="text-sm text-slate-500">{{ isEditing ? 'Update user information' : 'Fill in the details to create a new account' }}</p>
-                </template>
+                <h2 class="text-lg font-bold text-slate-800">{{ isEditing ? 'Edit User' : 'Add New User' }}</h2>
+                <p class="text-sm text-slate-500">{{ isEditing ? 'Update user information' : 'Fill in the details to create a new account' }}</p>
               </div>
             </div>
-            <button @click="closeModal" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+            <button @click="closeModal" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 hover:scale-110 active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
           </div>
 
-          <!-- Modal Body -->
+          <!-- Modal Body - Direct form without skeletons -->
           <div class="px-8 py-6 space-y-6 overflow-y-auto">
-
-            <!-- ===== SKELETON FORM ===== -->
-            <template v-if="modalLoading">
-              <div class="animate-pulse space-y-6">
-                <div class="grid grid-cols-3 gap-4">
-                  <div v-for="i in 3" :key="'sk-n-' + i" class="space-y-2">
-                    <div class="h-3 w-20 bg-slate-200 rounded"></div>
-                    <div class="h-11 bg-slate-200 rounded-xl"></div>
-                  </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                  <div v-for="i in 2" :key="'sk-a-' + i" class="space-y-2">
-                    <div class="h-3 w-28 bg-slate-200 rounded"></div>
-                    <div class="h-11 bg-slate-200 rounded-xl"></div>
-                  </div>
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                  <div v-for="i in 3" :key="'sk-c-' + i" class="space-y-2">
-                    <div class="h-3 w-24 bg-slate-200 rounded"></div>
-                    <div class="h-11 bg-slate-200 rounded-xl"></div>
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <div class="h-3 w-14 bg-slate-200 rounded"></div>
-                  <div class="flex gap-5">
-                    <div class="flex items-center gap-2">
-                      <div class="w-5 h-5 rounded-full bg-slate-200"></div>
-                      <div class="h-3 w-12 bg-slate-200 rounded"></div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="w-5 h-5 rounded-full bg-slate-100"></div>
-                      <div class="h-3 w-14 bg-slate-100 rounded"></div>
-                    </div>
-                  </div>
-                </div>
+            <!-- Name fields with animation -->
+            <div class="grid grid-cols-3 gap-4">
+              <div v-for="(field, index) in ['firstName', 'middleName', 'lastName']" :key="field" class="transition-all duration-300 hover:translate-y-[-2px]">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  {{ ['First Name', 'Middle Name', 'Last Name'][index] }}
+                  <span v-if="field !== 'middleName'" class="text-red-500">*</span>
+                  <span v-else class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
+                </label>
+                <input v-model="form[field]" type="text"
+                  :placeholder="'Enter ' + ['first name','middle name','last name'][index]"
+                  class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all duration-200 hover:border-[#1a4972] focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10"
+                  :class="{ 'border-red-400': errors[field] }" />
+                <p v-if="errors[field]" class="text-sm text-red-500 mt-1 animate-shake">{{ errors[field] }}</p>
               </div>
-            </template>
+            </div>
 
-            <!-- ===== REAL FORM ===== -->
-            <template v-else>
-              <!-- Name fields -->
-              <div class="grid grid-cols-3 gap-4">
-                <div v-for="(field, index) in ['firstName', 'middleName', 'lastName']" :key="field">
-                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">
-                    {{ ['First Name', 'Middle Name', 'Last Name'][index] }}
-                    <span v-if="field !== 'middleName'" class="text-red-500">*</span>
-                    <span v-else class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
-                  </label>
-                  <input v-model="form[field]" type="text"
-                    :placeholder="'Enter ' + ['first name','middle name','last name'][index]"
-                    class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all"
-                    :class="{ 'border-red-400': errors[field] }" />
-                  <p v-if="errors[field]" class="text-sm text-red-500 mt-1">{{ errors[field] }}</p>
-                </div>
+            <!-- Address + Contact -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="transition-all duration-300 hover:translate-y-[-2px]">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Complete Address <span class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
+                </label>
+                <input v-model="form.address" type="text" placeholder="Enter complete address"
+                  class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all duration-200 hover:border-[#1a4972] focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10"
+                  :class="{ 'border-red-400': errors.address }" />
+                <p v-if="errors.address" class="text-sm text-red-500 mt-1 animate-shake">{{ errors.address }}</p>
               </div>
+              <div class="transition-all duration-300 hover:translate-y-[-2px]">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Contact Number <span class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
+                </label>
+                <input
+                  v-model="form.contact"
+                  @keypress="onContactKeypress"
+                  @input="onContactInput"
+                  type="text" inputmode="numeric" maxlength="13"
+                  placeholder="09XX XXX XXXX"
+                  class="w-full px-4 py-3 text-sm border rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all duration-200 hover:border-[#1a4972] focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10"
+                  :class="errors.contact ? 'border-red-400' : 'border-slate-200'"
+                />
+                <p v-if="errors.contact" class="text-sm text-red-500 mt-1 animate-shake">{{ errors.contact }}</p>
+                <p v-else-if="form.contact && isPHContactValid(form.contact)"
+                  class="text-xs text-emerald-600 mt-1 flex items-center gap-1 animate-fadeIn">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Valid PH number
+                </p>
+              </div>
+            </div>
 
-              <!-- Address + Contact -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Complete Address <span class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
-                  </label>
-                  <input v-model="form.address" type="text" placeholder="Enter complete address"
-                    class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all"
-                    :class="{ 'border-red-400': errors.address }" />
-                  <p v-if="errors.address" class="text-sm text-red-500 mt-1">{{ errors.address }}</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Contact Number <span class="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
-                  </label>
-                  <input
-                    v-model="form.contact"
-                    @keypress="onContactKeypress"
-                    @input="onContactInput"
-                    type="text" inputmode="numeric" maxlength="13"
-                    placeholder="09XX XXX XXXX"
-                    class="w-full px-4 py-3 text-sm border rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all"
-                    :class="errors.contact ? 'border-red-400' : 'border-slate-200'"
-                  />
-                  <p v-if="errors.contact" class="text-sm text-red-500 mt-1">{{ errors.contact }}</p>
-                  <p v-else-if="form.contact && isPHContactValid(form.contact)"
-                    class="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            <!-- Email, Role, Password -->
+            <div class="grid grid-cols-3 gap-4">
+              <div class="transition-all duration-300 hover:translate-y-[-2px]">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email Address <span class="text-red-500">*</span></label>
+                <input v-model="form.email" type="email" placeholder="Enter email address"
+                  class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all duration-200 hover:border-[#1a4972] focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10"
+                  :class="{ 'border-red-400': errors.email }" />
+                <p v-if="errors.email" class="text-sm text-red-500 mt-1 animate-shake">{{ errors.email }}</p>
+              </div>
+              <div class="transition-all duration-300 hover:translate-y-[-2px]">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Role <span class="text-red-500">*</span></label>
+                <select v-model="form.role"
+                  class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all duration-200 hover:border-[#1a4972] focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10 text-slate-600 cursor-pointer"
+                  :class="{ 'border-red-400': errors.role }">
+                  <option value="" disabled>Select role</option>
+                  <option value="Lawyer">Lawyer</option>
+                  <option value="Clerk">Clerk</option>
+                </select>
+                <p v-if="errors.role" class="text-sm text-red-500 mt-1 animate-shake">{{ errors.role }}</p>
+              </div>
+              <div class="transition-all duration-300 hover:translate-y-[-2px]">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Password <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <input v-model="form.password"
+                    :type="showPassword ? 'text' : 'password'"
+                    @keyup.enter="submitForm"
+                    :placeholder="isEditing && !resetPassword ? '•••••••• (unchanged)' : 'Enter new password'"
+                    class="w-full px-4 py-3 pr-10 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all duration-200 hover:border-[#1a4972] focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10"
+                    :class="{ 'border-red-400': errors.password }"
+                    :disabled="isEditing && !resetPassword" />
+                  <button v-if="!isEditing || resetPassword" type="button" @click="showPassword = !showPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-all duration-200 hover:scale-110">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path :d="showPassword
+                        ? 'M13.875 18.825A10.05 10.05 0 0112 19.5c-4.5 0-8.25-3-9-7.5a9.956 9.956 0 012.16-4.112'
+                        : 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'"/>
                     </svg>
-                    Valid PH number
-                  </p>
+                  </button>
                 </div>
+                <div class="flex gap-2 mt-2">
+                  <button v-if="isEditing" @click="toggleResetPassword" type="button"
+                    class="flex items-center gap-1 px-3 py-1 text-sm font-semibold rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+                    :class="resetPassword ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'">
+                    <svg class="h-4 w-4 transition-transform duration-200 group-hover:rotate-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                    {{ resetPassword ? 'Cancel Reset' : 'Reset Password' }}
+                  </button>
+                </div>
+                <p v-if="errors.password" class="text-sm text-red-500 mt-1 animate-shake">{{ errors.password }}</p>
               </div>
+            </div>
 
-              <!-- Email, Role, Password -->
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email Address <span class="text-red-500">*</span></label>
-                  <input v-model="form.email" type="email" placeholder="Enter email address"
-                    class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all"
-                    :class="{ 'border-red-400': errors.email }" />
-                  <p v-if="errors.email" class="text-sm text-red-500 mt-1">{{ errors.email }}</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Role <span class="text-red-500">*</span></label>
-                  <select v-model="form.role"
-                    class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all text-slate-600"
-                    :class="{ 'border-red-400': errors.role }">
-                    <option value="" disabled>Select role</option>
-                    <option value="Lawyer">Lawyer</option>
-                    <option value="Clerk">Clerk</option>
-                  </select>
-                  <p v-if="errors.role" class="text-sm text-red-500 mt-1">{{ errors.role }}</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Password <span class="text-red-500">*</span></label>
+            <!-- Status -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">Status <span class="text-red-500">*</span></label>
+              <div class="flex items-center gap-4">
+                <label v-for="status in ['Active', 'Inactive']" :key="status" 
+                  class="flex items-center gap-2 cursor-pointer group transition-all duration-200 hover:scale-105">
                   <div class="relative">
-                    <input v-model="form.password"
-                      :type="showPassword ? 'text' : 'password'"
-                      @keyup.enter="submitForm"
-                      :placeholder="isEditing && !resetPassword ? '•••••••• (unchanged)' : 'Enter new password'"
-                      class="w-full px-4 py-3 pr-10 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none transition-all"
-                      :class="{ 'border-red-400': errors.password }"
-                      :disabled="isEditing && !resetPassword" />
-                    <button v-if="!isEditing || resetPassword" type="button" @click="showPassword = !showPassword"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path :d="showPassword
-                          ? 'M13.875 18.825A10.05 10.05 0 0112 19.5c-4.5 0-8.25-3-9-7.5a9.956 9.956 0 012.16-4.112'
-                          : 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'"/>
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="flex gap-2 mt-2">
-                    <button v-if="isEditing" @click="toggleResetPassword" type="button"
-                      class="flex items-center gap-1 px-3 py-1 text-sm font-semibold rounded-lg transition-all"
-                      :class="resetPassword ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'">
-                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                      </svg>
-                      {{ resetPassword ? 'Cancel Reset' : 'Reset Password' }}
-                    </button>
-                  </div>
-                  <p v-if="errors.password" class="text-sm text-red-500 mt-1">{{ errors.password }}</p>
-                </div>
-              </div>
-
-              <!-- Status -->
-              <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Status <span class="text-red-500">*</span></label>
-                <div class="flex items-center gap-4">
-                  <label v-for="status in ['Active', 'Inactive']" :key="status" class="flex items-center gap-2 cursor-pointer">
-                    <div class="relative">
-                      <input type="radio" v-model="form.status" :value="status" class="sr-only"/>
-                      <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
-                        :style="form.status === status ? { borderColor: '#1a4972', background: '#1a4972' } : { borderColor: '#cbd5e1' }">
-                        <div v-if="form.status === status" class="w-2 h-2 bg-white rounded-full"></div>
-                      </div>
+                    <input type="radio" v-model="form.status" :value="status" class="sr-only"/>
+                    <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+                      :style="form.status === status 
+                        ? { borderColor: '#1a4972', background: '#1a4972', boxShadow: '0 0 0 3px rgba(26,73,114,0.2)' } 
+                        : { borderColor: '#cbd5e1' }">
+                      <div v-if="form.status === status" class="w-2 h-2 bg-white rounded-full animate-pingOnce"></div>
                     </div>
-                    <span class="text-sm text-slate-700 font-medium">{{ status }}</span>
-                  </label>
-                </div>
+                  </div>
+                  <span class="text-sm text-slate-700 font-medium group-hover:text-[#1a4972] transition-colors duration-200">{{ status }}</span>
+                </label>
               </div>
-            </template>
-
+            </div>
           </div>
 
           <!-- Modal Footer -->
           <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
             <button @click="closeModal"
-              class="px-6 py-3 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 active:scale-95">
+              class="px-6 py-3 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 active:scale-95 transition-all duration-200 hover:shadow-md">
               Cancel
             </button>
-            <button @click="submitForm" :disabled="formLoading || modalLoading"
-              class="px-6 py-3 text-sm font-semibold text-white rounded-xl active:scale-95 disabled:opacity-60 flex items-center gap-2 min-w-[120px] justify-center"
+            <button @click="submitForm" :disabled="formLoading"
+              class="px-6 py-3 text-sm font-semibold text-white rounded-xl active:scale-95 disabled:opacity-60 flex items-center gap-2 min-w-[120px] justify-center transition-all duration-200 hover:shadow-lg hover:scale-105"
               :style="{ background: 'linear-gradient(135deg,#1a4972,#0f2f4a)', boxShadow: '0 4px 12px rgba(26,73,114,0.3)' }">
               <svg v-if="formLoading" class="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -416,10 +350,10 @@
     <!-- ============================================================ -->
     <Transition name="modal">
       <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="showDeleteModal = false">
-        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all duration-300 scale-100 opacity-100">
           <div class="p-6 text-center">
-            <div class="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4 transition-all duration-300 hover:scale-110 hover:shadow-lg">
               <svg class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -433,11 +367,11 @@
           </div>
           <div class="flex gap-3 px-6 pb-6">
             <button @click="showDeleteModal = false"
-              class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">
+              class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all duration-200 hover:scale-105 active:scale-95">
               Cancel
             </button>
             <button @click="deleteUser"
-              class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl">
+              class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg">
               Delete
             </button>
           </div>
@@ -451,7 +385,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue';
 import { debounce } from 'lodash';
-import * as UserService from '@/services/userServices';
+import UserService from '@/services/userServices';
 
 // ==================== COLUMNS ====================
 const columns = [
@@ -475,8 +409,6 @@ const isPHContactValid = (value) => /^09\d{9}$/.test(value.replace(/\D/g, ''));
 
 // ==================== STATE ====================
 const users        = ref([]);
-const isLoading    = ref(false);  // table skeleton
-const modalLoading = ref(false);  // modal skeleton
 const apiError     = ref('');
 const pagination   = ref({ current_page: 1, last_page: 1, per_page: 10, total: 0, from: 0, to: 0 });
 
@@ -534,8 +466,7 @@ const onContactInput = () => {
 
 // ==================== API ====================
 const loadUsers = async () => {
-  isLoading.value = true;
-  apiError.value  = '';
+  apiError.value = '';
   try {
     const response = await UserService.getUsers({
       search:         searchQuery.value || undefined,
@@ -545,76 +476,134 @@ const loadUsers = async () => {
       page:           currentPage.value,
       per_page:       itemsPerPage.value,
     });
+    
     if (response.data && response.meta) {
       users.value = response.data;
       const m = response.meta;
       pagination.value = {
-        current_page: m.current_page, last_page: m.last_page, per_page: m.per_page, total: m.total,
+        current_page: m.current_page, 
+        last_page: m.last_page, 
+        per_page: m.per_page, 
+        total: m.total,
         from: (m.current_page - 1) * m.per_page + 1,
-        to:   Math.min(m.current_page * m.per_page, m.total),
+        to: Math.min(m.current_page * m.per_page, m.total),
       };
     } else if (Array.isArray(response)) {
       users.value = response;
-      pagination.value = { current_page: 1, last_page: 1, per_page: response.length, total: response.length, from: 1, to: response.length };
+      pagination.value = { 
+        current_page: 1, 
+        last_page: 1, 
+        per_page: response.length, 
+        total: response.length, 
+        from: 1, 
+        to: response.length 
+      };
     } else {
       users.value = [];
     }
   } catch (error) {
     apiError.value = error.message || 'Failed to load users.';
-  } finally {
-    isLoading.value = false;
   }
 };
 
 // ==================== FILTER / SORT / PAGINATE ====================
-const debouncedSearch    = debounce(() => { currentPage.value = 1; loadUsers(); }, 500);
-const handleFilterChange = () => { currentPage.value = 1; loadUsers(); };
+const debouncedSearch = debounce(() => { 
+  currentPage.value = 1; 
+  loadUsers(); 
+}, 500);
+
+const handleFilterChange = () => { 
+  currentPage.value = 1; 
+  loadUsers(); 
+};
+
 const sortBy = (field) => {
-  sortDirection.value = sortField.value === field ? (sortDirection.value === 'asc' ? 'desc' : 'asc') : 'asc';
+  sortDirection.value = sortField.value === field 
+    ? (sortDirection.value === 'asc' ? 'desc' : 'asc') 
+    : 'asc';
   sortField.value = field;
   loadUsers();
 };
-const previousPage = () => { if (pagination.value.current_page > 1) { currentPage.value--; loadUsers(); } };
-const nextPage     = () => { if (pagination.value.current_page < pagination.value.last_page) { currentPage.value++; loadUsers(); } };
-const goToPage     = (page) => { currentPage.value = page; loadUsers(); };
+
+const previousPage = () => { 
+  if (pagination.value.current_page > 1) { 
+    currentPage.value--; 
+    loadUsers(); 
+  } 
+};
+
+const nextPage = () => { 
+  if (pagination.value.current_page < pagination.value.last_page) { 
+    currentPage.value++; 
+    loadUsers(); 
+  } 
+};
+
+const goToPage = (page) => { 
+  currentPage.value = page; 
+  loadUsers(); 
+};
 
 // ==================== UTILITIES ====================
-const formatDate      = (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
-const formatLastLogin = (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Never';
+const formatDate = (d) => d 
+  ? new Date(d).toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true 
+    }) 
+  : 'N/A';
+
+const formatLastLogin = (d) => d 
+  ? new Date(d).toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true 
+    }) 
+  : 'Never';
 
 // ==================== MODAL ====================
 const resetForm = () => {
-  Object.assign(form, { firstName: '', middleName: '', lastName: '', address: '', contact: '', email: '', role: '', password: '', status: 'Active' });
+  Object.assign(form, { 
+    firstName: '', middleName: '', lastName: '', 
+    address: '', contact: '', email: '', 
+    role: '', password: '', status: 'Active' 
+  });
   Object.keys(errors).forEach(k => errors[k] = '');
-  editingUserId.value = null; resetPassword.value = false; showPassword.value = false;
+  editingUserId.value = null; 
+  resetPassword.value = false; 
+  showPassword.value = false;
 };
+
 const clearErrors = () => Object.keys(errors).forEach(k => errors[k] = '');
 
 const openAddUserModal = () => {
   resetForm();
   isEditing.value = false;
-  form.password   = 'temporary123';
+  form.password = 'temporary123';
   showModal.value = true;
 };
 
 const closeModal = () => {
-  showModal.value    = false;
-  modalLoading.value = false;
+  showModal.value = false;
   resetForm();
 };
 
-// Open modal instantly → show skeleton → fetch data → swap to real form
 const editUser = async (user) => {
   resetForm();
-  isEditing.value    = true;
-  editingUserId.value= user.id;
-  showModal.value    = true;   // ← modal opens immediately
-  modalLoading.value = true;   // ← skeleton shows
+  isEditing.value = true;
+  editingUserId.value = user.id;
+  showModal.value = true;
   clearErrors();
 
   try {
-    const response  = await UserService.getUserById(user.id);
-    const userData  = response.data || response;
+    const response = await UserService.getUserById(user.id);
+    const userData = response.data || response;
     const formatted = UserService.formatUserDataForForm(userData);
     if (formatted.contact) formatted.contact = formatPHNumber(formatted.contact);
     Object.assign(form, formatted);
@@ -622,8 +611,6 @@ const editUser = async (user) => {
   } catch (error) {
     apiError.value = error.message || 'Failed to load user details';
     closeModal();
-  } finally {
-    modalLoading.value = false; // ← skeleton hides, real form appears
   }
 };
 
@@ -635,36 +622,80 @@ const toggleResetPassword = () => {
 
 // ==================== VALIDATION ====================
 const validateForm = () => {
-  clearErrors(); let ok = true;
-  if (!form.firstName.trim()) { errors.firstName = 'First name is required'; ok = false; }
-  if (!form.lastName.trim())  { errors.lastName  = 'Last name is required';  ok = false; }
-  if (!form.email.trim())     { errors.email     = 'Email is required';       ok = false; }
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { errors.email = 'Invalid email format'; ok = false; }
-  if (!form.role)             { errors.role      = 'Role is required';        ok = false; }
-  if (!isEditing.value && !form.password.trim()) { errors.password = 'Password is required'; ok = false; }
-  else if (isEditing.value && resetPassword.value && !form.password.trim()) { errors.password = 'New password is required'; ok = false; }
-  else if (form.password && form.password.length < 6 && form.password !== 'temppass1') { errors.password = 'Minimum 6 characters'; ok = false; }
-  if (form.contact && !isPHContactValid(form.contact)) { errors.contact = 'Use format: 09XX XXX XXXX'; ok = false; }
+  clearErrors(); 
+  let ok = true;
+  
+  if (!form.firstName.trim()) { 
+    errors.firstName = 'First name is required'; 
+    ok = false; 
+  }
+  if (!form.lastName.trim()) { 
+    errors.lastName = 'Last name is required'; 
+    ok = false; 
+  }
+  if (!form.email.trim()) { 
+    errors.email = 'Email is required'; 
+    ok = false; 
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { 
+    errors.email = 'Invalid email format'; 
+    ok = false; 
+  }
+  if (!form.role) { 
+    errors.role = 'Role is required'; 
+    ok = false; 
+  }
+  if (!isEditing.value && !form.password.trim()) { 
+    errors.password = 'Password is required'; 
+    ok = false; 
+  } else if (isEditing.value && resetPassword.value && !form.password.trim()) { 
+    errors.password = 'New password is required'; 
+    ok = false; 
+  } else if (form.password && form.password.length < 6 && form.password !== 'temppass1') { 
+    errors.password = 'Minimum 6 characters'; 
+    ok = false; 
+  }
+  if (form.contact && !isPHContactValid(form.contact)) { 
+    errors.contact = 'Use format: 09XX XXX XXXX'; 
+    ok = false; 
+  }
+  
   return ok;
 };
 
 const submitForm = async () => {
   if (!validateForm()) return;
+  
   formLoading.value = true;
-  apiError.value    = '';
+  apiError.value = '';
+  
   try {
-    const payload = { ...form, contact: form.contact ? form.contact.replace(/\D/g, '') : '' };
-    if (isEditing.value) await UserService.updateUser(editingUserId.value, payload);
-    else                 await UserService.createUser(payload);
+    const payload = { ...form };
+    if (isEditing.value) {
+      await UserService.updateUser(editingUserId.value, payload);
+    } else {
+      await UserService.createUser(payload);
+    }
     await loadUsers();
     closeModal();
   } catch (error) {
-    apiError.value = error.message || 'Failed to save user';
-    if (error.errors) {
-      const map = { name: 'firstName', contact_number: 'contact', password: 'password', email: 'email', role: 'role', address: 'address' };
-      Object.keys(error.errors).forEach(k => {
-        const f = map[k] || k;
-        if (Object.prototype.hasOwnProperty.call(errors, f)) errors[f] = error.errors[k][0];
+    const handledError = UserService.handleApiError(error);
+    apiError.value = handledError.message;
+    
+    // Map backend errors to form fields
+    if (handledError.errors) {
+      const map = { 
+        name: 'firstName', 
+        contact_number: 'contact', 
+        password: 'password', 
+        email: 'email', 
+        role: 'role', 
+        address: 'address' 
+      };
+      Object.keys(handledError.errors).forEach(k => {
+        const field = map[k] || k;
+        if (Object.prototype.hasOwnProperty.call(errors, field)) {
+          errors[field] = handledError.errors[k];
+        }
       });
     }
   } finally {
@@ -673,14 +704,19 @@ const submitForm = async () => {
 };
 
 // ==================== DELETE ====================
-const confirmDeleteUser = (user) => { userToDelete.value = user; showDeleteModal.value = true; };
+const confirmDeleteUser = (user) => { 
+  userToDelete.value = user; 
+  showDeleteModal.value = true; 
+};
+
 const deleteUser = async () => {
   if (!userToDelete.value) return;
+  
   try {
     await UserService.deleteUser(userToDelete.value.id);
     await loadUsers();
     showDeleteModal.value = false;
-    userToDelete.value    = null;
+    userToDelete.value = null;
   } catch (error) {
     apiError.value = error.message || 'Failed to delete user';
   }
@@ -688,7 +724,67 @@ const deleteUser = async () => {
 </script>
 
 <style scoped>
-.modal-enter-active, .modal-leave-active { transition: all 0.25s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-input:focus, select:focus { border-color: #1a4972 !important; box-shadow: 0 0 0 3px rgba(26,73,114,0.1); }
+/* Modal transitions */
+.modal-enter-active, .modal-leave-active { 
+  transition: all 0.25s ease; 
+}
+.modal-enter-from, .modal-leave-to { 
+  opacity: 0; 
+  transform: scale(0.95);
+}
+
+/* Row fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Ping once animation */
+@keyframes pingOnce {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pingOnce {
+  animation: pingOnce 0.3s ease-out;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Input focus styles */
+input:focus, select:focus { 
+  border-color: #1a4972 !important; 
+  box-shadow: 0 0 0 3px rgba(26,73,114,0.1); 
+}
+
+/* Hover lift effect */
+.hover\:translate-y-\[-2px\]:hover {
+  transform: translateY(-2px);
+}
 </style>

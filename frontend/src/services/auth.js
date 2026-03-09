@@ -1,8 +1,40 @@
 // src/services/authService.js
-import api from "./api";
+import api from "@/services/api";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERCEPTOR BOOTSTRAP
+// Attaches the Bearer token from sessionStorage to every outgoing request.
+// Called once on app boot (from main.js or App.vue) via initAuthInterceptor().
+// Also called automatically after a successful login.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _interceptorId = null;
+
+export const initAuthInterceptor = () => {
+  // Eject any previously registered interceptor to avoid stacking duplicates
+  if (_interceptorId !== null) {
+    api.interceptors.request.eject(_interceptorId);
+  }
+
+  _interceptorId = api.interceptors.request.use((config) => {
+    const token = sessionStorage.getItem("token");
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers["Authorization"] = `Bearer ${token}`;
+    }
+    return config;
+  });
+};
+
+// Register on module load so existing sessions are covered immediately
+initAuthInterceptor();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Login — stores token & user in sessionStorage (auto-clears on tab/browser close).
+ * Login — stores token & user in sessionStorage, then refreshes the interceptor.
  */
 export const login = async (credentials) => {
   try {
@@ -14,6 +46,8 @@ export const login = async (credentials) => {
     if (data.token) {
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("user", JSON.stringify(data.user));
+      // Re-register interceptor so the new token is picked up immediately
+      initAuthInterceptor();
     }
 
     return data;
@@ -37,6 +71,11 @@ export const logout = async () => {
   } finally {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
+    // Eject the interceptor so no token is sent after logout
+    if (_interceptorId !== null) {
+      api.interceptors.request.eject(_interceptorId);
+      _interceptorId = null;
+    }
   }
 };
 
@@ -44,8 +83,13 @@ export const logout = async () => {
  * Fetch authenticated user from server.
  */
 export const getUser = async () => {
-  const response = await api.get("/user");
-  return response.data;
+  try {
+    const response = await api.get("/user");
+    return response.data;
+  } catch (error) {
+    if (error.response?.data) throw error.response.data;
+    throw { message: "Network Error. Please check your connection." };
+  }
 };
 
 /**

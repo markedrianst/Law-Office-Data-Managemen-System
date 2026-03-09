@@ -1,5 +1,5 @@
 // src/services/auditLogService.js
-import api from './api';
+import api from '@/services/api';
 
 export const auditLogService = {
   /**
@@ -7,17 +7,28 @@ export const auditLogService = {
    * @param {Object} params - { email, status, action, date_from, date_to, page, per_page }
    */
 
-  // Fetch paginated case activity logs with filters
-async getCaseActivityLogs(params = {}) {
-  const response = await api.get('/admin/audit-logs/case-activity', { params })
-  return response.data   // { data: [...], meta: {...} }
-},
+    // Fetch paginated case activity logs with filters
+  async getCaseActivityLogs(params = {}) {
+    try {
+      const response = await api.get('/admin/audit-logs/case-activity', { params });
+      return response.data; // { data: [...], meta: {...} }
+    } catch (error) {
+      console.error('Get case activity logs error:', error);
+      if (error.response) throw error.response.data;
+      throw { message: error.message || 'Network Error' };
+    }
+  },
 
-// Fetch distinct case actions for the filter dropdown
-async getCaseActions() {
-  const response = await api.get('/admin/audit-logs/case-actions')
-  return response.data   // [{ value, label }, ...]
-},
+  // Fetch distinct case actions for the filter dropdown
+  async getCaseActions() {
+    try {
+      const response = await api.get('/admin/audit-logs/case-actions');
+      return response.data; // [{ value, label }, ...]
+    } catch (error) {
+      console.error('Get case actions error:', error);
+      return [];
+    }
+  },
 
 
   async getLogs(params = {}) {
