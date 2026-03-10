@@ -26,10 +26,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class CaseController extends Controller
 {
-    // =========================================================================
-    // GET /admin/cases
-    // =========================================================================
-
     public function index(Request $request): JsonResponse
     {
         $request->validate([
@@ -51,14 +47,10 @@ class CaseController extends Controller
         $sortDir  = $request->sort_direction ?? 'desc';
         $perPage  = (int) ($request->per_page ?? 10);
         $page     = (int) ($request->page     ?? 1);
-
-        // ── Cached total count ───────────────────────────────────────────────
         $filterKey = md5(serialize(compact('search', 'status', 'priority', 'stageId')));
         $total = Cache::remember("cases_count_{$filterKey}", 60, fn() =>
             Cases::filteredCount($status, $priority, $stageId, $search)
         );
-
-        // ── Paginated rows ───────────────────────────────────────────────────
         $rows = Cases::withJoins(Cases::listColumns())
             ->ofStatus($status)
             ->ofPriority($priority)
@@ -69,7 +61,6 @@ class CaseController extends Controller
             ->limit($perPage)
             ->get();
 
-        // ── Lookups — first unfiltered page load only ────────────────────────
         $lookups = null;
         if ($page === 1 && !$search && !$status && !$priority && !$stageId) {
             $lookups = [
@@ -93,10 +84,6 @@ class CaseController extends Controller
         ], fn($v) => $v !== null));
     }
 
-    // =========================================================================
-    // GET /admin/cases/{id}
-    // =========================================================================
-
     public function show(int|string $id): JsonResponse
     {
         $id = (int) $id;
@@ -114,9 +101,6 @@ class CaseController extends Controller
         return response()->json(['data' => Cases::formatRow($row)]);
     }
 
-    // =========================================================================
-    // GET /admin/cases/export?format=xlsx|pdf
-    // =========================================================================
 
     public function export(Request $request): \Symfony\Component\HttpFoundation\Response
     {
@@ -144,7 +128,6 @@ class CaseController extends Controller
         $format = $request->format;
         $now    = now()->format('Y-m-d');
 
-        // ── EXCEL ─────────────────────────────────────────────────────────────
         if ($format === 'xlsx') {
             $spreadsheet = new Spreadsheet();
             $sheet       = $spreadsheet->getActiveSheet();
@@ -222,7 +205,6 @@ class CaseController extends Controller
             ]);
         }
 
-        // ── PDF ───────────────────────────────────────────────────────────────
         $pdf = Pdf::loadView('cases-pdf', [
             'rows'       => $rows,
             'exportedAt' => now()->format('F d, Y h:i A'),
@@ -236,10 +218,6 @@ class CaseController extends Controller
         return $pdf->download("cases_export_{$now}.pdf");
     }
 
-    // =========================================================================
-    // GET /admin/cases/{id}/activity-logs
-    // =========================================================================
-
     public function activityLogs(int $id): JsonResponse
     {
         $logs = CaseActivityLog::where('case_id', $id)
@@ -249,11 +227,6 @@ class CaseController extends Controller
 
         return response()->json(['data' => $logs]);
     }
-
-    // =========================================================================
-    // LOOKUP ENDPOINTS
-    // =========================================================================
-
     public function categories(): JsonResponse
     {
         return response()->json(['data' => CaseCategory::cachedAll()]);
@@ -289,11 +262,6 @@ class CaseController extends Controller
                 ->get(),
         ]);
     }
-
-    // =========================================================================
-    // POST /admin/cases
-    // =========================================================================
-
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -365,10 +333,6 @@ class CaseController extends Controller
             'data'    => $this->fetchFormattedCase($case->id),
         ], 201);
     }
-
-    // =========================================================================
-    // PUT /admin/cases/{id}
-    // =========================================================================
 
     public function update(Request $request, int $id): JsonResponse
     {
@@ -475,10 +439,6 @@ class CaseController extends Controller
         }
     }
 
-    // =========================================================================
-    // PATCH /admin/cases/{id}/archive
-    // =========================================================================
-
     public function archive(int $id): JsonResponse
     {
         $case = Cases::find($id);
@@ -503,10 +463,6 @@ class CaseController extends Controller
         return response()->json(['message' => 'Case archived successfully.']);
     }
 
-    // =========================================================================
-    // POST /admin/clients  (quick-create)
-    // =========================================================================
-
     public function quickCreateClient(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -524,10 +480,6 @@ class CaseController extends Controller
             'data'    => $client,
         ], 201);
     }
-
-    // =========================================================================
-    // PRIVATE HELPERS
-    // =========================================================================
 
     private function fetchFormattedCase(int $id): array
     {

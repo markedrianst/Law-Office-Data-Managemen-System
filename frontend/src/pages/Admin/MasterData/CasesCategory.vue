@@ -58,32 +58,8 @@
     <!-- Table Card -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 
-      <!-- Skeleton -->
-      <div v-if="loading" class="overflow-x-auto">
-        <table class="min-w-full">
-          <tbody class="divide-y divide-slate-50">
-            <tr v-for="i in 5" :key="i" class="animate-pulse">
-              <td class="px-4 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0"></div>
-                  <div class="h-4 w-40 bg-slate-200 rounded"></div>
-                </div>
-              </td>
-              <td class="px-4 py-4"><div class="h-6 w-20 bg-slate-200 rounded-lg"></div></td>
-              <td class="px-4 py-4"><div class="h-6 w-16 bg-slate-200 rounded-lg"></div></td>
-              <td class="px-4 py-4">
-                <div class="flex gap-2">
-                  <div class="h-7 w-14 bg-slate-200 rounded-lg"></div>
-                  <div class="h-7 w-24 bg-slate-100 rounded-lg"></div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
       <!-- Data -->
-      <div v-else class="overflow-x-auto">
+      <div class="overflow-x-auto">
         <table class="min-w-full">
           <thead>
             <tr class="border-b border-slate-100 bg-[#1a4972]/[0.04]">
@@ -180,7 +156,7 @@
       </div>
 
       <!-- Pagination Footer -->
-      <div v-if="!loading && filteredCategories.length > 0"
+      <div v-if="filteredCategories.length > 0"
         class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 border-t border-slate-100 bg-slate-50/50">
         <p class="text-xs text-slate-500">
           Showing <span class="font-semibold text-slate-700">{{ filteredCategories.length }}</span>
@@ -213,7 +189,6 @@ import CaseCategoryModal from '@/components/Modals/Admin/CaseMaster/CaseCategory
 
 // ==================== STATE ====================
 const categories       = ref([])
-const loading          = ref(false)
 const togglingId       = ref(null)
 const showForm         = ref(false)
 const selectedCategory = ref(null)
@@ -254,12 +229,10 @@ const showToast = (message, type = 'success') => {
 // ==================== API ====================
 const fetchCategories = async () => {
   try {
-    loading.value = true
     categories.value = await caseCategoryService.getAll()
   } catch (err) {
     showToast(err?.response?.data?.message || 'Failed to load categories', 'error')
   } finally {
-    loading.value = false
   }
 }
 

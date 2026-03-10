@@ -586,7 +586,6 @@ const statusClass = (s) => ({
   REJECTED: 'bg-red-50 text-red-600 border-red-200',
 }[s] ?? 'bg-slate-100 text-slate-500 border-slate-200');
 
-// ── Lifecycle ───────────────────────────────────────────────────────────────────────────────────
 onMounted(() => {
   loadAll().then(() => {
     initialLoadDone = true;

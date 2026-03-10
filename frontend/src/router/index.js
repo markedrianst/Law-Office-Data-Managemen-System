@@ -10,7 +10,6 @@ import CaseCategory from "@/pages/Admin/MasterData/CasesCategory.vue";
 import CourtMaster from "@/pages/Admin/MasterData/CourtMaster.vue";
 import Documents from "@/pages/Admin/MasterData/Documents.vue";
 import Approvals from "@/pages/Admin/Approvals.vue";
-import ClerkTrackerPage from "@/pages/Clerks/ClerkTrackerPage.vue";
 
 const routes = [
   {
@@ -26,21 +25,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/clerkstracker",
-    name: "ClerkTrackerPage",
-    component: ClerkTrackerPage,
-    meta: { 
-      requiresAuth: true, 
-      roles: ["clerk"]  // Changed to array for consistency
-    },
-  },
-  {
     path: "/approvals",
     name: "Approvals",
     component: Approvals,
     meta: { 
       requiresAuth: true, 
-      roles: ["admin", "lawyer"]  // Both admin and lawyer can access
+      roles: ["admin", "lawyer"]
     },
   },
   {

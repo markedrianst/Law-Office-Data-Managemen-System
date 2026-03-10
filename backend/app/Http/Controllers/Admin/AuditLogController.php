@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class AuditLogController extends Controller
 {
-    /**
-     * Display a listing of audit logs with filters and pagination.
-     */
+ 
     public function index(Request $request)
     {
         $query = LoginLog::query()
@@ -35,7 +33,6 @@ class AuditLogController extends Controller
             });
         }
 
-        // Keep backward-compat with old 'email' param
         if (!$request->filled('search') && $request->filled('email')) {
             $search = $request->email;
             $query->where(function ($q) use ($search) {
@@ -104,9 +101,7 @@ class AuditLogController extends Controller
         ]);
     }
 
-    /**
-     * Case activity logs with filters and pagination.
-     */
+   
     public function caseActivityLogs(Request $request)
     {
         $query = DB::table('case_activity_logs')
@@ -208,9 +203,6 @@ class AuditLogController extends Controller
         return response()->json($actions);
     }
 
-    /**
-     * Get a single audit log entry.
-     */
     public function show($id)
     {
         $log = DB::table('login_logs')
@@ -247,9 +239,6 @@ class AuditLogController extends Controller
         ]);
     }
 
-    /**
-     * Export audit logs as CSV.
-     */
     public function export(Request $request)
     {
         $query = DB::table('login_logs')
@@ -312,9 +301,6 @@ class AuditLogController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    /**
-     * Get distinct actions for filter dropdown.
-     */
     public function getActions()
     {
         $actions = LoginLog::distinct()

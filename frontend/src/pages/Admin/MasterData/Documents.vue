@@ -49,23 +49,9 @@
     <!-- Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 
-      <!-- Loading skeleton -->
-      <div v-if="isLoading" class="overflow-x-auto">
-        <table class="min-w-full">
-          <tbody class="divide-y divide-slate-50">
-            <tr v-for="i in 6" :key="i" class="animate-pulse">
-              <td class="px-4 py-4"><div class="h-4 w-8 bg-slate-200 rounded"></div></td>
-              <td class="px-4 py-4"><div class="h-4 w-44 bg-slate-200 rounded mb-2"></div></td>
-              <td class="px-4 py-4"><div class="h-6 w-28 bg-slate-200 rounded-lg"></div></td>
-              <td class="px-4 py-4"><div class="h-6 w-24 bg-slate-200 rounded-lg"></div></td>
-              <td class="px-4 py-4"><div class="h-6 w-16 bg-slate-200 rounded-lg"></div></td>
-              <td class="px-4 py-4"><div class="flex gap-1"><div class="h-7 w-14 bg-slate-200 rounded-lg"></div><div class="h-7 w-28 bg-slate-100 rounded-lg"></div></div></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    
 
-      <div v-else class="overflow-x-auto">
+      <div  class="overflow-x-auto">
         <table class="min-w-full">
           <thead>
             <tr class="border-b border-slate-100 bg-[#1a4972]/[0.04]">
@@ -178,7 +164,7 @@
               </td>
             </tr>
 
-            <tr v-if="!isLoading && documents.length === 0">
+            <tr v-if="documents.length === 0">
               <td :colspan="columns.length" class="px-6 py-16 text-center">
                 <div class="flex flex-col items-center">
                   <div class="w-14 h-14 rounded-2xl navy-bg-8 flex items-center justify-center mb-3">
@@ -196,7 +182,7 @@
       </div>
 
       <!-- Info banner -->
-      <div v-if="!isLoading && documents.length > 1" class="px-4 py-2.5 border-t border-slate-100 bg-blue-50/40">
+      <div v-if=" documents.length > 1" class="px-4 py-2.5 border-t border-slate-100 bg-blue-50/40">
         <p class="text-[11px] text-slate-500 flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5 text-[#1a4972] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -412,7 +398,6 @@ const getCategoryColor = (cat) => cat ? (CATEGORY_COLORS[cat] ?? DEFAULT_COLOR) 
 // ==================== STATE ====================
 const documents    = ref([]);   // paginated (display)
 const allDocuments = ref([]);   // full unfiltered list sorted by sort_order ASC
-const isLoading    = ref(false);
 
 const searchQuery    = ref('');
 const filterCategory = ref('');
@@ -521,7 +506,6 @@ const loadAllDocuments = async () => {
 };
 
 const loadDocuments = async () => {
-  isLoading.value = true;
   try {
     const [res] = await Promise.all([
       DocumentService.getDocuments({
@@ -559,7 +543,6 @@ documents.value = sortField.value === 'sort_order'
       };
     }
   } catch (e) { console.error('loadDocuments:', e); }
-  finally { isLoading.value = false; }
 };
 
 // ==================== EVENTS ====================

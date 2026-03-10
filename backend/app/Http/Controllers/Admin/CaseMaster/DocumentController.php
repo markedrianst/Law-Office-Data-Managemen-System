@@ -9,30 +9,20 @@ use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
-    /**
-     * GET /api/documents
-     * Paginated list with optional search, category, is_active, and sorting.
-     */
     public function index(Request $request)
     {
         $query = Documents::query();
-
-        // Search
         if ($search = $request->input('search')) {
             $query->where('type', 'like', "%{$search}%");
         }
-
-        // Filter by category
         if ($category = $request->input('category')) {
             $query->where('category', $category);
         }
 
-        // Filter by is_active
         if ($request->has('is_active') && $request->input('is_active') !== '') {
             $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
         }
 
-        // Sorting — only allow safe column names
         $allowedSorts = ['type', 'category', 'requires_approval', 'is_active', 'sort_order', 'created_at'];
         $sortBy        = in_array($request->input('sort_by'), $allowedSorts) ? $request->input('sort_by') : 'sort_order';
         $sortDirection = $request->input('sort_direction') === 'desc' ? 'desc' : 'asc';
@@ -54,10 +44,6 @@ class DocumentController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/documents/active
-     * Flat list of active documents — for dropdowns.
-     */
     public function active()
     {
         $documents = Documents::active()->ordered()->get();
@@ -65,17 +51,11 @@ class DocumentController extends Controller
         return response()->json(['data' => $documents]);
     }
 
-    /**
-     * GET /api/documents/{id}
-     */
     public function show(Documents $document)
     {
         return response()->json(['data' => $document]);
     }
 
-    /**
-     * POST /api/documents
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -91,9 +71,6 @@ class DocumentController extends Controller
         return response()->json(['data' => $document], 201);
     }
 
-    /**
-     * PUT /api/documents/{id}
-     */
     public function update(Request $request, Documents $document)
     {
         $validated = $request->validate([
@@ -109,10 +86,6 @@ class DocumentController extends Controller
         return response()->json(['data' => $document]);
     }
 
-    /**
-     * PATCH /api/documents/{id}/toggle-active
-     * Flip is_active boolean.
-     */
     public function toggleActive(Documents $document)
     {
         $document->update(['is_active' => !$document->is_active]);

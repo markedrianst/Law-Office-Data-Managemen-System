@@ -8,24 +8,9 @@ use App\Models\FolderMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Global approvals endpoint — aggregates pending movements across ALL cases.
- * Used by the standalone /approvals page and the sidebar badge count.
- *
- * Routes to register:
- *   GET  /admin/approvals                → index()          (full list, paginated)
- *   GET  /admin/approvals/pending-count  → pendingCount()   (badge number only)
- *   PATCH /admin/approvals/{source}/{movement}/approve → approve()
- *
- * Middleware: restrict all three to role:admin,lawyer
- */
+
 class ApprovalsController extends Controller
 {
-    /**
-     * GET /admin/approvals
-     * Returns ALL checklist + folder movements across all cases, merged and sorted.
-     * Supports ?status=PENDING|APPROVED|REJECTED&type=checklist|folder&direction=IN|OUT
-     */
     public function index(Request $request): JsonResponse
     {
         $status    = strtoupper($request->input('status',    'ALL'));
@@ -38,7 +23,7 @@ class ApprovalsController extends Controller
             'checklist:id,task,assigned_to',
             'recorder:id,full_name',
             'approver:id,full_name',
-            'case:id,case_code',           // add this relation to ChecklistMovement model
+            'case:id,case_code',           
         ]);
 
         if ($status !== 'ALL') {
@@ -56,11 +41,10 @@ class ApprovalsController extends Controller
             ]
         ));
 
-        // ── Folder movements ──────────────────────────────────────────────────
         $folderQ = FolderMovement::with([
             'recorder:id,full_name',
             'approver:id,full_name',
-            'case:id,case_code',           // add this relation to FolderMovement model
+            'case:id,case_code',        
         ]);
 
         if ($status !== 'ALL') {
@@ -115,10 +99,6 @@ class ApprovalsController extends Controller
         ]);
     }
 
-    /**
-     * GET /admin/approvals/pending-count
-     * Lightweight endpoint for the sidebar badge — returns only the count.
-     */
     public function pendingCount(): JsonResponse
     {
         $count = ChecklistMovement::where('approval_status', 'PENDING')->count()
@@ -127,11 +107,6 @@ class ApprovalsController extends Controller
         return response()->json(['count' => $count]);
     }
 
-    /**
-     * PATCH /admin/approvals/{source}/{movement}/approve
-     * Universal approve/reject — delegates to the correct tracker controller.
-     * {source} = "checklist" | "folder"
-     */
     public function approve(Request $request, string $source, int $movementId): JsonResponse
     {
         $validated = $request->validate([
