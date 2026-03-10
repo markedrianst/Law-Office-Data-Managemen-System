@@ -1,13 +1,6 @@
 <template>
   <header class="header-bar">
-    <!-- Hamburger menu button (mobile only) -->
-    <button v-if="showHamburger" class="hamburger-btn" @click="$emit('toggle-sidebar')" :class="{ active: sidebarOpen }">
-      <span class="hamburger-line hamburger-line-1"></span>
-      <span class="hamburger-line hamburger-line-2"></span>
-      <span class="hamburger-line hamburger-line-3"></span>
-    </button>
-
-    <!-- Page title -->
+    <!-- Page title (left) -->
     <h1 class="page-title">{{ pageTitle }}</h1>
 
     <div class="header-right">
@@ -21,7 +14,7 @@
         <span class="bell-dot"></span>
       </button>
 
-      <!-- User dropdown -->
+      <!-- User dropdown (hidden on mobile) -->
       <div class="user-menu" ref="dropdownRef">
         <button class="user-btn" :class="{ active: isOpen }" @click="isOpen = !isOpen">
           <div class="avatar">{{ userInitials }}</div>
@@ -76,15 +69,21 @@
           </div>
         </transition>
       </div>
+
+      <!-- Hamburger (mobile only, on the RIGHT like the reference image) -->
+      <button v-if="showHamburger" class="hamburger-btn" @click="$emit('toggle-sidebar')" :class="{ active: sidebarOpen }">
+        <span class="hamburger-line hamburger-line-1"></span>
+        <span class="hamburger-line hamburger-line-2"></span>
+        <span class="hamburger-line hamburger-line-3"></span>
+      </button>
     </div>
   </header>
 
-  <!-- ── Logout Confirmation Modal ─────────────────────────────── -->
+  <!-- ── Logout Confirmation Modal ── -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
         <div class="modal-card">
-          <!-- Icon -->
           <div class="modal-icon-wrap">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -94,13 +93,11 @@
             </svg>
           </div>
 
-          <!-- Text -->
           <div class="modal-body">
             <h2 class="modal-title">Sign out?</h2>
             <p class="modal-sub">You'll need to log back in to access the system.</p>
           </div>
 
-          <!-- Actions -->
           <div class="modal-actions">
             <button class="modal-btn modal-btn--cancel" :disabled="isLoggingOut" @click="showLogoutModal = false">
               Cancel
@@ -133,7 +130,6 @@ const showLogoutModal = ref(false)
 const isLoggingOut = ref(false)
 const showHamburger = ref(false)
 
-// Define props
 defineProps({
   sidebarOpen: {
     type: Boolean,
@@ -141,7 +137,6 @@ defineProps({
   }
 })
 
-// Emit events
 defineEmits(['toggle-sidebar'])
 
 const pageTitle = computed(() => ({
@@ -156,12 +151,10 @@ const pageTitle = computed(() => ({
   '/account': 'Account Settings',
 }[route.path] || 'Dashboard'))
 
-// Click outside dropdown
 const handleOutside = e => {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target)) isOpen.value = false
 }
 
-// Detect mobile screen
 const handleResize = () => {
   showHamburger.value = window.innerWidth < 768
 }
@@ -169,7 +162,7 @@ const handleResize = () => {
 onMounted(() => {
   document.addEventListener('mousedown', handleOutside)
   window.addEventListener('resize', handleResize)
-  handleResize() // Call on mount to set initial state
+  handleResize()
 })
 
 onUnmounted(() => {
@@ -177,13 +170,11 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-// Open confirmation modal
 const askLogout = () => {
   isOpen.value = false
   showLogoutModal.value = true
 }
 
-// Actually log out after confirmation
 const confirmLogout = async () => {
   isLoggingOut.value = true
   try {
@@ -191,14 +182,9 @@ const confirmLogout = async () => {
   } catch (err) {
     console.error('Logout error:', err)
   } finally {
-    // 1. Reset Global Store (stops background fetches)
     store.actions.reset()
-    
-    // 2. Clear local session data
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('user')
-    
-    // 3. Navigate home
     router.replace('/')
   }
 }
@@ -226,7 +212,34 @@ const confirmLogout = async () => {
   }
 }
 
-/* ===== HAMBURGER MENU ===== */
+/* ===== PAGE TITLE ===== */
+.page-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+  margin: 0;
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 12px;
+  }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ===== HAMBURGER (right side on mobile) ===== */
 .hamburger-btn {
   display: none;
   flex-direction: column;
@@ -276,33 +289,6 @@ const confirmLogout = async () => {
 
 .hamburger-btn.active .hamburger-line-3 {
   transform: rotate(-45deg) translateY(-9px);
-}
-
-/* ===== PAGE TITLE ===== */
-.page-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.02em;
-  margin: 0;
-  flex: 1;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (max-width: 480px) {
-  .page-title {
-    font-size: 12px;
-  }
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
 }
 
 /* ── Bell ── */
@@ -358,6 +344,20 @@ const confirmLogout = async () => {
 .user-btn:hover,
 .user-btn.active {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* Hide user button text on mobile, show only avatar */
+@media (max-width: 767px) {
+  .user-btn {
+    padding: 4px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+  }
+  .user-info,
+  .chevron {
+    display: none;
+  }
 }
 
 .avatar {
@@ -548,7 +548,7 @@ const confirmLogout = async () => {
   transform: translateY(-6px) scale(0.97);
 }
 
-/* ── Logout Modal Overlay ── */
+/* ── Logout Modal ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -561,7 +561,6 @@ const confirmLogout = async () => {
   padding: 16px;
 }
 
-/* ── Modal Card ── */
 .modal-card {
   background: white;
   border-radius: 20px;
@@ -682,12 +681,9 @@ const confirmLogout = async () => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
-/* ── Modal transition ── */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;

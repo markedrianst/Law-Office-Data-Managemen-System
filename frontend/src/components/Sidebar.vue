@@ -200,7 +200,7 @@ const onVisibilityChange = () => {
   if (_dirty && initialLoadDone) {
     fetchPendingCount()
     _dirty = false
-  }
+  } 
 }
 
 function startPolling() {
@@ -243,6 +243,7 @@ const allNav = [
     roles: ['admin', 'lawyer'],
     badgeRef: pendingApprovalCount,
   },
+  
   {
     label: 'Master Data Preference',
     icon: icons.tasks,
@@ -252,7 +253,7 @@ const allNav = [
     children: [
       { path: '/casecategory', label: 'Case Categories', icon: icons.tasks },
       { path: '/courtmaster',  label: 'Courts',          icon: icons.tasks },
-      { path: '/documents',    label: 'Documents',        icon: icons.tasks },
+      { path: '/documents',    label: 'Documents',       icon: icons.tasks },
     ],
   },
   { path: '/clerkstracker', label: 'Clerks Tracker', icon: icons.appointments, roles: ['clerk'] },

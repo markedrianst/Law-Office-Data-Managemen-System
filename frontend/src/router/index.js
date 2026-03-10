@@ -9,6 +9,7 @@ import CaseMaster from "@/pages/Admin/cases/CaseMaster.vue";
 import CaseCategory from "@/pages/Admin/MasterData/CasesCategory.vue";
 import CourtMaster from "@/pages/Admin/MasterData/CourtMaster.vue";
 import Documents from "@/pages/Admin/MasterData/Documents.vue";
+import LawyerDashboard from "@/pages/Lawyer/LawyerDashboard.vue";
 import Approvals from "@/pages/Admin/Approvals.vue";
 
 const routes = [
@@ -31,6 +32,15 @@ const routes = [
     meta: { 
       requiresAuth: true, 
       roles: ["admin", "lawyer"]
+    },
+  },
+  {
+    path: "/lawyer-dashboard",
+    name: "LawyerDashboard",
+    component: LawyerDashboard,
+    meta: { 
+      requiresAuth: true, 
+      roles: ["lawyer"]
     },
   },
   {

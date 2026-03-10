@@ -1,19 +1,80 @@
 <template>
   <div class="min-h-screen p-4 md:p-6 bg-slate-50" style="font-family: 'Segoe UI', sans-serif;">
 
-    <!-- Header -->
-    <div class="mb-6">
-      <div class="flex items-center gap-3 mb-1">
-        <div class="w-1 h-8 rounded-full bg-gradient-to-b from-[#1a4972] to-[#2d6db5]"></div>
-        <h1 class="text-2xl font-bold tracking-tight text-[#1a4972]">Case Master</h1>
+    <!-- Header & Primary Actions -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-1 h-8 rounded-full bg-gradient-to-b from-[#1a4972] to-[#2d6db5]"></div>
+          <h1 class="text-2xl font-bold tracking-tight text-[#1a4972]">Case Master</h1>
+        </div>
+        <p class="text-sm ml-4 pl-3 text-slate-500">Create, assign, and track all legal cases</p>
       </div>
-      <p class="text-sm ml-4 pl-3 text-slate-500">Create, assign, and track all legal cases</p>
+
+      <div class="flex items-center gap-3">
+        <!-- New Case -->
+        <button @click="openCreate"
+          class="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-br from-[#1a4972] to-[#0f2f4a] shadow-lg shadow-[#1a4972]/30 hover:shadow-xl hover:shadow-[#1a4972]/40 active:scale-95 transition-all whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Case
+        </button>
+
+        <!-- Export dropdown -->
+        <div class="relative" ref="exportDropdownRef">
+          <button
+            @click="showExportMenu = !showExportMenu"
+            :disabled="exportLoading"
+            class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#1a4972] border border-[#1a4972]/20 bg-white hover:bg-[#1a4972]/5 active:scale-95 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            <svg v-if="!exportLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <svg v-else class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"/>
+            </svg>
+            Export
+            <svg class="w-3 h-3 transition-transform" :class="showExportMenu ? 'rotate-180' : ''"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+
+          <transition name="dropdown">
+            <div v-if="showExportMenu"
+              class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden ring-1 ring-black ring-opacity-5">
+              <div class="px-3 py-2 border-b border-slate-50">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Export Results</p>
+              </div>
+              <button @click="exportCases('xlsx')"
+                class="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                </svg>
+                Excel (.xlsx)
+              </button>
+              <button @click="exportCases('pdf')"
+                class="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors">
+                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                PDF Document
+              </button>
+            </div>
+          </transition>
+        </div>
+      </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <div class="relative flex-1 min-w-0 sm:min-w-[200px]">
+    <!-- Filter Bar -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-4 mb-6">
+      <div class="flex flex-col lg:flex-row gap-4">
+        <!-- Search -->
+        <div class="relative flex-1">
           <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -21,91 +82,38 @@
           </div>
           <input v-model="searchQuery" @input="debouncedSearch" type="text"
             placeholder="Search by case code, title, or client..."
-            class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] focus:ring-2 focus:ring-[#1a4972]/10 placeholder-slate-400 transition-all" />
+            class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] focus:ring-4 focus:ring-[#1a4972]/5 placeholder-slate-400 transition-all" />
         </div>
-        <div class="flex flex-wrap gap-2 sm:gap-3">
+
+        <!-- Filters Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <select v-model="filterStatus" @change="handleFilterChange"
-            class="flex-1 sm:flex-none px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600 min-w-[110px]">
-            <option value="">All Status</option>
+            class="px-3 py-2.5 text-sm bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600 cursor-pointer hover:border-slate-300 transition-colors">
+            <option value="">All Statuses</option>
             <option value="active">Active</option>
             <option value="closed">Closed</option>
             <option value="archived">Archived</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
           </select>
           <select v-model="filterPriority" @change="handleFilterChange"
-            class="flex-1 sm:flex-none px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600 min-w-[110px]">
-            <option value="">All Priority</option>
+            class="px-3 py-2.5 text-sm bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600 cursor-pointer hover:border-slate-300 transition-colors">
+            <option value="">All Priorities</option>
             <option value="urgent">Urgent</option>
             <option value="normal">Normal</option>
             <option value="low">Low</option>
           </select>
           <select v-model="filterStage" @change="handleFilterChange"
-            class="flex-1 sm:flex-none px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600 min-w-[130px]">
+            class="px-3 py-2.5 text-sm bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1a4972] text-slate-600 cursor-pointer hover:border-slate-300 transition-colors">
             <option value="">All Stages</option>
             <option v-for="s in stages" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
-
-          <!-- New Case -->
-          <button @click="openCreate"
-            class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-br from-[#1a4972] to-[#0f2f4a] shadow-lg shadow-[#1a4972]/30 hover:shadow-xl hover:shadow-[#1a4972]/40 active:scale-95 transition-all whitespace-nowrap">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-            </svg>
-            New Case
-          </button>
-
-          <!-- Export dropdown -->
-          <div class="relative" ref="exportDropdownRef">
-            <button
-              @click="showExportMenu = !showExportMenu"
-              :disabled="exportLoading"
-              class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#1a4972] border border-[#1a4972]/30 bg-white hover:bg-[#1a4972]/5 active:scale-95 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
-              <svg v-if="!exportLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              <svg v-else class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"/>
-              </svg>
-              Export
-              <svg class="w-3 h-3 transition-transform" :class="showExportMenu ? 'rotate-180' : ''"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
-
-            <transition name="dropdown">
-              <div v-if="showExportMenu"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden">
-                <div class="px-3 py-2 border-b border-slate-100">
-                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Export filtered results</p>
-                </div>
-                <button @click="exportCases('xlsx')"
-                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
-                  </svg>
-                  Excel (.xlsx)
-                </button>
-                <button @click="exportCases('pdf')"
-                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors">
-                  <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                  </svg>
-                  PDF
-                </button>
-              </div>
-            </transition>
-          </div>
-
         </div>
       </div>
     </div>
 
     <!-- Cases Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="overflow-x-auto">
 
       <div class="overflow-x-auto relative">
         <table class="min-w-full">
@@ -129,7 +137,12 @@
           </thead>
 
           <tbody class="divide-y divide-slate-50">
-            <tr v-for="c in cases" :key="c.id" class="hover:bg-blue-50/30 transition-colors duration-100">
+            <tr v-for="c in cases" :key="c.id" 
+                class="transition-colors duration-100"
+                :class="{
+                  'hover:bg-blue-50/30': c.case_status !== 'pending',
+                  'opacity-60 bg-slate-50 cursor-not-allowed': c.case_status === 'pending'
+                }">
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2 mb-0.5">
                   <p class="text-xs font-bold tracking-wider" :class="getCategoryTextClass(c.category)">{{ c.case_code }}</p>
@@ -176,11 +189,15 @@
               </td>
               <td class="px-4 py-4">
                 <div class="flex items-center gap-1">
-                  <button @click="openView(c)" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] transition-colors hover-navy-bg">
+                  <button @click="openView(c)" 
+                          :disabled="c.case_status === 'pending'" 
+                          class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] transition-colors hover-navy-bg disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     View
                   </button>
-                  <button @click="openEdit(c)" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] transition-colors hover-navy-bg">
+                  <button @click="openEdit(c)" 
+                          :disabled="c.case_status === 'pending'" 
+                          class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#1a4972] transition-colors hover-navy-bg disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     Edit
                   </button>
@@ -285,25 +302,21 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
-
-// Persistent BroadcastChannel — notifies Approvals page + Sidebar badge
-// whenever a clerk successfully records a movement. Must be module-level so
-// the message is guaranteed to flush before the instance is GC'd.
-const approvalsBc = new BroadcastChannel('approvals_sync');
-const caseUpdatesBc = new BroadcastChannel('case_updates');
-
 import api              from '@/services/api';
 import * as CaseService   from '@/services/caseService';
 import * as ClientService from '@/services/clientService';
 import store from '@/store';
 import { useAuth } from '@/composables/useAuth';
-
-const { userRole } = useAuth();
-
 import CaseCategoryModal from '@/components/Modals/Admin/CaseMaster/CaseCategoryModal.vue';
 import CaseForm          from '@/components/Modals/Admin/CaseMaster/CaseFormModal.vue';
 import CaseViewModal     from '@/components/Modals/Admin/CaseMaster/CaseViewModal.vue';
 import ClientModal       from '@/components/Modals/Admin/CaseMaster/NewClientModal.vue';
+
+const { userRole } = useAuth();
+
+// Broadcast channels for real-time updates
+const caseUpdatesBc = new BroadcastChannel('case_updates');
+const approvalsBc = new BroadcastChannel('approvals_sync');
 
 // ── Columns ─────────────────────────────────────────────────────────────────
 const columns = [
@@ -432,7 +445,13 @@ const capitalize  = (s) => s ? s[0].toUpperCase() + s.slice(1) : '';
 
 const priorityClass    = (p) => ({ urgent: 'bg-red-50 text-red-700', normal: 'bg-blue-50 text-blue-700', low: 'bg-slate-100 text-slate-600' }[p] || 'bg-slate-100 text-slate-500');
 const priorityDotClass = (p) => ({ urgent: 'bg-red-500', normal: 'bg-blue-500', low: 'bg-slate-400' }[p] || 'bg-slate-400');
-const caseStatusClass  = (s) => ({ active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', closed: 'bg-red-50 text-red-700 ring-1 ring-red-200', archived: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' }[s] || 'bg-slate-100 text-slate-500');
+const caseStatusClass  = (s) => ({ 
+  active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', 
+  closed: 'bg-red-50 text-red-700 ring-1 ring-red-200', 
+  archived: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  pending: 'bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200',
+  rejected: 'bg-gray-50 text-gray-700 ring-1 ring-gray-200',
+}[s] || 'bg-slate-100 text-slate-500');
 
 // ── Export ───────────────────────────────────────────────────────────────────
 const exportCases = async (format) => {
@@ -563,6 +582,7 @@ const addChecklistTask = async (taskData) => {
   try {
     await CaseService.createChecklistTask(viewCase.value.id, taskData);
     viewModalRef.value?.refreshChecklist();
+    caseUpdatesBc.postMessage({ event: 'case_updated' });
   } catch (e) {
     console.error('addChecklistTask:', e);
   }
@@ -582,6 +602,7 @@ const deleteChecklistTask = async (taskId) => {
   if (!viewCase.value) return;
   try {
     await CaseService.deleteChecklistTask(viewCase.value.id, taskId);
+    caseUpdatesBc.postMessage({ event: 'case_updated' });
     viewModalRef.value?.refreshChecklist();
   } catch (e) {
     console.error('deleteChecklistTask:', e);
@@ -600,11 +621,6 @@ const sortBy = (field) => {
 const previousPage = () => { if (currentPage.value > 1) { currentPage.value--; loadCases(); } };
 const nextPage     = () => { if (currentPage.value < pagination.value.last_page) { currentPage.value++; loadCases(); } };
 const goToPage     = (page) => { currentPage.value = page; loadCases(); };
-
-// Watch for pagination changes
-watch(currentPage, () => {
-  loadCases();
-});
 
 // ── Form operations ───────────────────────────────────────────────────────────
 const clearErrors = () => Object.assign(errors, { title: '', assigned_lawyer_id: '', case_no: '', client_id: '' });
@@ -741,7 +757,8 @@ const saveNewClient = async () => {
 
 // ── View modal ────────────────────────────────────────────────────────────────
 const openView = (c) => {
-  viewCase.value      = c;
+  if (c.case_status === 'pending') return;
+  viewCase.value      = { ...c, request_id: c.id };
   showViewModal.value = true;
   loadStageHistory(c.id);               // non-blocking
   nextTick(() => viewModalRef.value?.openModal(c.id));
@@ -758,18 +775,20 @@ const updateCaseStage = async ({ stage_id, stage_name }) => {
     
     await CaseService.updateStage(viewCase.value.id, { stage_id });
     viewCase.value = { ...viewCase.value, current_stage_id: stage_id, stage: stage_name };
+    caseUpdatesBc.postMessage({ event: 'case_updated' });
   } catch (e) {
     console.error('updateCaseStage failed:', e);
   } finally {
     viewModalRef.value?.finishStageUpdate();
   }
 };
-
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(() => {
-  // If store isn't initialized, trigger it
+  // If store isn't initialized, trigger it. Otherwise, refresh data for the view.
   if (!store.state.isInitialized) {
     store.actions.initialize(userRole.value);
+  } else {
+    loadCases();
   }
 
   // Use the user data we already have from useAuth
@@ -783,6 +802,10 @@ onMounted(() => {
     store.actions.refreshCases();
   };
 
+  approvalsBc.onmessage = () => {
+    store.actions.refreshCases();
+  };
+
   document.addEventListener('click', (e) => {
     if (exportDropdownRef.value && !exportDropdownRef.value.contains(e.target)) {
       showExportMenu.value = false;
@@ -792,6 +815,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(_searchTimer);
+  caseUpdatesBc.close();
   approvalsBc.close();
 });
 </script>

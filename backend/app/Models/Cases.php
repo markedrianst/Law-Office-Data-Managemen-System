@@ -217,7 +217,9 @@ class Cases extends Model
         ?string $status,
         ?string $priority,
         ?int    $stageId,
-        ?string $search
+        ?string $search,
+        ?int    $clerkId,
+        ?int    $lawyerId
     ): int {
         $q = DB::table('cases')
             ->leftJoin('clients AS cl', 'cl.id', '=', 'cases.client_id');
@@ -225,6 +227,8 @@ class Cases extends Model
         if ($status)   $q->where('cases.case_status',       $status);
         if ($priority) $q->where('cases.priority',          $priority);
         if ($stageId)  $q->where('cases.current_stage_id',  $stageId);
+        if ($clerkId)  $q->where('cases.assigned_clerk_id', $clerkId);
+        if ($lawyerId) $q->where('cases.assigned_lawyer_id', $lawyerId);
 
         if ($search) {
             $like = '%' . $search . '%';

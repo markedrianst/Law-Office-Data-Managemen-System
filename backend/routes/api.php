@@ -16,7 +16,6 @@ use App\Http\Controllers\Admin\FolderTrackerController;
 use App\Http\Controllers\Admin\ApprovalsController;
 use App\Http\Controllers\Admin\NotificationController;
 
-
 Route::post('/login',         [AuthenticatedSessionController::class, 'login']);
 Route::put ('/changepassword', [AuthenticatedSessionController::class, 'change']);
 

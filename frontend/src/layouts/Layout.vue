@@ -1,11 +1,22 @@
 <template>
   <div class="layout">
+    <!-- Mobile Overlay (backdrop) -->
+    <Transition name="overlay">
+      <div v-if="sidebarOpen && isMobile" class="sidebar-overlay" @click="closeSidebar"></div>
+    </Transition>
+
     <!-- Sidebar -->
-    <Sidebar class="sidebar" />
+    <Transition name="sidebar-slide">
+      <Sidebar 
+        v-if="!isMobile || sidebarOpen"
+        class="sidebar" 
+        :class="{ 'sidebar-mobile': isMobile, 'sidebar-desktop': !isMobile }"
+        @navigate="handleNavigate" />
+    </Transition>
 
     <!-- Main content area -->
     <div class="main">
-      <Header class="header" />
+      <Header class="header" :sidebar-open="sidebarOpen" @toggle-sidebar="toggleSidebar" />
 
       <!-- Scrollable content -->
       <div class="content">
@@ -14,13 +25,11 @@
 
       <Footer class="footer" />
     </div>
-
- 
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import Sidebar from "@/components/Sidebar.vue";
 import Header from "@/components/Header.vue";
 import Footer from "@/components/Footer.vue";
@@ -28,13 +37,52 @@ import store from "@/store";
 import { useAuth } from "@/composables/useAuth";
 
 const { userRole } = useAuth();
+const sidebarOpen = ref(false);
+const isMobile = ref(false);
+
+const toggleSidebar = () => {
+  sidebarOpen.value = !sidebarOpen.value;
+};
+
+const closeSidebar = () => {
+  if (isMobile.value) {
+    sidebarOpen.value = false;
+  }
+};
+
+const handleResize = () => {
+  const wasMobile = isMobile.value;
+  isMobile.value = window.innerWidth < 768;
+  
+  if (isMobile.value && !wasMobile) {
+    sidebarOpen.value = false;
+  }
+  
+  if (!isMobile.value && wasMobile) {
+    sidebarOpen.value = false;
+  }
+};
+
+const handleEscape = (e) => {
+  if (e.key === 'Escape' && sidebarOpen.value && isMobile.value) {
+    closeSidebar();
+  }
+};
 
 onMounted(async () => {
   const token = sessionStorage.getItem('token');
   if (!token) return;
 
-  // Initialize global store on application load with user role
+  handleResize();
   await store.actions.initialize(userRole.value);
+  
+  window.addEventListener('resize', handleResize);
+  document.addEventListener('keydown', handleEscape);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+  document.removeEventListener('keydown', handleEscape);
 });
 </script>
 
@@ -45,16 +93,63 @@ onMounted(async () => {
   height: 100vh;
   overflow: hidden;
   flex-direction: row;
+  position: relative;
+}
+
+/* ===== SIDEBAR OVERLAY (Mobile backdrop) ===== */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+}
+
+.overlay-enter-active,
+.overlay-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.overlay-enter-from,
+.overlay-leave-to {
+  opacity: 0;
 }
 
 /* ===== SIDEBAR ===== */
 .sidebar {
-  width: 250px;
   height: 100vh;
   flex-shrink: 0;
   overflow-y: auto;
-  background: #1a4972; /* example color */
+  background: linear-gradient(180deg, #1a4972 0%, #0f2f4a 55%, #091e31 100%);
   color: white;
+}
+
+/* Desktop sidebar - normal flow */
+.sidebar-desktop {
+  position: relative;
+  z-index: 1;
+}
+
+/* Mobile sidebar - slides in from the RIGHT (like the reference image) */
+.sidebar-mobile {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 220px;
+  z-index: 999;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Slide from right on mobile */
+.sidebar-slide-enter-active,
+.sidebar-slide-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-slide-enter-from,
+.sidebar-slide-leave-to {
+  transform: translateX(100%);
 }
 
 /* ===== MAIN CONTENT ===== */
@@ -64,19 +159,39 @@ onMounted(async () => {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: #f4f6f9;
+  background: #f8fafc;
+  min-width: 0;
 }
 
 /* ===== HEADER ===== */
 .header {
   flex-shrink: 0;
+  position: relative;
+  z-index: 50;
 }
 
 /* ===== SCROLLABLE CONTENT ===== */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  overflow-x: hidden;
+}
+
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* ===== FOOTER ===== */
@@ -84,49 +199,14 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* ===== MODALS (UNCHANGED) ===== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background: rgba(10, 20, 35, 0.7);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.modal-card {
-  background: white;
-  border-radius: 20px;
-  padding: 36px 28px 28px;
-  width: 100%;
-  max-width: 380px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 14px;
-  font-family: 'Segoe UI', sans-serif;
-}
-
-@media (max-width: 480px) {
-  .modal-card {
-    max-width: 90%;
-    padding: 28px 20px 20px;
+/* ===== RESPONSIVE ===== */
+@media (max-width: 767px) {
+  .layout {
+    flex-direction: column;
   }
 }
 
-/* Modal transitions */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
+body:has(.sidebar-mobile) {
+  overflow: hidden;
 }
 </style>

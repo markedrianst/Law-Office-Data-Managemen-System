@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cases;
 use App\Models\CaseActivityLog;
 use App\Models\CaseCategory;
+use App\Models\CaseRequest;
 use App\Models\CaseStage;
 use App\Models\CaseStageHistory;
 use App\Models\Client;
@@ -33,6 +34,8 @@ class CaseController extends Controller
             'case_status'    => 'nullable|in:active,closed,archived',
             'priority'       => 'nullable|in:low,normal,urgent',
             'stage_id'       => 'nullable|integer|exists:case_stages,id',
+            'assigned_clerk_id' => 'nullable|integer|exists:users,id',
+            'assigned_lawyer_id' => 'nullable|integer|exists:users,id',
             'sort_by'        => 'nullable|in:case_no,case_code,title,priority,created_at',
             'sort_direction' => 'nullable|in:asc,desc',
             'page'           => 'nullable|integer|min:1',
@@ -43,18 +46,22 @@ class CaseController extends Controller
         $status   = $request->case_status  ?? null;
         $priority = $request->priority     ?? null;
         $stageId  = $request->filled('stage_id') ? (int) $request->stage_id : null;
+        $clerkId  = $request->filled('assigned_clerk_id') ? (int) $request->assigned_clerk_id : null;
+        $lawyerId = $request->filled('assigned_lawyer_id') ? (int) $request->assigned_lawyer_id : null;
         $sortCol  = Cases::resolveSortColumn($request->sort_by ?? 'created_at');
         $sortDir  = $request->sort_direction ?? 'desc';
         $perPage  = (int) ($request->per_page ?? 10);
         $page     = (int) ($request->page     ?? 1);
-        $filterKey = md5(serialize(compact('search', 'status', 'priority', 'stageId')));
+        $filterKey = md5(serialize(compact('search', 'status', 'priority', 'stageId', 'clerkId', 'lawyerId')));
         $total = Cache::remember("cases_count_{$filterKey}", 60, fn() =>
-            Cases::filteredCount($status, $priority, $stageId, $search)
+            Cases::filteredCount($status, $priority, $stageId, $search, $clerkId, $lawyerId)
         );
         $rows = Cases::withJoins(Cases::listColumns())
             ->ofStatus($status)
             ->ofPriority($priority)
             ->ofStage($stageId)
+            ->when($clerkId, fn($query, $clerkId) => $query->where('cases.assigned_clerk_id', $clerkId))
+            ->when($lawyerId, fn($query, $lawyerId) => $query->where('cases.assigned_lawyer_id', $lawyerId))
             ->search($search)
             ->orderBy($sortCol, $sortDir)
             ->offset(($page - 1) * $perPage)
@@ -262,6 +269,11 @@ class CaseController extends Controller
                 ->get(),
         ]);
     }
+    private function isClerk(): bool
+    {
+        return auth()->user()->role->name === 'clerk';
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -278,6 +290,16 @@ class CaseController extends Controller
             'current_stage_id'   => 'nullable|integer|exists:case_stages,id',
             'summary'            => 'nullable|string|max:2000',
         ]);
+
+        if ($this->isClerk()) {
+            CaseRequest::create([
+                'request_type' => 'create',
+                'requested_by' => auth()->id(),
+                'request_data' => $validated,
+            ]);
+
+            return response()->json(['message' => 'Case creation request submitted for approval.'], 202);
+        }
 
         $case = DB::transaction(function () use ($validated) {
             $actorId = auth()->id();
@@ -359,6 +381,17 @@ class CaseController extends Controller
             'current_stage_id'   => 'nullable|integer|exists:case_stages,id',
             'summary'            => 'nullable|string|max:2000',
         ]);
+
+        if ($this->isClerk()) {
+            CaseRequest::create([
+                'case_id'      => $id,
+                'request_type' => 'update',
+                'requested_by' => auth()->id(),
+                'request_data' => $validated,
+            ]);
+
+            return response()->json(['message' => 'Case update request submitted for approval.'], 202);
+        }
 
         try {
             DB::transaction(function () use ($case, $validated) {
@@ -445,6 +478,17 @@ class CaseController extends Controller
 
         if (!$case) {
             return response()->json(['message' => 'Case not found.'], 404);
+        }
+
+        if ($this->isClerk()) {
+            CaseRequest::create([
+                'case_id'      => $id,
+                'request_type' => 'archive',
+                'requested_by' => auth()->id(),
+                'request_data' => ['case_status' => 'archived'],
+            ]);
+
+            return response()->json(['message' => 'Case archive request submitted for approval.'], 202);
         }
 
         DB::transaction(function () use ($case) {
