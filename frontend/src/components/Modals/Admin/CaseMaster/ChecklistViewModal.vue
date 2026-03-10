@@ -264,7 +264,6 @@
     :show="tm.show"
     :mode="tm.mode"
     :task="tm.task"
-    :clerks="clerks"
     @close="tm.show = false"
     @save="onTaskSave"
     @switch-to-edit="switchToEdit"
@@ -274,6 +273,7 @@
 <script setup>
 import { reactive, watch, ref, computed } from 'vue';
 import CaseTaskModal from './CaseTaskModal.vue';
+import store from '@/store';
 
 const props = defineProps({
   show:             { type: Boolean, default: false },
@@ -281,10 +281,12 @@ const props = defineProps({
   checklist:        { type: Array,   default: () => [] },
   checklistLoading: { type: Boolean, default: false },
   initialMode:      { type: String,  default: 'view' },
-  clerks:           { type: Array,   default: () => [] },
 });
 
 const emit = defineEmits(['close', 'add-task', 'update-task', 'delete-task']);
+
+// ── Global Store Integration ──────────────────────────────────────────────
+const clerks = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'clerk' || u?.role?.toLowerCase() === 'clerk'));
 
 // ── Filters ────────────────────────────────────────────────────────────────
 const searchQuery  = ref('');

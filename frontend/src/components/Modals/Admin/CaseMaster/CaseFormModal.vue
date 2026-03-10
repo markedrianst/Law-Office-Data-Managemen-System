@@ -284,6 +284,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import api from '@/services/api';
+import store from '@/store';
 
 const props = defineProps({
   show:               { type: Boolean, default: false },
@@ -291,11 +292,6 @@ const props = defineProps({
   formLoading:        { type: Boolean, default: false },
   form:               { type: Object,  required: true },
   errors:             { type: Object,  required: true },
-  categories:         { type: Array,   default: () => [] },
-  clients:            { type: Array,   default: () => [] },
-  lawyers:            { type: Array,   default: () => [] },
-  clerks:             { type: Array,   default: () => [] },
-  activeStages:       { type: Array,   default: () => [] },
   previewCode:        { type: String,  default: '' },
   newlyCreatedClient: { type: String,  default: '' },
   initCourtNA:        { type: Boolean, default: false },
@@ -305,12 +301,19 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'submit', 'category-change', 'open-new-client']);
 
+// ── Global Store Integration ──────────────────────────────────────────────
+const categories = computed(() => store.state.categories);
+const clients = computed(() => store.state.clients);
+const lawyers = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'lawyer' || u?.role?.toLowerCase() === 'lawyer'));
+const clerks = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'clerk' || u?.role?.toLowerCase() === 'clerk'));
+const activeStages = computed(() => store.state.stages.filter(s => s.is_active));
+const courts = computed(() => store.state.courts);
+
 // ==================== COURT DROPDOWN STATE ====================
-const courts = ref([]);
 const courtSearch = ref('');
 const courtDropdownOpen = ref(false);
 const courtDropdownRef = ref(null);
-const courtLoading = ref(false);
+const courtLoading = computed(() => store.state.isLoading);
 
 // ==================== CLIENT DROPDOWN STATE ====================
 const courtNA = ref(props.initCourtNA);
@@ -332,8 +335,8 @@ const syncFromProps = () => {
   courtDropdownOpen.value    = false;
   clientSearch.value         = props.initClientSearch || '';
   clientDropdownOpen.value   = false;
-  // Reload courts list if it failed to load earlier (no extra call if list is fresh)
-  if (courts.value.length === 0 && !courtLoading.value) loadCourts();
+  // If store isn't initialized, initialize it
+  if (!store.state.isInitialized) store.actions.initialize();
 };
 defineExpose({ syncFromProps });
 // ==================== COMPUTED PROPERTIES ====================
@@ -341,7 +344,7 @@ const filteredCourts = computed(() => {
   if (!courtSearch.value) return courts.value;
   
   const searchLower = courtSearch.value.toLowerCase().trim();
-  return courts.value.filter(court => 
+  return (courts.value || []).filter(court => 
     court.name.toLowerCase().includes(searchLower)
   );
 });
@@ -349,35 +352,20 @@ const filteredCourts = computed(() => {
 const exactCourtMatch = computed(() => {
   if (!courtSearch.value) return false;
   const searchLower = courtSearch.value.toLowerCase().trim();
-  return courts.value.some(court => 
+  return (courts.value || []).some(court => 
     court.name.toLowerCase() === searchLower
   );
 });
 
 const filteredClients = computed(() => {
   const q = clientSearch.value.toLowerCase().trim();
-  return q ? props.clients.filter(c => c.full_name.toLowerCase().includes(q)) : props.clients;
+  return q ? (clients.value || []).filter(c => (c.full_name || '').toLowerCase().includes(q)) : (clients.value || []);
 });
 
 // ==================== METHODS ====================
 const getInitials = (n) => n ? n.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() : '??';
 
 // Court Methods
-const loadCourts = async () => {
-  courtLoading.value = true;
-  try {
-    const res = await api.get('/admin/courts-offices');
-    // CourtController returns { success: true, data: [...] }
-    const list = res.data?.data ?? res.data ?? [];
-    courts.value = Array.isArray(list) ? list.filter(c => c.is_active !== false) : [];
-  } catch (error) {
-    console.error('[CaseFormModal] Failed to load courts:', error);
-    courts.value = [];
-  } finally {
-    courtLoading.value = false;
-  }
-};
-
 const selectCourt = (court) => {
   props.form.court_or_office = court.name;
   courtSearch.value = court.name;
@@ -438,7 +426,6 @@ const handleClickOutside = (event) => {
 
 // Eagerly load courts at mount — list is ready before the modal ever opens
 onMounted(() => {
-  loadCourts();
   document.addEventListener('mousedown', handleClickOutside);
 });
 

@@ -286,20 +286,40 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { debounce } from 'lodash'
 import { auditLogService } from '@/services/auditLogService'
+import { useAuth } from '@/composables/useAuth'
 import * as XLSX from 'xlsx'
 
-// ── State ─────────────────────────────────────────────────────────
-const systemLogs  = ref([])
-const caseLogs    = ref([])
+const router = useRouter()
+const { isAdmin } = useAuth()
+import store from '@/store'
+
+// ── Global Store Integration ──
+const systemLogs = computed(() => store.state.activityLogs.filter(l => l._type === 'system'))
+const caseLogs   = computed(() => store.state.activityLogs.filter(l => l._type === 'case'))
+const pagination = computed(() => store.state.pagination.logs)
+const isLoading  = computed(() => store.state.isLoading)
+
+// ── Role Check ──
+onMounted(() => {
+  if (!isAdmin.value) {
+    router.push('/dashboard')
+    return
+  }
+  // If the store already has logs, we show them instantly.
+  // We only trigger a refresh if the store isn't initialized.
+  if (!store.state.isInitialized) {
+    store.actions.initialize('admin')
+  } else {
+    loadAll()
+  }
+})
 const expanded    = ref([])
 const timeFilter  = ref('')
 const currentPage = ref(1)
 const perPage     = ref(15)
-
-// We track a combined total for pagination display
-const pagination = ref({ current_page: 1, last_page: 1, per_page: 15, total: 0, from: 0, to: 0 })
 
 const filters = reactive({ search: '', type: '', status: '', dateFrom: '', dateTo: '' })
 
@@ -320,9 +340,7 @@ const vClickOutside = {
 
 // ── Merge + sort both log streams by date desc ────────────────────
 const mergedLogs = computed(() => {
-  const sys  = systemLogs.value.map(l => ({ ...l, _type: 'system' }))
-  const case_ = caseLogs.value.map(l => ({ ...l, _type: 'case' }))
-  return [...sys, ...case_].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  return [...store.state.activityLogs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 })
 
 const groupedMergedLogs = computed(() => {
@@ -348,51 +366,23 @@ const hasActiveFilters = computed(() =>
   !!(filters.search || filters.type || filters.status || filters.dateFrom || filters.dateTo)
 )
 
-// ── Load both sources in parallel ────────────────────────────────
+// ── Background load via store ────────────────────────────────────
 const loadAll = async () => {
   try {
     const params = {
       search:    filters.search   || undefined,
       status:    filters.status   || undefined,
+      type:      filters.type     || undefined,
       date_from: filters.dateFrom || undefined,
       date_to:   filters.dateTo   || undefined,
       page:      currentPage.value,
       per_page:  perPage.value,
     }
 
-    const fetchSystem = filters.type === 'case'
-      ? Promise.resolve({ data: [], meta: { total: 0, current_page: 1, last_page: 1, from: 0, to: 0 } })
-      : auditLogService.getLogs(params)
-
-    const fetchCase = filters.type === 'system'
-      ? Promise.resolve({ data: [], meta: { total: 0 } })
-      : auditLogService.getCaseActivityLogs(params)
-
-    const [sysRes, caseRes] = await Promise.all([fetchSystem, fetchCase])
-
-    systemLogs.value = sysRes.data  || []
-    caseLogs.value   = caseRes.data || []
-
-    // Combine totals for pagination info
-    const sysTotal  = sysRes.meta?.total  || 0
-    const caseTotal = caseRes.meta?.total || 0
-    const combined  = sysTotal + caseTotal
-
-    // Use system meta for page structure (both use same page/perPage)
-    const meta = sysRes.meta || caseRes.meta || {}
-    pagination.value = {
-      current_page: meta.current_page || currentPage.value,
-      last_page:    meta.last_page    || 1,
-      per_page:     perPage.value,
-      total:        combined,
-      from:         meta.from || 0,
-      to:           meta.to   || 0,
-    }
+    await store.actions.refreshLogs(params)
     currentPage.value = pagination.value.current_page
   } catch (e) {
-    systemLogs.value = []
-    caseLogs.value   = []
-  } finally {
+    console.error('Failed to load logs:', e)
   }
 }
 
@@ -552,6 +542,4 @@ const exportExcel = async (scope) => {
   } catch (e) { console.error('Export failed', e) }
   finally { isExporting.value = false }
 }
-
-onMounted(loadAll)
 </script>

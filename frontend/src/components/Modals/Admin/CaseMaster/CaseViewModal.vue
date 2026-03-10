@@ -595,13 +595,12 @@
 import { ref, computed, reactive, watch, onUnmounted } from 'vue';
 import CaseTaskModal from './CaseTaskModal.vue';
 import * as CaseService from '@/services/caseService';
+import store from '@/store';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 const props = defineProps({
   show:         { type: Boolean, default: false },
   viewCase:     { type: Object,  default: null  },
-  activeStages: { type: Array,   default: () => [] },
-  clerks:       { type: Array,   default: () => [] },
   currentUser:  { type: Object,  default: null  },
 });
 
@@ -609,6 +608,10 @@ const emit = defineEmits([
   'close', 'edit', 'add-task', 'update-task', 'delete-task',
   'update-stage', 'checklist-movement', 'folder-movement', 'update:viewCase',
 ]);
+
+// ── Global Store Integration ──────────────────────────────────────────────
+const activeStages = computed(() => store.state.stages.filter(s => s.is_active));
+const clerks = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'clerk' || u?.role?.toLowerCase() === 'clerk'));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SMART SYNC LAYER
@@ -828,7 +831,7 @@ const showToast = (msg, type = 'error') => {
 
 // ── Stage ──────────────────────────────────────────────────────────────────
 const onStageChange = (stageId) => {
-  const stage = props.activeStages.find(s => String(s.id) === String(stageId));
+  const stage = activeStages.value.find(s => String(s.id) === String(stageId));
   if (!stage) return;
   stageUpdating.value = true;
   emit('update-stage', { stage_id: stage.id, stage_name: stage.name });

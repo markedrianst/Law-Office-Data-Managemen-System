@@ -363,6 +363,7 @@ import { useRouter } from "vue-router";
 import { login, changePassword } from "@/services/auth";
 import backgroundImg from "../../assets/images/bg.jpg";
 import { useAuth } from "@/composables/useAuth";
+import store from "@/store";
 
 const { refreshUser } = useAuth();
 const router = useRouter();
@@ -496,6 +497,10 @@ async function handleLogin() {
     }
 
     refreshUser();
+    // Pre-initialize global store to avoid any data fetching delay after landing
+    // Pass user role for role-based data fetching (Logs for Admin, Approvals for Admin/Lawyer)
+    const userRole = user.role?.name ?? (typeof user.role === 'string' ? user.role : '');
+    await store.actions.initialize(userRole);
     router.push("/dashboard");
   } catch (err) {
     const msg = err.message || "An error occurred during login";

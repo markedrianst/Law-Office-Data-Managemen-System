@@ -121,6 +121,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { logout } from '@/services/auth'
+import store from '@/store'
 
 const router = useRouter()
 const route = useRoute()
@@ -148,8 +149,10 @@ const pageTitle = computed(() => ({
   '/usermanagement': 'User Management',
   '/audittrail': 'Activity Logs',
   '/casemaster': 'Case Master',
-  '/tasks': 'Tasks',
-  '/appointments': 'Appointments',
+  '/approvals': 'Approvals',
+  '/courtmaster': 'Courts',
+  '/caseCategory': 'Case Categories',
+  '/documents': 'Documents',
   '/account': 'Account Settings',
 }[route.path] || 'Dashboard'))
 
@@ -185,11 +188,18 @@ const confirmLogout = async () => {
   isLoggingOut.value = true
   try {
     await logout()
-  } catch {
+  } catch (err) {
+    console.error('Logout error:', err)
+  } finally {
+    // 1. Reset Global Store (stops background fetches)
+    store.actions.reset()
+    
+    // 2. Clear local session data
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('user')
-  } finally {
-    router.push('/')
+    
+    // 3. Navigate home
+    router.replace('/')
   }
 }
 </script>

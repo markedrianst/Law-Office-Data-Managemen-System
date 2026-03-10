@@ -18,11 +18,10 @@ use App\Http\Controllers\Admin\NotificationController;
 
 
 Route::post('/login',         [AuthenticatedSessionController::class, 'login']);
-Route::post('/logout',        [AuthenticatedSessionController::class, 'logout']);
 Route::put ('/changepassword', [AuthenticatedSessionController::class, 'change']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
-
+    Route::post('/logout',        [AuthenticatedSessionController::class, 'logout']);
     Route::get('/user', fn(Request $request) => $request->user());
 
     // ── User management (admin only) ──────────────────────────────────────────

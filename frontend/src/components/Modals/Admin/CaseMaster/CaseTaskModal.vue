@@ -342,36 +342,21 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import { getActiveDocuments } from '@/services/documentService';
+import store from '@/store';
 
 const props = defineProps({
   show:   { type: Boolean, default: false },
   mode:   { type: String,  default: 'add' },
   task:   { type: Object,  default: null  },
-  clerks: { type: Array,   default: () => [] },
-  // Add to defineProps:
-errors: { type: Object, default: () => ({ task: '', due_date: '', status: '' }) }
+  errors: { type: Object, default: () => ({ task: '', due_date: '', status: '' }) }
 });
 
 const emit = defineEmits(['close', 'save', 'switch-to-edit']);
 
-// ── Document types (fetched once on mount) ─────────────────────────────────
-const documents        = ref([]);
-const documentsLoading = ref(false);
-
-const fetchDocuments = async () => {
-  documentsLoading.value = true;
-  try {
-    const res = await getActiveDocuments();
-    documents.value = res.data?.data || res.data || [];
-  } catch (e) {
-    console.error('fetchDocuments:', e);
-  } finally {
-    documentsLoading.value = false;
-  }
-};
-
-onMounted(() => nextTick(fetchDocuments));
+// ── Global Store Integration ──────────────────────────────────────────────
+const clerks = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'clerk' || u?.role?.toLowerCase() === 'clerk'));
+const documents = computed(() => store.state.documentTypes);
+const documentsLoading = computed(() => store.state.isLoading);
 
 // ── Document dropdown state ────────────────────────────────────────────────
 const docSearch       = ref('');
@@ -456,19 +441,19 @@ const clerkDisplayName = (clerk) => clerk?.name ?? clerk?.full_name ?? '';
 const filteredClerks = computed(() => {
   const q = clerkSearch.value.toLowerCase().trim();
   return q
-    ? props.clerks.filter(c => clerkDisplayName(c).toLowerCase().includes(q))
-    : props.clerks;
+    ? clerks.value.filter(c => clerkDisplayName(c).toLowerCase().includes(q))
+    : clerks.value;
 });
 
 const selectedClerkName = computed(() => {
   if (!localTask.assigned_clerk_id) return '';
-  const found = props.clerks.find(c => c.id === localTask.assigned_clerk_id);
+  const found = clerks.value.find(c => c.id === localTask.assigned_clerk_id);
   return found ? clerkDisplayName(found) : '';
 });
 
 const resolvedClerkName = computed(() => {
   if (localTask.assigned_clerk_id) {
-    const found = props.clerks.find(c => c.id === localTask.assigned_clerk_id);
+    const found = clerks.value.find(c => c.id === localTask.assigned_clerk_id);
     if (found) return clerkDisplayName(found);
   }
   return localTask.assigned_to ?? '';
@@ -479,7 +464,7 @@ const resolvedClerkName = computed(() => {
 // filteredClerks is computed. This watcher additionally keeps the search
 // input label in sync if the currently-selected clerk's name changes.
 watch(
-  () => props.clerks,
+  () => clerks.value,
   (newClerks) => {
     if (!localTask.assigned_clerk_id) return;
     const found = newClerks.find(c => c.id === localTask.assigned_clerk_id);
@@ -539,7 +524,7 @@ const syncTask = () => {
     docSearch.value = localTask.document_type || '';
 
     // Pre-fill clerk search box
-    const foundClerk = props.clerks.find(c => c.id === localTask.assigned_clerk_id);
+    const foundClerk = clerks.value.find(c => c.id === localTask.assigned_clerk_id);
     clerkSearch.value = foundClerk
       ? clerkDisplayName(foundClerk)
       : (localTask.assigned_to ?? '');

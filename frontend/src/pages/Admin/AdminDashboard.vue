@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <!-- Stats Cards -->
+    <!-- Stats Cards with Real Data -->
     <div class="stats-grid">
       <div class="stat-card" v-for="stat in stats" :key="stat.label">
         <div class="stat-icon">{{ stat.icon }}</div>
@@ -32,34 +32,70 @@
 
     <!-- Main Grid -->
     <div class="main-grid">
-      <!-- Recent Activity Panel -->
+      <!-- Recent Activity Panel with Real User Names -->
       <div class="panel">
         <div class="panel-header">
           <h3 class="panel-title">Recent Activity</h3>
-          <button class="panel-link">View all</button>
+          <button class="panel-link" @click="viewAllActivities">View all</button>
         </div>
         <div class="activity-list">
+          <div v-if="recentActivities.length === 0" class="empty-state">
+            <p class="empty-text">No recent activities</p>
+          </div>
           <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-            <div class="activity-dot" :class="`dot-${activity.type}`"></div>
-            <div class="activity-content">
-              <p class="activity-text">{{ activity.text }}</p>
-              <span class="activity-time">{{ activity.time }}</span>
+            <div class="activity-icon" :class="activity.type">
+              {{ activity.icon }}
             </div>
-            <span class="activity-tag" :class="`tag-${activity.type}`">{{ activity.tag }}</span>
+            <div class="activity-content">
+              <div class="activity-header">
+                <span class="activity-type-badge" :class="activity.type">{{ activity.typeLabel }}</span>
+                <span class="activity-time">{{ activity.time }}</span>
+              </div>
+              <p class="activity-text">
+                <strong class="activity-user">{{ activity.userName }}</strong>
+                {{ activity.action }}
+                <span v-if="activity.target" class="activity-target">{{ activity.target }}</span>
+              </p>
+              <div v-if="activity.details" class="activity-details">
+                <span v-if="activity.details.from !== undefined" class="change-badge">
+                  <span class="from-value">{{ formatValue(activity.details.from) }}</span>
+                  <svg class="arrow-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                    <path d="M5 12L10 8 5 4" stroke-width="1.5"/>
+                  </svg>
+                  <span class="to-value">{{ formatValue(activity.details.to) }}</span>
+                </span>
+                <span v-else-if="activity.details.note" class="note">{{ activity.details.note }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Quick Actions Panel -->
+      <!-- Schedules Panel -->
       <div class="panel">
         <div class="panel-header">
-          <h3 class="panel-title">Quick Actions</h3>
+          <h3 class="panel-title">Today's Schedules</h3>
+          <button class="panel-link" @click="viewAllSchedules">View all</button>
         </div>
-        <div class="quick-actions-grid">
-          <button v-for="action in quickActions" :key="action.label" class="quick-action-btn" @click="handleQuickAction(action.action)">
-            <div class="action-icon">{{ action.icon }}</div>
-            <span class="action-label">{{ action.label }}</span>
-          </button>
+        <div class="schedule-list">
+          <div v-if="schedules.length === 0" class="empty-state">
+            <p class="empty-text">No schedules for today</p>
+          </div>
+          <div v-for="schedule in schedules" :key="schedule.id" class="schedule-item">
+            <div class="schedule-time">
+              <span class="time-badge">{{ schedule.time }}</span>
+            </div>
+            <div class="schedule-content">
+              <p class="schedule-title">{{ schedule.title }}</p>
+              <p class="schedule-meta">
+                <span class="schedule-type" :class="`type-${schedule.type}`">{{ schedule.type }}</span>
+                <span class="schedule-case">{{ schedule.case_no }}</span>
+              </p>
+            </div>
+            <div class="schedule-participant">
+              <div class="participant-avatar">{{ getInitials(schedule.participant) }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -67,7 +103,7 @@
       <div class="panel">
         <div class="panel-header">
           <h3 class="panel-title">Cases Overview</h3>
-          <button class="panel-link">View all</button>
+          <button class="panel-link" @click="viewAllCases">View all</button>
         </div>
         <div class="cases-overview">
           <div class="case-stat-item">
@@ -102,9 +138,12 @@
       <div class="panel">
         <div class="panel-header">
           <h3 class="panel-title">Folder Movements</h3>
-          <button class="panel-link">View all</button>
+          <button class="panel-link" @click="viewAllMovements">View all</button>
         </div>
         <div class="movement-list">
+          <div v-if="folderMovements.length === 0" class="empty-state">
+            <p class="empty-text">No recent folder movements</p>
+          </div>
           <div v-for="movement in folderMovements" :key="movement.id" class="movement-item">
             <div class="movement-icon" :class="movement.type.toLowerCase()">
               <svg v-if="movement.type === 'OUT'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -116,9 +155,17 @@
             </div>
             <div class="movement-content">
               <p class="movement-text">
-                <strong>{{ movement.case_no }}</strong> - {{ movement.purpose }}
+                <strong>{{ movement.case_code || movement.case_no }}</strong> 
+                <span class="movement-purpose">{{ movement.purpose || movement.task || 'Folder movement' }}</span>
               </p>
-              <span class="movement-meta">{{ movement.handled_by }} • {{ formatDate(movement.date) }}</span>
+              <span class="movement-meta">
+                <span class="handler">{{ movement.handled_by || movement.recorder?.full_name }}</span>
+                <span class="dot">•</span>
+                <span class="date">{{ formatMovementDate(movement.date) }}</span>
+                <span class="approval-badge" :class="`approval-${(movement.approval_status || 'pending').toLowerCase()}`">
+                  {{ movement.approval_status || 'PENDING' }}
+                </span>
+              </span>
             </div>
           </div>
         </div>
@@ -142,7 +189,6 @@
               class="search-input"
             />
           </div>
-          <button class="btn-primary" @click="handleAddUser">+ Add User</button>
         </div>
       </div>
 
@@ -154,36 +200,33 @@
               <th>Role</th>
               <th>Status</th>
               <th>Last Login</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="user in filteredUsers" :key="user.id" class="table-row">
               <td>
                 <div class="user-cell">
-                  <div class="user-avatar">{{ getUserInitials(user.name) }}</div>
+                  <div class="user-avatar">{{ getUserInitials(user.full_name || user.name) }}</div>
                   <div>
-                    <div class="user-name">{{ user.name }}</div>
+                    <div class="user-name">{{ user.full_name || user.name }}</div>
                     <div class="user-email">{{ user.email }}</div>
                   </div>
                 </div>
               </td>
               <td>
-                <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">{{ user.role }}</span>
+                <span class="role-badge" :class="`role-${(user.role?.name || user.role || '').toLowerCase()}`">
+                  {{ user.role?.name || user.role || '—' }}
+                </span>
               </td>
               <td>
-                <span class="status-badge" :class="`status-${user.status}`">{{ user.status }}</span>
+                <span class="status-badge" :class="`status-${user.is_active ? 'active' : 'inactive'}`">
+                  {{ user.is_active ? 'Active' : 'Inactive' }}
+                </span>
               </td>
-              <td class="text-muted">{{ user.last_login || 'Never' }}</td>
-              <td>
-                <div class="action-buttons">
-                  <button class="action-btn edit-btn" @click="handleEditUser(user)">Edit</button>
-                  <button class="action-btn delete-btn" @click="handleDeleteUser(user)">Remove</button>
-                </div>
-              </td>
+              <td class="text-muted">{{ formatLastLogin(user.last_login) }}</td>
             </tr>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="5" class="text-center text-muted py-4">No users found</td>
+              <td colspan="4" class="text-center text-muted py-4">No users found</td>
             </tr>
           </tbody>
         </table>
@@ -199,48 +242,308 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import store from '@/store'
+import { useAuth } from '@/composables/useAuth'
 
-// State
-const searchQuery = ref('')
-const users = ref([])
-const stats = ref([
-  { label: 'Total Users', value: 0, trend: 12, progress: 100, color: '#1a4972', icon: '👥' },
-  { label: 'Active Cases', value: 0, trend: 8, progress: 72, color: '#3b82f6', icon: '💼' },
-  { label: 'Documents', value: 0, trend: 23, progress: 88, color: '#10b981', icon: '📄' },
-  { label: 'Logins Today', value: 0, trend: -3, progress: 40, color: '#f97316', icon: '🔓' }
-])
+const router = useRouter()
+const { isAdmin, isLawyer, userRole } = useAuth()
 
-const caseStats = ref({
-  active: 0,
-  pending: 0,
-  closed: 0,
-  archived: 0,
-  completionRate: 0
+// Global Store Integration
+const users = computed(() => store.state.users || [])
+const cases = computed(() => store.state.cases || [])
+const activityLogs = computed(() => store.state.activityLogs || [])
+const approvals = computed(() => store.state.approvals || [])
+const folders = computed(() => store.state.folders || [])
+const documents = computed(() => store.state.documents || [])
+
+// Stats with Real Data
+const stats = computed(() => {
+  const today = new Date().toISOString().split('T')[0]
+  
+  // Real login count for today
+  const todayLogins = activityLogs.value.filter(l => 
+    l.action === 'login' && 
+    l.status === 'success' && 
+    l.created_at?.startsWith(today)
+  ).length
+
+  // Real document count (folders + checklist items)
+  const folderCount = approvals.value.filter(a => a._source === 'folder').length
+  const checklistCount = approvals.value.filter(a => a._source === 'checklist').length
+  const totalDocuments = folderCount + checklistCount
+
+  console.log('folderCount:', folderCount)
+  console.log('checklistCount:', checklistCount)
+  console.log('totalDocuments:', totalDocuments)
+  console.log('todayLogins:', todayLogins)
+
+  // Calculate trends (compare with yesterday's data)
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  
+  const yesterdayLogins = activityLogs.value.filter(l => 
+    l.action === 'login' && 
+    l.status === 'success' && 
+    l.created_at?.startsWith(yesterdayStr)
+  ).length
+
+  const loginTrend = yesterdayLogins > 0 
+    ? Math.round(((todayLogins - yesterdayLogins) / yesterdayLogins) * 100)
+    : todayLogins > 0 ? 100 : 0
+
+  return [
+    { 
+      label: 'Total Users', 
+      value: users.value.length, 
+      trend: 12, // You can calculate this from user creation logs
+      progress: 100, 
+      color: '#1a4972', 
+      icon: '👥' 
+    },
+    { 
+      label: 'Active Cases', 
+      value: cases.value.filter(c => c.case_status === 'active').length, 
+      trend: 8, 
+      progress: 72, 
+      color: '#3b82f6', 
+      icon: '💼' 
+    },
+    { 
+      label: 'Documents', 
+      value: totalDocuments, 
+      trend: 23, 
+      progress: 88, 
+      color: '#10b981', 
+      icon: '📄' 
+    },
+    { 
+      label: 'Logins Today', 
+      value: todayLogins, 
+      trend: loginTrend, 
+      progress: todayLogins > 0 ? Math.min(100, todayLogins * 10) : 0, 
+      color: '#f97316', 
+      icon: '🔓' 
+    }
+  ]
 })
 
-const recentActivities = ref([
-  { id: 1, text: 'New user account created', time: '2 min ago', tag: 'User', type: 'user' },
-  { id: 2, text: 'Case #2241 document uploaded', time: '18 min ago', tag: 'Document', type: 'document' },
-  { id: 3, text: 'Password changed — j.dela@nplo', time: '45 min ago', tag: 'Security', type: 'security' },
-  { id: 4, text: 'Case #2238 status updated', time: '1 hr ago', tag: 'Case', type: 'case' },
-  { id: 5, text: 'Failed login attempt detected', time: '2 hr ago', tag: 'Alert', type: 'alert' },
-  { id: 6, text: 'New case #2242 opened', time: '3 hr ago', tag: 'Case', type: 'case' }
+const caseStats = computed(() => {
+  const c = cases.value
+  const active = c.filter(x => x.case_status === 'active').length
+  const pending = c.filter(x => x.case_status === 'pending').length
+  const closed = c.filter(x => x.case_status === 'closed').length
+  const archived = c.filter(x => x.case_status === 'archived').length
+  const total = c.length || 1
+  
+  return {
+    active,
+    pending,
+    closed,
+    archived,
+    completionRate: Math.round((closed / total) * 100)
+  }
+})
+
+// Recent Activities with Proper User Names
+const recentActivities = computed(() => {
+  // Create a map of emails to user names for quick lookup
+  const userMap = new Map()
+  users.value.forEach(user => {
+    if (user.email) {
+      userMap.set(user.email.toLowerCase(), user.full_name || user.name || user.email.split('@')[0])
+    }
+  })
+
+  return activityLogs.value.slice(0, 8).map(log => {
+    // Find user name from various sources
+    let userName = 'System'
+    let userEmail = ''
+
+    if (log.user?.name) {
+      userName = log.user.name
+      userEmail = log.user.email
+    } else if (log.email_attempted) {
+      userEmail = log.email_attempted
+      // Try to find user by email
+      const mappedName = userMap.get(log.email_attempted.toLowerCase())
+      if (mappedName) {
+        userName = mappedName
+      } else {
+        // Extract name from email
+        const namePart = log.email_attempted.split('@')[0]
+        userName = namePart.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+      }
+    } else if (log.actor) {
+      userName = log.actor
+    }
+
+    // Format action text and determine type
+    let type = 'system'
+    let typeLabel = 'System'
+    let icon = '⚙️'
+    let action = ''
+    let target = ''
+    let details = null
+
+    if (log._type === 'case' || log.case_code) {
+      type = 'case'
+      typeLabel = 'Case'
+      icon = '📁'
+      
+      // Parse case action
+      if (log.action?.includes('status')) {
+        action = 'updated case status'
+      } else if (log.action?.includes('stage')) {
+        action = 'changed stage'
+      } else if (log.action?.includes('create')) {
+        action = 'created case'
+      } else if (log.action?.includes('update')) {
+        action = 'updated case'
+      } else {
+        action = log.action || 'performed action'
+      }
+      
+      target = log.case_code || ''
+      
+      // Parse details for before/after
+      if (log.details) {
+        if (typeof log.details === 'string') {
+          try {
+            details = JSON.parse(log.details)
+          } catch {
+            details = { note: log.details }
+          }
+        } else {
+          details = log.details
+        }
+      }
+    } else {
+      // System actions
+      const actionMap = {
+        login: { action: 'logged in', icon: '→' },
+        logout: { action: 'logged out', icon: '←' },
+        password_change: { action: 'changed password', icon: '🔑' },
+        user_create: { action: 'created new user', icon: '➕' },
+        user_update: { action: 'updated user', icon: '✏️' },
+        user_delete: { action: 'deleted user', icon: '🗑️' },
+        activated: { action: 'activated account', icon: '✅' },
+        deactivated: { action: 'deactivated account', icon: '⛔' }
+      }
+      
+      const mapped = actionMap[log.action] || { action: log.action || 'performed action', icon: '•' }
+      action = mapped.action
+      icon = mapped.icon
+      
+      if (log.details && typeof log.details === 'string') {
+        details = { note: log.details }
+      }
+    }
+
+    return {
+      id: log.id,
+      userName,
+      userEmail,
+      action,
+      target,
+      details,
+      time: formatRelativeTime(log.created_at),
+      type,
+      typeLabel,
+      icon,
+      status: log.status
+    }
+  })
+})
+
+// Folder Movements from Approvals
+const folderMovements = computed(() => {
+  return approvals.value
+    .filter(m => m._source === 'folder' || m._source === 'checklist')
+    .slice(0, 5)
+    .map(m => ({
+      id: m.id,
+      case_code: m.case_code,
+      case_no: m.case_id,
+      type: m.type,
+      purpose: m.purpose,
+      task: m.checklist?.task,
+      handled_by: m.handled_by || m.recorder?.full_name,
+      recorder: m.recorder,
+      date: m.date || m.created_at,
+      approval_status: m.approval_status
+    }))
+})
+
+// Schedules (mock data - replace with actual schedules)
+const schedules = ref([
+  { 
+    id: 1, 
+    time: '09:00', 
+    title: 'Client Meeting - Smith vs. Jones', 
+    type: 'meeting',
+    case_no: '2026-0001',
+    participant: 'John Smith'
+  },
+  { 
+    id: 2, 
+    time: '10:30', 
+    title: 'Court Hearing - Regional Trial Court', 
+    type: 'hearing',
+    case_no: '2026-0002',
+    participant: 'Judge Reyes'
+  },
+  { 
+    id: 3, 
+    time: '14:00', 
+    title: 'Document Review Deadline', 
+    type: 'deadline',
+    case_no: '2026-0003',
+    participant: 'Maria Santos'
+  }
 ])
 
-const folderMovements = ref([
-  { id: 1, case_no: 'CASE-2024-001', type: 'OUT', purpose: 'For Court Filing', handled_by: 'Maria Santos', date: '2024-03-06' },
-  { id: 2, case_no: 'CASE-2024-002', type: 'IN', purpose: 'Received from Court', handled_by: 'Juan dela Cruz', date: '2024-03-06' },
-  { id: 3, case_no: 'CASE-2024-003', type: 'OUT', purpose: 'For Client Review', handled_by: 'Paolo Mendoza', date: '2024-03-05' }
-])
+// UI State
+const searchQuery = ref('')
 
-const quickActions = [
-  { label: 'Add User', icon: '➕', action: 'add-user' },
-  { label: 'Export Logs', icon: '📤', action: 'export-logs' },
-  { label: 'View Logs', icon: '📋', action: 'view-logs' },
-  { label: 'Settings', icon: '⚙️', action: 'settings' }
-]
+// Polling for real-time updates
+let pollTimer = null
+let bc = null
+
+const openChannel = () => {
+  closeChannel()
+  bc = new BroadcastChannel('dashboard_sync')
+  bc.onmessage = () => {
+    refreshData()
+  }
+}
+
+const closeChannel = () => {
+  if (bc) bc.close()
+  bc = null
+}
+
+const startPolling = () => {
+  stopPolling()
+  pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      refreshData()
+    }
+  }, 30000)
+}
+
+const stopPolling = () => {
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = null
+}
+
+const refreshData = () => {
+  store.actions.refreshApprovals({ limit: 10 })
+  store.actions.refreshLogs({ limit: 20 })
+  store.actions.refreshCases({ limit: 10 })
+}
 
 // Computed
 const currentDate = computed(() => {
@@ -255,116 +558,115 @@ const currentDate = computed(() => {
 const currentYear = computed(() => new Date().getFullYear())
 
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value
+  const u = users.value
+  if (!searchQuery.value) return u.slice(0, 10)
   const query = searchQuery.value.toLowerCase()
-  return users.value.filter(user => 
-    user.name.toLowerCase().includes(query) ||
-    user.email.toLowerCase().includes(query) ||
-    user.role.toLowerCase().includes(query)
-  )
+  return u.filter(user => 
+    (user.full_name || user.name || '').toLowerCase().includes(query) ||
+    (user.email || '').toLowerCase().includes(query) ||
+    (user.role?.name || user.role || '').toLowerCase().includes(query)
+  ).slice(0, 10)
 })
 
-// Methods
+// Helper Methods
 const getUserInitials = (name) => {
+  if (!name) return '??'
   return name
     .split(' ')
+    .filter(Boolean)
     .map(word => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
 }
 
+const getInitials = (name) => {
+  return getUserInitials(name)
+}
+
+const formatRelativeTime = (date) => {
+  if (!date) return '—'
+  const now = new Date()
+  const past = new Date(date)
+  const diffMs = now - past
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays}d ago`
+  return formatDate(date)
+}
+
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric' 
+  if (!date) return '—'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return date
+  return d.toLocaleDateString('en-US', { 
+    month: '2-digit', 
+    day: '2-digit',
+    year: 'numeric'
   })
 }
 
-const handleQuickAction = (action) => {
-  console.log('Quick action:', action)
-  // Implement based on your needs
+const formatMovementDate = (date) => {
+  if (!date) return '—'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return date
+  return d.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-const handleAddUser = () => {
-  console.log('Add user')
-  // Navigate to add user page or open modal
+const formatLastLogin = (date) => {
+  if (!date) return 'Never'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return date
+  return d.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-const handleEditUser = (user) => {
-  console.log('Edit user:', user)
-  // Open edit modal
+const formatValue = (val) => {
+  if (val === null || val === undefined || val === '') return '(empty)'
+  return String(val)
 }
 
-const handleDeleteUser = (user) => {
-  console.log('Delete user:', user)
-  // Show confirmation modal
-}
+// Navigation handlers
+const viewAllActivities = () => router.push('/logs')
+const viewAllSchedules = () => router.push('/schedules')
+const viewAllCases = () => router.push('/cases')
+const viewAllMovements = () => router.push('/approvals')
 
-// Data fetching
-const fetchDashboardData = async () => {
-  try {
-    // Fetch users
-    const usersResponse = await axios.get('/api/users')
-    users.value = usersResponse.data
-
-    // Fetch stats
-    const statsResponse = await axios.get('/api/dashboard/stats')
-    if (statsResponse.data) {
-      stats.value[0].value = statsResponse.data.total_users || 24
-      stats.value[1].value = statsResponse.data.active_cases || 138
-      stats.value[2].value = statsResponse.data.documents || 512
-      stats.value[3].value = statsResponse.data.logins_today || 9
-    }
-
-    // Fetch case stats
-    const caseStatsResponse = await axios.get('/api/cases/stats')
-    if (caseStatsResponse.data) {
-      caseStats.value = caseStatsResponse.data
-    }
-
-    // Fetch recent activities
-    const activitiesResponse = await axios.get('/api/activities/recent')
-    if (activitiesResponse.data) {
-      recentActivities.value = activitiesResponse.data
-    }
-
-    // Fetch folder movements
-    const movementsResponse = await axios.get('/api/folder-movements/recent')
-    if (movementsResponse.data) {
-      folderMovements.value = movementsResponse.data
-    }
-
-  } catch (error) {
-    console.error('Failed to fetch dashboard data:', error)
-    // Use mock data if API fails
-    loadMockData()
-  }
-}
-
-const loadMockData = () => {
-  // Mock users data
-  users.value = [
-    { id: 1, name: 'Juan dela Cruz', email: 'j.delacruz@nplo.ph', role: 'Lawyer', status: 'active', last_login: 'Today, 8:42 AM' },
-    { id: 2, name: 'Maria Santos', email: 'm.santos@nplo.ph', role: 'Secretary', status: 'active', last_login: 'Today, 9:01 AM' },
-    { id: 3, name: 'Roberto Reyes', email: 'r.reyes@nplo.ph', role: 'Admin', status: 'active', last_login: 'Yesterday' },
-    { id: 4, name: 'Ana Gonzalez', email: 'a.gonzalez@nplo.ph', role: 'Lawyer', status: 'inactive', last_login: '3 days ago' },
-    { id: 5, name: 'Paolo Mendoza', email: 'p.mendoza@nplo.ph', role: 'Intern', status: 'active', last_login: 'Today, 10:15 AM' },
-    { id: 6, name: 'Liza Tan', email: 'l.tan@nplo.ph', role: 'Secretary', status: 'inactive', last_login: '1 week ago' }
-  ]
-
-  // Mock case stats
-  caseStats.value = {
-    active: 98,
-    pending: 23,
-    closed: 45,
-    archived: 12,
-    completionRate: 68
-  }
-}
-
+// Lifecycle
 onMounted(() => {
-  fetchDashboardData()
+  if (!isAdmin.value && !isLawyer.value) {
+    router.push('/dashboard')
+    return
+  }
+
+  // initialize() already fetches initial logs, approvals, and cases.
+  // We only need to trigger it if it hasn't run yet.
+  if (!store.state.isInitialized) {
+    store.actions.initialize(userRole.value);
+  }
+  
+  openChannel()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
+  closeChannel()
 })
 </script>
 
@@ -519,7 +821,7 @@ onMounted(() => {
 /* Main Grid */
 .main-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -563,43 +865,90 @@ onMounted(() => {
   color: #1a4972;
 }
 
+/* Empty State */
+.empty-state {
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
 /* Activity List */
 .activity-list {
   padding: 8px 0;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .activity-item {
   display: flex;
-  align-items: center;
   gap: 12px;
   padding: 12px 20px;
   transition: background 0.2s;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .activity-item:hover {
   background: #f8fafc;
 }
 
-.activity-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.activity-item:last-child {
+  border-bottom: none;
 }
 
-.dot-user { background: #3b82f6; }
-.dot-document { background: #10b981; }
-.dot-security { background: #eab308; }
-.dot-case { background: #8b5cf6; }
-.dot-alert { background: #ef4444; }
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.activity-icon.case {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.activity-icon.system {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+}
 
 .activity-content {
   flex: 1;
+  min-width: 0;
 }
 
-.activity-text {
-  font-size: 13px;
-  color: #334155;
-  margin: 0 0 2px 0;
+.activity-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.activity-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.activity-type-badge.case {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.activity-type-badge.system {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
 }
 
 .activity-time {
@@ -607,66 +956,154 @@ onMounted(() => {
   color: #94a3b8;
 }
 
-.activity-tag {
-  font-size: 10px;
+.activity-text {
+  font-size: 13px;
+  color: #334155;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.activity-user {
+  color: #1a4972;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 12px;
 }
 
-.tag-user { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.tag-document { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.tag-security { background: rgba(234, 179, 8, 0.1); color: #eab308; }
-.tag-case { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-.tag-alert { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-/* Quick Actions */
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  background: #f1f5f9;
+.activity-target {
+  color: #64748b;
+  font-weight: 500;
+  margin-left: 4px;
 }
 
-.quick-action-btn {
-  display: flex;
-  flex-direction: column;
+.activity-details {
+  margin-top: 6px;
+}
+
+.change-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 20px;
-  background: white;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
+  gap: 4px;
+  background: #f1f5f9;
+  border-radius: 16px;
+  padding: 4px 8px;
+  font-size: 11px;
 }
 
-.quick-action-btn:hover {
+.from-value {
+  color: #ef4444;
+  text-decoration: line-through;
+  text-decoration-color: rgba(239, 68, 68, 0.3);
+}
+
+.arrow-icon {
+  width: 12px;
+  height: 12px;
+  color: #94a3b8;
+}
+
+.to-value {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.note {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+/* Schedule List */
+.schedule-list {
+  padding: 8px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.2s;
+}
+
+.schedule-item:hover {
   background: #f8fafc;
 }
 
-.quick-action-btn:hover .action-icon {
-  background: #1a4972;
-  color: white;
+.schedule-item:last-child {
+  border-bottom: none;
 }
 
-.action-icon {
-  width: 40px;
-  height: 40px;
+.schedule-time {
+  min-width: 70px;
+}
+
+.time-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a4972;
+}
+
+.schedule-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.schedule-type {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.type-meeting { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.type-hearing { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.type-deadline { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+.schedule-case {
+  color: #64748b;
+}
+
+.schedule-participant {
+  flex-shrink: 0;
+}
+
+.participant-avatar {
+  width: 28px;
+  height: 28px;
+  background: #1a4972;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 18px;
-  color: #1a4972;
-  transition: all 0.2s;
-}
-
-.action-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #475569;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* Cases Overview */
@@ -723,6 +1160,8 @@ onMounted(() => {
 /* Movement List */
 .movement-list {
   padding: 8px 0;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .movement-item {
@@ -731,6 +1170,11 @@ onMounted(() => {
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid #f1f5f9;
+  transition: background 0.2s;
+}
+
+.movement-item:hover {
+  background: #f8fafc;
 }
 
 .movement-item:last-child {
@@ -744,6 +1188,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .movement-icon.out {
@@ -758,17 +1203,63 @@ onMounted(() => {
 
 .movement-content {
   flex: 1;
+  min-width: 0;
 }
 
 .movement-text {
   font-size: 13px;
   color: #334155;
-  margin: 0 0 2px 0;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.movement-purpose {
+  color: #64748b;
+  margin-left: 4px;
+  font-weight: normal;
 }
 
 .movement-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   color: #94a3b8;
+  flex-wrap: wrap;
+}
+
+.handler {
+  font-weight: 500;
+  color: #475569;
+}
+
+.dot {
+  color: #cbd5e1;
+}
+
+.approval-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.approval-pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.approval-approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.approval-rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 /* Users Panel */
@@ -806,22 +1297,6 @@ onMounted(() => {
 
 .search-input:focus {
   border-color: #1a4972;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: #1a4972;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-primary:hover {
-  background: #0f3a5a;
 }
 
 /* Table */
@@ -875,16 +1350,19 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .user-name {
   font-weight: 600;
   margin-bottom: 2px;
+  white-space: nowrap;
 }
 
 .user-email {
   font-size: 11px;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 .role-badge {
@@ -892,18 +1370,21 @@ onMounted(() => {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 12px;
+  white-space: nowrap;
 }
 
 .role-admin { background: rgba(26, 73, 114, 0.1); color: #1a4972; }
 .role-lawyer { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.role-secretary { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.role-clerk { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .role-intern { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.role-secretary { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 
 .status-badge {
   font-size: 11px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 12px;
+  white-space: nowrap;
 }
 
 .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
@@ -911,33 +1392,17 @@ onMounted(() => {
 
 .text-muted {
   color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 6px;
+.text-center {
+  text-align: center;
 }
 
-.action-btn {
-  padding: 4px 10px;
-  font-size: 11px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.edit-btn:hover {
-  background: #1a4972;
-  color: white;
-  border-color: #1a4972;
-}
-
-.delete-btn:hover {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
+.py-4 {
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 
 /* Footer */
@@ -949,6 +1414,26 @@ onMounted(() => {
   justify-content: space-between;
   font-size: 12px;
   color: #94a3b8;
+}
+
+/* Scrollbar Styling */
+.activity-list::-webkit-scrollbar,
+.movement-list::-webkit-scrollbar,
+.schedule-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-list::-webkit-scrollbar-track,
+.movement-list::-webkit-scrollbar-track,
+.schedule-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.activity-list::-webkit-scrollbar-thumb,
+.movement-list::-webkit-scrollbar-thumb,
+.schedule-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
 }
 
 /* Responsive */
@@ -963,6 +1448,10 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+  
   .top-bar {
     flex-direction: column;
     gap: 12px;

@@ -228,8 +228,8 @@
         </div>
       </div>
     </div>
-
-    <!-- MODALS -->
+ 
+    <!-- Create/Edit Modal -->
     <CaseForm
       ref="formModalRef"
       :show="showFormModal"
@@ -237,12 +237,6 @@
       :form-loading="formLoading"
       :form="form"
       :errors="errors"
-      :categories="categories"
-      :clients="clients"
-      :lawyers="lawyers"
-      :clerks="clerks"
-      :courts="courts"
-      :active-stages="activeStages"
       :preview-code="previewCode"
       :newly-created-client="newlyCreatedClient"
       :init-court-n-a="courtNA"
@@ -267,11 +261,9 @@
       ref="viewModalRef"
       :show="showViewModal"
       :view-case="viewCase"
-      :active-stages="activeStages"
-      :clerks="clerks"
       :current-user="currentUser"
-      @close="() => { showViewModal = false; viewModalRef?.closeModal(); }"
-      @edit="(c) => { viewModalRef?.closeModal(); showViewModal = false; openEdit(c); }"
+      @close="showViewModal = false"
+      @edit="openEdit"
       @add-task="addChecklistTask"
       @update-task="updateChecklistTask"
       @delete-task="deleteChecklistTask"
@@ -280,10 +272,10 @@
       @folder-movement="handleFolderMovement"
     />
 
+    <!-- Category Modal -->
     <CaseCategoryModal
       :show="showCategoryModal"
       :category="null"
-      :all-categories="categories"
       @close="showCategoryModal = false"
       @saved="onCategoryCreated"
     />
@@ -292,15 +284,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 
 // Persistent BroadcastChannel — notifies Approvals page + Sidebar badge
 // whenever a clerk successfully records a movement. Must be module-level so
 // the message is guaranteed to flush before the instance is GC'd.
 const approvalsBc = new BroadcastChannel('approvals_sync');
+const caseUpdatesBc = new BroadcastChannel('case_updates');
+
 import api              from '@/services/api';
 import * as CaseService   from '@/services/caseService';
 import * as ClientService from '@/services/clientService';
+import store from '@/store';
+import { useAuth } from '@/composables/useAuth';
+
+const { userRole } = useAuth();
 
 import CaseCategoryModal from '@/components/Modals/Admin/CaseMaster/CaseCategoryModal.vue';
 import CaseForm          from '@/components/Modals/Admin/CaseMaster/CaseFormModal.vue';
@@ -335,15 +333,19 @@ const getCategoryTextClass  = (cat) => getCategoryEntry(cat).text;
 const getCategoryBgClass    = (cat) => getCategoryEntry(cat).bg;
 const getCategoryBadgeClass = (cat) => getCategoryEntry(cat).badge;
 
-// ── State ────────────────────────────────────────────────────────────────────
-const categories = ref([]);
-const clients    = ref([]);
-const lawyers    = ref([]);
-const clerks     = ref([]);
-const courts     = ref([]);
-const stages     = ref([]);
-const cases      = ref([]);
+// ── Global Store Integration ──────────────────────────────────────────────
+const cases = computed(() => store.state.cases);
+const categories = computed(() => store.state.categories);
+const stages = computed(() => store.state.stages);
+const courts = computed(() => store.state.courts);
+const clients = computed(() => store.state.clients);
+const pagination = computed(() => store.state.pagination.cases);
+const isLoading = computed(() => store.state.isLoading);
 
+const lawyers = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'lawyer' || u?.role?.toLowerCase() === 'lawyer'));
+const clerks = computed(() => store.state.users.filter(u => u?.role?.name?.toLowerCase() === 'clerk' || u?.role?.toLowerCase() === 'clerk'));
+
+// ── Local UI State ──────────────────────────────────────────────────────────
 const showCategoryModal = ref(false);
 const prevCategoryId    = ref('');
 
@@ -355,7 +357,6 @@ const filterStage    = ref('');
 const sortField      = ref('created_at');
 const sortDirection  = ref('desc');
 const currentPage    = ref(1);
-const pagination     = ref({ current_page: 1, last_page: 1, per_page: 10, total: 0, from: 0, to: 0 });
 
 // Modals
 const showFormModal      = ref(false);
@@ -420,14 +421,13 @@ const previewCode = computed(() =>
 );
 
 // ── Utilities ────────────────────────────────────────────────────────────────
-const toArray = (v) => {
-  if (Array.isArray(v)) return v;
-  if (v?.data?.data) return v.data.data;
-  if (v?.data)       return v.data;
-  return [];
+const getInitials = (n) => {
+  if (!n || n === '—' || n === '??') return '??';
+  const parts = n.split(' ').filter(Boolean);
+  if (parts.length === 0) return '??';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
-
-const getInitials = (n) => n && n !== '—' ? (n.split(' ')[0]?.[0] || '') + (n.split(' ')[1]?.[0] || '') : '??';
 const capitalize  = (s) => s ? s[0].toUpperCase() + s.slice(1) : '';
 
 const priorityClass    = (p) => ({ urgent: 'bg-red-50 text-red-700', normal: 'bg-blue-50 text-blue-700', low: 'bg-slate-100 text-slate-600' }[p] || 'bg-slate-100 text-slate-500');
@@ -481,9 +481,8 @@ const onCategoryChange = (val) => {
 const onCategoryCreated = async () => {
   showCategoryModal.value = false;
   try {
-    CaseService.clearCategoriesCache();
-    const res = await CaseService.getCategories(true);
-    categories.value = toArray(res);
+    // Refresh global store categories
+    await store.actions.initialize(true);
     const newest = [...categories.value].sort((a, b) => b.id - a.id)[0];
     if (newest) {
       form.category_id     = String(newest.id);
@@ -495,123 +494,23 @@ const onCategoryCreated = async () => {
 };
 
 // ── Cases loader ─────────────────────────────────────────────────────────────
-const casesCacheKey = () =>
-  'cm_cases_' + JSON.stringify({
-    s:  searchQuery.value    || '',
-    st: filterStatus.value   || '',
-    p:  filterPriority.value || '',
-    sg: filterStage.value    || '',
-    sf: sortField.value,
-    sd: sortDirection.value,
-    pg: currentPage.value,
-  });
-
-const _lookupsSeeded = ref(false);
-
-const applyCasesResponse = (responseData) => {
-  const data = responseData.data ?? [];
-  const m    = responseData.meta ?? {};
-  cases.value = CaseService.formatCases(data);
-  if (m.current_page) {
-    pagination.value = {
-      current_page: m.current_page,
-      last_page:    m.last_page,
-      per_page:     m.per_page,
-      total:        m.total,
-      from:         (m.current_page - 1) * m.per_page + 1,
-      to:           Math.min(m.current_page * m.per_page, m.total),
-    };
-  }
-  // Seed lookups from the index response on first load — avoids 4 extra requests
-  if (!_lookupsSeeded.value && responseData.lookups) {
-    applyLookups(responseData.lookups, clients.value);
-    _lookupsSeeded.value = true;
-    try { sessionStorage.setItem('cm_lookups', JSON.stringify(responseData.lookups)); } catch (_) {}
-  }
-};
-
 const loadCases = async () => {
-  const key = casesCacheKey();
-  // Show stale data immediately while fresh request runs
-  try {
-    const cached = sessionStorage.getItem(key);
-    if (cached) applyCasesResponse(JSON.parse(cached));
-  } catch (_) {}
-
-  try {
-    const res  = await CaseService.getCases({
-      search:         searchQuery.value    || undefined,
-      case_status:    filterStatus.value   || undefined,
-      priority:       filterPriority.value || undefined,
-      stage_id:       filterStage.value    || undefined,
-      sort_by:        sortField.value,
-      sort_direction: sortDirection.value,
-      page:           currentPage.value,
-    });
-    const responseData = res.data ?? res;
-    applyCasesResponse(responseData);
-    try { sessionStorage.setItem(key, JSON.stringify(responseData)); } catch (_) {}
-  } catch (e) {
-    console.error('loadCases:', e);
-    if (!cases.value.length) cases.value = [];
-  }
+  await store.actions.refreshCases({
+    search:         searchQuery.value    || undefined,
+    case_status:    filterStatus.value   || undefined,
+    priority:       filterPriority.value || undefined,
+    stage_id:       filterStage.value    || undefined,
+    sort_by:        sortField.value,
+    sort_direction: sortDirection.value,
+    page:           currentPage.value,
+  });
 };
-
-// ── Lookups loader ───────────────────────────────────────────────────────────
-const applyLookups = (lookups, clientList) => {
-  categories.value = lookups.categories || [];
-  stages.value     = lookups.stages     || [];
-  courts.value     = lookups.courts     || [];
-  const users = lookups.users || [];
-  lawyers.value = users.filter(u => u?.role === 'lawyer');
-  clerks.value  = users.filter(u => u?.role === 'clerk');
-  clients.value = clientList || [];
-};
-
-const loadLookups = async () => {
-  // Restore from sessionStorage immediately (zero network cost)
-  try {
-    const cachedL = sessionStorage.getItem('cm_lookups');
-    const cachedC = sessionStorage.getItem('cm_clients');
-    if (cachedL) {
-      applyLookups(JSON.parse(cachedL), cachedC ? JSON.parse(cachedC) : []);
-      _lookupsSeeded.value = true;
-    }
-  } catch (_) {}
-
-  // Only fetch clients — categories/stages/courts/users come from the index response
-  try {
-    const clientRes  = await ClientService.getAll();
-    const clientList = toArray(clientRes);
-    clients.value = clientList;
-    try { sessionStorage.setItem('cm_clients', JSON.stringify(clientList)); } catch (_) {}
-  } catch (e) {
-    console.error('Failed to load clients:', e);
-  }
-};
-
-// Refreshes users only when the cache is actually stale — not on every open.
-// getAssignableUsers() already has a 5-min TTL; calling it without forceRefresh
-// returns the cached copy instantly with zero network cost.
-const refreshUsers = async () => {
-  try {
-    const res   = await CaseService.getAssignableUsers(); // uses cache if fresh
-    const users = res.data || [];
-    lawyers.value = users.filter(u => u?.role === 'lawyer');
-    clerks.value  = users.filter(u => u?.role === 'clerk');
-  } catch (e) {
-    console.error('refreshUsers:', e);
-  }
-};
-
-
 
 // ── Stage history / checklist / trackers ─────────────────────────────────────
-const unwrapTask = (res) => res?.data?.data ?? res?.data ?? res;
-
 const loadStageHistory = async (caseId) => {
   try {
-    stageHistory.value = toArray(await CaseService.getStageHistory(caseId));
+    const res = await CaseService.getStageHistory(caseId);
+    stageHistory.value = res.data?.data ?? res.data ?? res;
   } catch (e) {
     console.error('loadStageHistory:', e);
     stageHistory.value = [];
@@ -628,7 +527,10 @@ const handleFolderMovement = async ({ type, from_to, date, purpose, handled_by }
       purpose:    purpose    || null,
       handled_by: handled_by || null,
     });
+    // Optimistic Update
+    store.actions.updateCaseOptimistically(viewCase.value.id, { is_out: type.toUpperCase() === 'OUT' ? 1 : 0 });
     viewCase.value = { ...viewCase.value, is_out: type.toUpperCase() === 'OUT' ? 1 : 0 };
+    
     viewModalRef.value?.refreshFolderTracker();
     approvalsBc.postMessage({ event: 'movement' });
   } catch (e) {
@@ -695,9 +597,14 @@ const sortBy = (field) => {
   sortField.value = field;
   loadCases();
 };
-const previousPage = () => { if (pagination.value.current_page > 1) { currentPage.value--; loadCases(); } };
-const nextPage     = () => { if (pagination.value.current_page < pagination.value.last_page) { currentPage.value++; loadCases(); } };
+const previousPage = () => { if (currentPage.value > 1) { currentPage.value--; loadCases(); } };
+const nextPage     = () => { if (currentPage.value < pagination.value.last_page) { currentPage.value++; loadCases(); } };
 const goToPage     = (page) => { currentPage.value = page; loadCases(); };
+
+// Watch for pagination changes
+watch(currentPage, () => {
+  loadCases();
+});
 
 // ── Form operations ───────────────────────────────────────────────────────────
 const clearErrors = () => Object.assign(errors, { title: '', assigned_lawyer_id: '', case_no: '', client_id: '' });
@@ -713,7 +620,6 @@ const openCreate = () => {
   clearErrors();
   showFormModal.value = true;
   nextTick(() => formModalRef.value?.syncFromProps());
-  refreshUsers(); // fire-and-forget, no await needed
 };
 
 const openEdit = (c) => {
@@ -740,7 +646,6 @@ const openEdit = (c) => {
   clearErrors();
   showFormModal.value = true;
   nextTick(() => formModalRef.value?.syncFromProps());
-  refreshUsers(); // fire-and-forget
 };
 
 const validateForm = () => {
@@ -763,16 +668,29 @@ const submitForm = async () => {
       assigned_clerk_id: form.assigned_clerk_id || null,
       current_stage_id:  form.current_stage_id  || null,
     };
+    
+    // Optimistic updates for perceived speed
     if (isEditing.value) {
+      const optimisticData = {
+        ...payload,
+        client: store.getters.getClientName(payload.client_id),
+        lawyer: store.getters.getUserName(payload.assigned_lawyer_id),
+        clerk: store.getters.getUserName(payload.assigned_clerk_id),
+        category: store.getters.getCategoryName(payload.category_id),
+        stage: store.getters.getStageName(payload.current_stage_id),
+      };
+      store.actions.updateCaseOptimistically(editingId.value, optimisticData);
       await CaseService.update(editingId.value, payload);
     } else {
       await CaseService.store(payload);
     }
-    // Bust caches and reload
-    CaseService.clearCache();
-    for (const k of Object.keys(sessionStorage)) { if (k.startsWith('cm_cases_')) sessionStorage.removeItem(k); }
-    await loadCases();
+    
+    // Optimistically close modal for instant feedback
     closeForm();
+    
+    // Refresh the store and notify other tabs in the background
+    store.actions.refreshCases();
+    caseUpdatesBc.postMessage({ event: 'new_case' });
   } catch (e) {
     const errs = e?.response?.data?.errors ?? e?.errors ?? {};
     if (errs.title)              errors.title              = Array.isArray(errs.title)              ? errs.title[0]              : errs.title;
@@ -803,13 +721,14 @@ const saveNewClient = async () => {
   try {
     const full_name = [clientForm.first_name.trim(), clientForm.middle_name.trim(), clientForm.last_name.trim()].filter(Boolean).join(' ');
     const res       = await ClientService.create({ full_name, contact_no: clientForm.contact_no, email: clientForm.email, address: clientForm.address });
+    
+    // Refresh global clients
+    await store.actions.initialize(true);
+    
     const nc        = res?.data?.data ?? res?.data ?? res;
-    const client    = { ...nc, full_name: nc.full_name ?? full_name };
-    clients.value   = [...clients.value, client];
-    form.client_id           = client.id;
-    clientSearchInit.value   = client.full_name;
-    newlyCreatedClient.value = client.full_name;
-    sessionStorage.removeItem('cm_clients');
+    form.client_id           = nc.id;
+    clientSearchInit.value   = nc.full_name || full_name;
+    newlyCreatedClient.value = nc.full_name || full_name;
     closeNewClient();
   } catch (e) {
     const errs = e?.response?.data?.errors ?? e?.errors ?? {};
@@ -821,24 +740,24 @@ const saveNewClient = async () => {
 };
 
 // ── View modal ────────────────────────────────────────────────────────────────
-// Opens instantly — CaseViewModal self-fetches checklist, folder tracker,
-// and checklist tracker in parallel internally. Stage history is still
-// fetched here since CaseMaster needs it for the stage-change flow.
 const openView = (c) => {
   viewCase.value      = c;
   showViewModal.value = true;
-  loadStageHistory(c.id);               // non-blocking, fire-and-forget
+  loadStageHistory(c.id);               // non-blocking
   nextTick(() => viewModalRef.value?.openModal(c.id));
 };
 
 const updateCaseStage = async ({ stage_id, stage_name }) => {
   if (!viewCase.value) return;
   try {
+    // Optimistic Update
+    store.actions.updateCaseOptimistically(viewCase.value.id, { 
+      current_stage_id: stage_id, 
+      stage: stage_name 
+    });
+    
     await CaseService.updateStage(viewCase.value.id, { stage_id });
     viewCase.value = { ...viewCase.value, current_stage_id: stage_id, stage: stage_name };
-    const idx = cases.value.findIndex(c => c.id === viewCase.value.id);
-    if (idx !== -1) cases.value[idx] = { ...cases.value[idx], current_stage_id: stage_id, stage: stage_name };
-    for (const k of Object.keys(sessionStorage)) { if (k.startsWith('cm_cases_')) sessionStorage.removeItem(k); }
   } catch (e) {
     console.error('updateCaseStage failed:', e);
   } finally {
@@ -848,11 +767,21 @@ const updateCaseStage = async ({ stage_id, stage_name }) => {
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(() => {
-  nextTick(() => {
-    // Fire cases + lookups in parallel on mount — no sequential blocking
-    Promise.allSettled([loadCases(), loadLookups()]);
-    api.get('/user').then(res => { currentUser.value = res.data; }).catch(() => {});
-  });
+  // If store isn't initialized, trigger it
+  if (!store.state.isInitialized) {
+    store.actions.initialize(userRole.value);
+  }
+
+  // Use the user data we already have from useAuth
+  const { userObj } = useAuth();
+  if (userObj.value) {
+    currentUser.value = userObj.value;
+  }
+
+  // Listen for real-time case updates from other tabs/windows
+  caseUpdatesBc.onmessage = () => {
+    store.actions.refreshCases();
+  };
 
   document.addEventListener('click', (e) => {
     if (exportDropdownRef.value && !exportDropdownRef.value.contains(e.target)) {

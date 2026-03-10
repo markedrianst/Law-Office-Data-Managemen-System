@@ -20,11 +20,22 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
 import Sidebar from "@/components/Sidebar.vue";
 import Header from "@/components/Header.vue";
 import Footer from "@/components/Footer.vue";
+import store from "@/store";
+import { useAuth } from "@/composables/useAuth";
 
+const { userRole } = useAuth();
 
+onMounted(async () => {
+  const token = sessionStorage.getItem('token');
+  if (!token) return;
+
+  // Initialize global store on application load with user role
+  await store.actions.initialize(userRole.value);
+});
 </script>
 
 <style scoped>

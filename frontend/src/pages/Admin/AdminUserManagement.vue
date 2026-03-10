@@ -383,9 +383,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { debounce } from 'lodash';
 import UserService from '@/services/userServices';
+import store from '@/store';
 
 // ==================== COLUMNS ====================
 const columns = [
@@ -407,10 +408,13 @@ const formatPHNumber = (raw) => {
 
 const isPHContactValid = (value) => /^09\d{9}$/.test(value.replace(/\D/g, ''));
 
+// ==================== Global Store Integration ====================
+const users = computed(() => store.state.users);
+const pagination = computed(() => store.state.pagination.users);
+const isLoading = computed(() => store.state.isLoading);
+
 // ==================== STATE ====================
-const users        = ref([]);
 const apiError     = ref('');
-const pagination   = ref({ current_page: 1, last_page: 1, per_page: 10, total: 0, from: 0, to: 0 });
 
 const searchQuery   = ref('');
 const roleFilter    = ref('');
@@ -442,11 +446,12 @@ const errors = reactive({
 const displayedPages = computed(() => {
   const pages = [];
   const max   = 5;
-  const total = pagination.value.last_page;
+  const total = pagination.value.last_page || 1;
+  const current = pagination.value.current_page || 1;
   if (total <= max) {
     for (let i = 1; i <= total; i++) pages.push(i);
   } else {
-    let s = Math.max(1, pagination.value.current_page - 2);
+    let s = Math.max(1, current - 2);
     let e = Math.min(total, s + max - 1);
     if (e - s + 1 < max) s = Math.max(1, e - max + 1);
     for (let i = s; i <= e; i++) pages.push(i);
@@ -455,7 +460,13 @@ const displayedPages = computed(() => {
 });
 
 // ==================== LIFECYCLE ====================
-onMounted(() => loadUsers());
+onMounted(() => {
+  if (!store.state.isInitialized) {
+    store.actions.initialize();
+  } else {
+    loadUsers();
+  }
+});
 
 // ==================== PHONE HANDLERS ====================
 const onContactKeypress = (e) => { if (!/[\d]/.test(e.key)) e.preventDefault(); };
@@ -468,7 +479,7 @@ const onContactInput = () => {
 const loadUsers = async () => {
   apiError.value = '';
   try {
-    const response = await UserService.getUsers({
+    await store.actions.refreshUsers({
       search:         searchQuery.value || undefined,
       role:           roleFilter.value  || undefined,
       sort_by:        sortField.value,
@@ -476,31 +487,6 @@ const loadUsers = async () => {
       page:           currentPage.value,
       per_page:       itemsPerPage.value,
     });
-    
-    if (response.data && response.meta) {
-      users.value = response.data;
-      const m = response.meta;
-      pagination.value = {
-        current_page: m.current_page, 
-        last_page: m.last_page, 
-        per_page: m.per_page, 
-        total: m.total,
-        from: (m.current_page - 1) * m.per_page + 1,
-        to: Math.min(m.current_page * m.per_page, m.total),
-      };
-    } else if (Array.isArray(response)) {
-      users.value = response;
-      pagination.value = { 
-        current_page: 1, 
-        last_page: 1, 
-        per_page: response.length, 
-        total: response.length, 
-        from: 1, 
-        to: response.length 
-      };
-    } else {
-      users.value = [];
-    }
   } catch (error) {
     apiError.value = error.message || 'Failed to load users.';
   }
@@ -526,14 +512,14 @@ const sortBy = (field) => {
 };
 
 const previousPage = () => { 
-  if (pagination.value.current_page > 1) { 
+  if (currentPage.value > 1) { 
     currentPage.value--; 
     loadUsers(); 
   } 
 };
 
 const nextPage = () => { 
-  if (pagination.value.current_page < pagination.value.last_page) { 
+  if (currentPage.value < pagination.value.last_page) { 
     currentPage.value++; 
     loadUsers(); 
   } 
@@ -543,6 +529,11 @@ const goToPage = (page) => {
   currentPage.value = page; 
   loadUsers(); 
 };
+
+// Watch for pagination changes
+watch(currentPage, () => {
+  loadUsers();
+});
 
 // ==================== UTILITIES ====================
 const formatDate = (d) => d 
@@ -670,17 +661,17 @@ const submitForm = async () => {
   
   try {
     const payload = { ...form };
-    console.log('Submitting payload:', payload); // Debug log
     
     if (isEditing.value) {
       await UserService.updateUser(editingUserId.value, payload);
     } else {
       await UserService.createUser(payload);
     }
-    await loadUsers();
+    
+    // Refresh global store
+    await store.actions.refreshUsers();
     closeModal();
   } catch (error) {
-    console.error('Form submission error:', error); // Debug log
     const handledError = UserService.handleApiError(error);
     apiError.value = handledError.message;
     
@@ -702,7 +693,6 @@ const submitForm = async () => {
       });
     }
     
-    // Don't close modal on error
     formLoading.value = false;
   }
 };
@@ -718,7 +708,7 @@ const deleteUser = async () => {
   
   try {
     await UserService.deleteUser(userToDelete.value.id);
-    await loadUsers();
+    await store.actions.refreshUsers();
     showDeleteModal.value = false;
     userToDelete.value = null;
   } catch (error) {

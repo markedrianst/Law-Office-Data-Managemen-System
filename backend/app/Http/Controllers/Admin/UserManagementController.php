@@ -12,11 +12,7 @@ use Illuminate\Validation\Rules\Password;
 
 class UserManagementController extends Controller
 {
-    /**
-     * Clear the assignable-users cache used by CaseController.
-     * Called after any create / update / delete so the case dropdowns
-     * always reflect the latest user list without waiting 5 minutes.
-     */
+   
     private function clearAssignableUsersCache(): void
     {
         // CaseController now always caches with key: assignable_users_all_{limit}
@@ -233,12 +229,6 @@ class UserManagementController extends Controller
             $updateData['must_change_password'] = true;
             $changes[] = "password: [reset by admin — user must change on next login]";
 
-            // ── KEY FIX ─────────────────────────────────────────────────────
-            // Delete all Sanctum tokens for this user immediately.
-            // Without this the old token stays valid forever, /check-status
-            // keeps returning 200, and the "session expired" modal never fires.
-            // With this, the next poll (≤30 s) returns 401 → modal shown.
-            // ────────────────────────────────────────────────────────────────
             $user->tokens()->delete();
         }
 

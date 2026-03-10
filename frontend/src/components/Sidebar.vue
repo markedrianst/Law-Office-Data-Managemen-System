@@ -123,8 +123,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { debounce } from 'lodash'
 import { useAuth } from '@/composables/useAuth'
-import { getPendingCount, getClerkPendingCount } from '@/services/approvalService'
+import store from '@/store'
+import { getClerkPendingCount } from '@/services/approvalService'
 
 const route = useRoute()
 const collapsed = ref(false)
@@ -134,14 +136,20 @@ const { userName, userRole, userInitials } = useAuth()
 defineEmits(['navigate'])
 
 // ── Badge state ───────────────────────────────────────────────────────────────────────────────────
-const pendingApprovalCount = ref(0)
+const pendingApprovalCount = computed(() => store.state.pendingApprovalsCount)
 const clerkHasPending      = ref(false)
 
 const fetchPendingCount = async () => {
+  if (!store.state.isInitialized) return
+  // Don't poll if we're on the Approvals page (it handles its own updates)
+  if (route.path === '/approvals') return
+  
   const role = userRole.value?.toLowerCase()
+  // Admin/Lawyer use the global store count
   if (['admin', 'lawyer'].includes(role)) {
-    pendingApprovalCount.value = await getPendingCount()
+    await store.actions.refreshPendingCount()
   }
+  // Clerks still check their specific "Recorded by me" pending count
   if (role === 'clerk') {
     try {
       const count = await getClerkPendingCount()
@@ -169,10 +177,17 @@ let bc = null
 const openChannel = () => {
   closeChannel()
   bc = new BroadcastChannel('approvals_sync')
+  
+  const debouncedRefresh = debounce(() => {
+    if (document.visibilityState === 'visible') {
+      fetchPendingCount()
+    }
+  }, 1000)
+
   bc.onmessage = () => {
     if (!initialLoadDone) return
     if (document.visibilityState === 'visible') {
-      fetchPendingCount()
+      debouncedRefresh()
     } else {
       _dirty = true
     }
@@ -213,7 +228,7 @@ const icons = {
 const allNav = [
   { path: '/dashboard',      label: 'Dashboard',    icon: icons.dashboard, roles: [] },
   { path: '/usermanagement', label: 'Users',         icon: icons.users,     roles: ['admin'] },
-  { path: '/audittrail',     label: 'Activity Logs', icon: icons.logs,      roles: ['admin', 'lawyer'] },
+  { path: '/audittrail',     label: 'Activity Logs', icon: icons.logs,      roles: ['admin'] },
   {
     path: '/casemaster',
     label: 'Case Master',

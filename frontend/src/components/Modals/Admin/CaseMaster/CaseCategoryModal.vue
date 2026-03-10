@@ -173,15 +173,18 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick } from 'vue'
 import caseCategoryService from '@/services/caseCategoryService'
+import store from '@/store'
 
 // ==================== PROPS & EMITS ====================
 const props = defineProps({
   show:           { type: Boolean, default: false },
   category:       { type: Object,  default: null  },
-  allCategories:  { type: Array,   default: () => [] }, // full list from parent
 })
 
 const emit = defineEmits(['close', 'saved'])
+
+// ==================== GLOBAL STORE ====================
+const allCategories = computed(() => store.state.categories)
 
 // ==================== STATE ====================
 const formLoading  = ref(false)
@@ -197,13 +200,13 @@ const isEditing = computed(() => !!props.category?.id)
 
 // Other categories excluding the one being edited
 const otherCategories = computed(() =>
-  props.allCategories.filter(c => c.id !== props.category?.id)
+  allCategories.value.filter(c => c.id !== props.category?.id)
 )
 
 // The highest sort_order in the list
 const maxSortOrder = computed(() => {
-  if (props.allCategories.length === 0) return 0
-  return Math.max(...props.allCategories.map(c => c.sort_order))
+  if (allCategories.value.length === 0) return 0
+  return Math.max(...allCategories.value.map(c => c.sort_order))
 })
 
 // Next available slot = max + 1 (for create mode)
@@ -258,7 +261,7 @@ const validate = () => {
     return false
   }
 
-  const dupe = props.allCategories.find(c =>
+  const dupe = allCategories.value.find(c =>
     c.name.toLowerCase() === form.name.trim().toLowerCase() &&
     c.id !== props.category?.id
   )

@@ -148,10 +148,7 @@ class ChecklistTrackerController extends Controller
         }
     }
 
-    /**
-     * Returns true for roles that are allowed to self-approve.
-     * Adjust the role name check to match your User/Role model.
-     */
+
     private function isPrivileged(\App\Models\User $user): bool
     {
         // Works whether you store role as a string column or via a role relation

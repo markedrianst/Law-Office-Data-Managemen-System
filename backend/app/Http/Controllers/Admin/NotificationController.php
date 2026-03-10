@@ -6,21 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * NotificationController
- *
- * Exposes the Laravel database notifications for the authenticated user.
- * Powers the bell icon in the header and the approval alerts.
- *
- * Routes (registered in api.php under /notifications):
- *   GET  /notifications              → index()       paginated list
- *   GET  /notifications/unread-count → unreadCount() lightweight badge
- *   PATCH /notifications/{id}/read  → markRead()     mark one as read
- *   POST /notifications/read-all    → readAll()      mark all as read
- */
+
 class NotificationController extends Controller
 {
-    /** GET /notifications — paginated notification list */
+    
     public function index(Request $request): JsonResponse
     {
         $notifications = $request->user()
