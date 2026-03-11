@@ -6,12 +6,17 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\LoginLog;
+use App\Models\Role; // Add this import
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\DB;
 
 class UserManagementController extends Controller
 {
+    // Add cache key for roles
+    const CACHE_KEY_ROLES = 'user_management_roles';
+    const CACHE_DURATION = 3600; // 1 hour
    
     private function clearAssignableUsersCache(): void
     {
@@ -20,6 +25,32 @@ class UserManagementController extends Controller
         foreach ([100, 50, 200, 999] as $limit) {
             Cache::forget("assignable_users_all_{$limit}");
         }
+        // Also clear roles cache when users change (new role might be added)
+        Cache::forget(self::CACHE_KEY_ROLES);
+    }
+
+    /**
+     * Get available roles for filter dropdown
+     */
+    public function getRoles()
+    {
+        return Cache::remember(self::CACHE_KEY_ROLES, self::CACHE_DURATION, function () {
+            $roles = Role::select('id', 'name')
+                ->whereIn('name', ['lawyer', 'clerk']) // Only lawyer and clerk for user management
+                ->orderBy('name')
+                ->get()
+                ->map(function ($role) {
+                    return [
+                        'id' => $role->id,
+                        'name' => ucfirst($role->name), // Capitalize first letter
+                        'value' => ucfirst($role->name) // For v-model binding
+                    ];
+                });
+
+            return response()->json([
+                'data' => $roles
+            ]);
+        });
     }
 
     /**

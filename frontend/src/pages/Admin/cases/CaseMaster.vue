@@ -201,6 +201,13 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     Edit
                   </button>
+                  <!-- Delete Button -->
+                  <button @click="confirmDelete(c)" 
+                          :disabled="c.case_status === 'pending'" 
+                          class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Delete
+                  </button>
                 </div>
               </td>
             </tr>
@@ -297,6 +304,90 @@
       @saved="onCategoryCreated"
     />
 
+    <!-- Delete Confirmation Modal -->
+    <Transition name="modal">
+      <div v-if="showDeleteModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @click.self="showDeleteModal = false">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-red-50">
+            <div class="w-8 h-8 rounded-xl bg-red-500 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Delete Case</h2>
+              <p class="text-xs text-gray-500">This action cannot be undone</p>
+            </div>
+          </div>
+          
+          <div class="px-6 py-5">
+            <p class="text-sm text-gray-700">
+              Are you sure you want to delete case 
+              <span class="font-bold text-[#1a4972]">{{ caseToDelete?.case_code }}</span>?
+            </p>
+            <p class="text-xs text-gray-500 mt-2">
+              This will permanently remove:
+            </p>
+            <ul class="mt-2 text-xs text-gray-600 space-y-1 list-disc pl-5">
+              <li>Case: {{ caseToDelete?.title }}</li>
+              <li>All checklist items</li>
+              <li>All folder movements</li>
+              <li>All activity logs</li>
+            </ul>
+            
+            <div v-if="deleteLoading" class="mt-4 flex items-center justify-center gap-2 text-sm text-[#1a4972]">
+              <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"/>
+              </svg>
+              Deleting...
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
+            <button @click="showDeleteModal = false" 
+                    :disabled="deleteLoading"
+                    class="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl border border-gray-200 transition disabled:opacity-50">
+              Cancel
+            </button>
+            <button @click="deleteCase" 
+                    :disabled="deleteLoading"
+                    class="px-5 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-2">
+              <svg v-if="!deleteLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              {{ deleteLoading ? 'Deleting...' : 'Yes, Delete Case' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Success Toast -->
+    <Transition name="toast">
+      <div v-if="deleteSuccess.show" class="fixed bottom-6 right-6 z-[100] max-w-sm">
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border-l-4 border-emerald-500">
+          <div class="flex items-start gap-3 p-4">
+            <div class="flex-shrink-0">
+              <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-bold text-gray-900">Case Deleted</h3>
+              <p class="text-xs text-gray-500 mt-0.5">{{ deleteSuccess.message }}</p>
+            </div>
+            <button @click="deleteSuccess.show = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
   </div>
 </template>
 
@@ -380,6 +471,12 @@ const newlyCreatedClient = ref('');
 const courtNA            = ref(false);
 const docketNA           = ref(false);
 const clientSearchInit   = ref('');
+
+// Delete Modal
+const showDeleteModal = ref(false);
+const caseToDelete = ref(null);
+const deleteLoading = ref(false);
+const deleteSuccess = reactive({ show: false, message: '' });
 
 // Export
 const showExportMenu    = ref(false);
@@ -664,6 +761,56 @@ const openEdit = (c) => {
   nextTick(() => formModalRef.value?.syncFromProps());
 };
 
+// ── Delete operations ────────────────────────────────────────────────────────
+const confirmDelete = (c) => {
+  if (c.case_status === 'pending') return;
+  caseToDelete.value = c;
+  showDeleteModal.value = true;
+};
+
+const deleteCase = async () => {
+  if (!caseToDelete.value) return;
+  
+  deleteLoading.value = true;
+  
+  try {
+    const response = await CaseService.deleteCase(caseToDelete.value.id);
+    
+    // Check if it's an approval request (202 status)
+    if (response.status === 202) {
+      deleteSuccess.message = 'Deletion request submitted for approval.';
+    } else {
+      deleteSuccess.message = 'Case has been deleted successfully.';
+      
+      // Optimistic update - remove from local state
+      const index = store.state.cases.findIndex(c => c.id === caseToDelete.value.id);
+      if (index !== -1) {
+        store.state.cases.splice(index, 1);
+      }
+      
+      // Notify other tabs
+      caseUpdatesBc.postMessage({ event: 'case_deleted', caseId: caseToDelete.value.id });
+    }
+    
+    // Show success message
+    deleteSuccess.show = true;
+    setTimeout(() => { deleteSuccess.show = false; }, 4000);
+    
+    // Close modal
+    showDeleteModal.value = false;
+    caseToDelete.value = null;
+    
+    // Refresh cases in background
+    await loadCases();
+    
+  } catch (error) {
+    console.error('Delete failed:', error);
+    alert(error.response?.data?.message || 'Failed to delete case');
+  } finally {
+    deleteLoading.value = false;
+  }
+};
+
 const validateForm = () => {
   clearErrors(); let ok = true;
   if (!form.title?.trim())      { errors.title              = 'Case title is required'; ok = false; }
@@ -798,8 +945,17 @@ onMounted(() => {
   }
 
   // Listen for real-time case updates from other tabs/windows
-  caseUpdatesBc.onmessage = () => {
-    store.actions.refreshCases();
+  caseUpdatesBc.onmessage = ({ data }) => {
+    if (data.event === 'case_deleted' && data.caseId) {
+      // Remove the deleted case from store if present
+      const index = store.state.cases.findIndex(c => c.id === data.caseId);
+      if (index !== -1) {
+        store.state.cases.splice(index, 1);
+      }
+    } else {
+      // For other updates, refresh the list
+      store.actions.refreshCases();
+    }
   };
 
   approvalsBc.onmessage = () => {
@@ -827,4 +983,6 @@ onBeforeUnmount(() => {
 .navy-bg-8 { background-color: rgba(26, 73, 114, 0.08); }
 .dropdown-enter-active, .dropdown-leave-active { transition: all 0.15s ease; }
 .dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
+.toast-enter-active, .toast-leave-active { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: scale(0.95) translateY(8px); }
 </style>

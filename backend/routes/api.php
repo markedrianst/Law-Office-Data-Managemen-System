@@ -25,6 +25,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // ── User management (admin only) ──────────────────────────────────────────
     Route::get   ('/users',           [UserManagementController::class, 'index']);
+    Route::get('/roles', [UserManagementController::class, 'getRoles']);
     Route::post  ('/users',           [UserManagementController::class, 'store']);
     Route::get   ('/users/{user}',    [UserManagementController::class, 'show']);
     Route::put   ('/users/{user}',    [UserManagementController::class, 'update']);
@@ -61,6 +62,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::put   ('cases/{id}',               [CaseController::class, 'update']);         // admin/lawyer
     Route::patch ('cases/{id}/archive',       [CaseController::class, 'archive']);        // admin/lawyer
     Route::get   ('cases/{id}/activity-logs', [CaseController::class, 'activityLogs']);
+    Route::delete('/cases/{id}', [CaseController::class, 'destroy']);
 
     // ── Case Stage — per-case actions ─────────────────────────────────────────
     Route::get('cases/{caseId}/stages/history', [CaseStageController::class, 'history']);

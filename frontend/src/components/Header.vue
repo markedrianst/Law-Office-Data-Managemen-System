@@ -1,10 +1,7 @@
 <template>
   <header class="header-bar">
-    <!-- Page title (left) -->
     <h1 class="page-title">{{ pageTitle }}</h1>
-
     <div class="header-right">
-      <!-- Bell -->
       <button class="icon-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -13,8 +10,6 @@
         </svg>
         <span class="bell-dot"></span>
       </button>
-
-      <!-- User dropdown (hidden on mobile) -->
       <div class="user-menu" ref="dropdownRef">
         <button class="user-btn" :class="{ active: isOpen }" @click="isOpen = !isOpen">
           <div class="avatar">{{ userInitials }}</div>
@@ -70,7 +65,7 @@
         </transition>
       </div>
 
-      <!-- Hamburger (mobile only, on the RIGHT like the reference image) -->
+      <!-- Hamburger (mobile only) -->
       <button v-if="showHamburger" class="hamburger-btn" @click="$emit('toggle-sidebar')" :class="{ active: sidebarOpen }">
         <span class="hamburger-line hamburger-line-1"></span>
         <span class="hamburger-line hamburger-line-2"></span>
@@ -79,7 +74,7 @@
     </div>
   </header>
 
-  <!-- ── Logout Confirmation Modal ── -->
+  <!-- Logout Confirmation Modal -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
@@ -118,7 +113,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { logout } from '@/services/auth'
-import store from '@/store'
 
 const router = useRouter()
 const route = useRoute()
@@ -139,20 +133,25 @@ defineProps({
 
 defineEmits(['toggle-sidebar'])
 
-const pageTitle = computed(() => ({
-  '/dashboard': 'Dashboard',
-  '/usermanagement': 'User Management',
-  '/audittrail': 'Activity Logs',
-  '/casemaster': 'Case Master',
-  '/approvals': 'Approvals',
-  '/courtmaster': 'Courts',
-  '/caseCategory': 'Case Categories',
-  '/documents': 'Documents',
-  '/account': 'Account Settings',
-}[route.path] || 'Dashboard'))
+const pageTitle = computed(() => {
+  const titles = {
+    '/dashboard': 'Dashboard',
+    '/usermanagement': 'User Management',
+    '/audittrail': 'Activity Logs',
+    '/casemaster': 'Case Master',
+    '/approvals': 'Approvals',
+    '/courtmaster': 'Courts',
+    '/casecategory': 'Case Categories',
+    '/documents': 'Documents',
+    '/account': 'Account Settings',
+  }
+  return titles[route.path] || 'Dashboard'
+})
 
-const handleOutside = e => {
-  if (dropdownRef.value && !dropdownRef.value.contains(e.target)) isOpen.value = false
+const handleOutside = (e) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(e.target)) {
+    isOpen.value = false
+  }
 }
 
 const handleResize = () => {
@@ -179,13 +178,15 @@ const confirmLogout = async () => {
   isLoggingOut.value = true
   try {
     await logout()
-  } catch (err) {
-    console.error('Logout error:', err)
-  } finally {
-    store.actions.reset()
+    // Clear session
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('user')
     router.replace('/')
+  } catch (err) {
+    console.error('Logout error:', err)
+  } finally {
+    isLoggingOut.value = false
+    showLogoutModal.value = false
   }
 }
 </script>

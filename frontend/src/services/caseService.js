@@ -36,6 +36,8 @@ const _fresh = (ts) => ts > 0 && Date.now() - ts < TTL;
  * Used by CaseMaster.vue table. Strips undefined/empty params so the
  * URL stays clean and the backend cache key is deterministic.
  */
+// Make sure this export exists in your caseService.js
+export const deleteCase = (id) => api.delete(`/admin/cases/${id}`);
 export const getCases = (params = {}) => {
   const defaults = {
     per_page:       10,
@@ -60,25 +62,14 @@ export const getCases = (params = {}) => {
 export const getCase = (id) =>
   api.get(`/admin/cases/${id}`);
 
-/**
- * POST /admin/cases
- * Used by CaseMaster.vue submitForm() when isEditing === false.
- */
 export const store = (payload) =>
   api.post('/admin/cases', payload);
 
-/**
- * PUT /admin/cases/:id
- * Used by CaseMaster.vue submitForm() when isEditing === true.
- * After success CaseMaster calls clearCache() + reloads the list.
- */
+
 export const update = (id, payload) =>
   api.put(`/admin/cases/${id}`, payload);
 
-/**
- * PATCH /admin/cases/:id/archive
- * Used by CaseMaster.vue (archive action button).
- */
+
 export const archive = (id) =>
   api.patch(`/admin/cases/${id}/archive`);
 
@@ -93,9 +84,7 @@ export const getActivityLogs = (caseId, params = {}) =>
 // STAGES  (CaseViewModal.vue inline stage change — still needed directly)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * GET /admin/cases/:caseId/stages/history
- */
+
 export const getStageHistory = (caseId) =>
   api.get(`/admin/cases/${caseId}/stages/history`);
 

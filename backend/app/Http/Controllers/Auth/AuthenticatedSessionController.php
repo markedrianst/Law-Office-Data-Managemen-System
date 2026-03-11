@@ -7,34 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\LoginLog;
+use Illuminate\Support\Facades\DB;
 
 class AuthenticatedSessionController extends Controller
 {
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    /**
-     * Write a login log entry.
-     */
-    private function writeLog(array $data): void
-    {
-        LoginLog::create($data);
-    }
-
-    /**
-     * Build the base log payload shared across all actions.
-     */
-    private function baseLog(Request $request, string $action, ?int $userId, string $email, string $status): array
-    {
-        return [
-            'user_id'         => $userId,
-            'action'          => $action,
-            'email_attempted' => $email,
-            'ip_address'      => $request->ip(),
-            'user_agent'      => $request->userAgent(),
-            'status'          => $status,
-        ];
-    }
-
     // ─── Login ────────────────────────────────────────────────────────────────
 
     public function login(Request $request)
@@ -44,67 +20,82 @@ class AuthenticatedSessionController extends Controller
             'password' => 'required',
         ]);
 
+        // Get user
         $user = User::where('email', $request->email)->first();
 
         // Unknown email
         if (!$user) {
-            $this->writeLog(array_merge(
-                $this->baseLog($request, 'login', null, $request->email, 'failed'),
-                ['details' => "LOGIN FAILED:\nReason: Email not found\nAttempted Email: {$request->email}"]
-            ));
-
+            $this->writeLoginLog($request, null, $request->email, 'failed', 'Email not found');
             return response()->json(['message' => 'Invalid credentials or inactive account'], 401);
         }
 
         // Wrong password
         if (!Hash::check($request->password, $user->password_hash)) {
-            $this->writeLog(array_merge(
-                $this->baseLog($request, 'login', $user->id, $request->email, 'failed'),
-                ['details' => "LOGIN FAILED:\nUser: {$user->full_name} ({$user->email})\nReason: Incorrect password"]
-            ));
-
+            $this->writeLoginLog($request, $user->id, $request->email, 'failed', 'Incorrect password');
             return response()->json(['message' => 'Invalid credentials or inactive account'], 401);
         }
 
-        // Inactive account — surface a specific message to the frontend
+        // Inactive account
         if ($user->status !== 'active') {
-            $this->writeLog(array_merge(
-                $this->baseLog($request, 'login', $user->id, $request->email, 'failed'),
-                ['details' => "LOGIN FAILED:\nUser: {$user->full_name} ({$user->email})\nReason: Account is inactive"]
-            ));
-
+            $this->writeLoginLog($request, $user->id, $request->email, 'failed', 'Account inactive');
             return response()->json(['message' => 'Your account is inactive. Please contact the administrator.'], 403);
         }
 
-        // Must change password — don't issue a token yet
+        // Check if password change is required
         if ($user->must_change_password) {
-            $this->writeLog(array_merge(
-                $this->baseLog($request, 'login', $user->id, $request->email, 'failed'),
-                ['details' => "LOGIN FAILED:\nUser: {$user->full_name} ({$user->email})\nReason: Password change required"]
-            ));
-
             return response()->json([
                 'message' => 'Password must be changed before login',
-                'user'    => $user,
+                'user' => $user->only(['id', 'email', 'full_name', 'must_change_password'])
             ], 200);
         }
 
-        // Success
+        // Delete old tokens
         $user->tokens()->delete();
-        $token = $user->createToken('api-token')->plainTextToken;
+
+        // Create new token
+        $token = $user->createToken('api-token', ['*'], now()->addDays(7))->plainTextToken;
+
+        // Update last login
         $user->last_login = now();
         $user->save();
 
-        $this->writeLog(array_merge(
-            $this->baseLog($request, 'login', $user->id, $request->email, 'success'),
-            ['details' => "LOGIN SUCCESSFUL:\nUser: {$user->full_name} ({$user->email})\nRole: " . ucfirst($user->role->name ?? 'Unknown') . "\nLast Login: " . ($user->getOriginal('last_login') ?? 'Never')]
-        ));
+        // Write log
+        $this->writeLoginLog($request, $user->id, $request->email, 'success', 'Login successful');
+
+        // Load role relationship
+        $user->load('role:id,name');
 
         return response()->json([
             'message' => 'Login successful',
             'token'   => $token,
-            'user'    => $user->load('role'),
+            'user'    => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'full_name' => $user->full_name,
+                'role' => $user->role ? ['id' => $user->role->id, 'name' => $user->role->name] : null,
+            ],
         ]);
+    }
+
+    /**
+     * Write login log directly (no queue)
+     */
+    private function writeLoginLog(Request $request, $userId, $email, $status, $details)
+    {
+        try {
+            LoginLog::create([
+                'user_id'         => $userId,
+                'action'          => 'login',
+                'email_attempted' => $email,
+                'ip_address'      => $request->ip(),
+                'user_agent'      => $request->userAgent(),
+                'status'          => $status,
+                'details'         => $details,
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't crash the application
+            \Log::error('Failed to write login log: ' . $e->getMessage());
+        }
     }
 
     // ─── Logout ───────────────────────────────────────────────────────────────
@@ -113,16 +104,13 @@ class AuthenticatedSessionController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
-            return response()->json(['message' => 'No active session'], 401);
+        if ($user) {
+            // Delete current token
+            $user->currentAccessToken()->delete();
+
+            // Write log
+            $this->writeLoginLog($request, $user->id, $user->email, 'success', 'Logout successful');
         }
-
-        $request->user()->currentAccessToken()->delete();
-
-        $this->writeLog(array_merge(
-            $this->baseLog($request, 'logout', $user->id, $user->email, 'success'),
-            ['details' => "LOGOUT SUCCESSFUL:\nUser: {$user->full_name} ({$user->email})\nRole: " . ucfirst($user->role->name ?? 'Unknown') . "\nLogout Time: " . now()->format('Y-m-d H:i:s')]
-        ));
 
         return response()->json(['message' => 'Logged out successfully']);
     }
@@ -139,40 +127,24 @@ class AuthenticatedSessionController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // Unknown email
         if (!$user) {
-            $this->writeLog(array_merge(
-                $this->baseLog($request, 'password_change', null, $request->email, 'failed'),
-                ['details' => "PASSWORD CHANGE FAILED:\nReason: User email not found\nAttempted Email: {$request->email}"]
-            ));
-
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        // Wrong current password
         if (!Hash::check($request->current_password, $user->password_hash)) {
-            $this->writeLog(array_merge(
-                $this->baseLog($request, 'password_change', $user->id, $request->email, 'failed'),
-                ['details' => "PASSWORD CHANGE FAILED:\nUser: {$user->full_name} ({$user->email})\nReason: Current password is incorrect\nTimestamp: " . now()->format('Y-m-d H:i:s')]
-            ));
-
             return response()->json(['message' => 'Current password is incorrect'], 422);
         }
 
         // Update password
-        $lastChanged = $user->updated_at?->format('Y-m-d H:i:s') ?? 'Never';
-
-        $user->password_hash       = Hash::make($request->new_password);
+        $user->password_hash = Hash::make($request->new_password);
         $user->must_change_password = false;
-        $user->update();
+        $user->save();
 
-        $this->writeLog(array_merge(
-            $this->baseLog($request, 'password_change', $user->id, $request->email, 'success'),
-            ['details' => "PASSWORD CHANGE SUCCESSFUL:\nUser: {$user->full_name} ({$user->email})\nRole: " . ucfirst($user->role->name ?? 'Unknown') . "\nPassword last changed: {$lastChanged}\nPassword change required flag: Reset to false\nChange Time: " . now()->format('Y-m-d H:i:s')]
-        ));
+        // Delete all tokens for security
+        $user->tokens()->delete();
 
         return response()->json([
             'message' => 'Password updated successfully. Please login with your new password.',
         ]);
     }
-}
+}   

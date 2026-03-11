@@ -1,70 +1,85 @@
 <template>
-  <div class="dashboard-container">
+  <div class="min-h-screen p-6 bg-slate-50 font-sans">
     <!-- Top Bar -->
-    <div class="top-bar">
-      <div class="welcome-section">
-        <h1 class="page-title">Dashboard</h1>
-        <p class="welcome-text">Welcome back — here's what's happening today.</p>
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-3xl font-bold text-[#1a4972] mb-1">Dashboard</h1>
+        <p class="text-sm text-slate-500">Welcome back, {{ userName }} — here's what's happening today.</p>
       </div>
-      <div class="top-bar-right">
-        <span class="date-badge">{{ currentDate }}</span>
-        <div class="live-badge">
-          <span class="live-dot"></span>
+      <div class="flex items-center gap-3">
+        <span class="px-3.5 py-1.5 bg-white border border-slate-200 rounded-full text-xs text-slate-600">{{ currentDate }}</span>
+        <div class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-semibold text-emerald-500">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
           Live
         </div>
       </div>
     </div>
 
-    <!-- Stats Cards with Real Data -->
-    <div class="stats-grid">
-      <div class="stat-card" v-for="stat in stats" :key="stat.label">
-        <div class="stat-icon">{{ stat.icon }}</div>
-        <div class="stat-content">
-          <span class="stat-label">{{ stat.label }}</span>
-          <span class="stat-value">{{ stat.value }}</span>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div v-for="stat in stats" :key="stat.label" 
+           class="bg-white rounded-xl p-5 relative overflow-hidden shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+        <div class="text-2xl mb-3">{{ stat.icon }}</div>
+        <div class="mb-2">
+          <span class="block text-xs text-slate-500 mb-1">{{ stat.label }}</span>
+          <span class="text-3xl font-bold text-slate-800">{{ stat.value }}</span>
         </div>
-        <span class="stat-trend" :class="stat.trend >= 0 ? 'trend-up' : 'trend-down'">
+        <span class="absolute top-5 right-5 text-xs font-semibold px-2 py-0.5 rounded-xl"
+              :class="stat.trend >= 0 ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'">
           {{ stat.trend > 0 ? '+' : '' }}{{ stat.trend }}%
         </span>
-        <div class="stat-progress" :style="{ width: stat.progress + '%', backgroundColor: stat.color }"></div>
+        <div class="absolute bottom-0 left-0 h-0.5 transition-all duration-300" 
+             :style="{ width: stat.progress + '%', backgroundColor: stat.color }"></div>
       </div>
     </div>
 
     <!-- Main Grid -->
-    <div class="main-grid">
-      <!-- Recent Activity Panel with Real User Names -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3 class="panel-title">Recent Activity</h3>
-          <button class="panel-link" @click="viewAllActivities">View all</button>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <!-- Recent Activity Panel -->
+      <div class="bg-white rounded-xl overflow-hidden shadow-sm">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+          <h3 class="text-sm font-semibold text-[#1a4972] m-0">Recent Activity</h3>
+          <button @click="viewAllActivities" 
+                  class="bg-transparent border border-slate-200 px-3 py-1 rounded-2xl text-xs text-slate-500 cursor-pointer transition-all hover:bg-slate-50 hover:text-[#1a4972]">
+            View all
+          </button>
         </div>
-        <div class="activity-list">
-          <div v-if="recentActivities.length === 0" class="empty-state">
-            <p class="empty-text">No recent activities</p>
+        <div class="py-2 max-h-96 overflow-y-auto">
+          <div v-if="recentActivities.length === 0" class="py-8 px-5 text-center">
+            <p class="text-xs text-slate-400 m-0">No recent activities</p>
           </div>
-          <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-            <div class="activity-icon" :class="activity.type">
+          <div v-for="activity in recentActivities" :key="activity.id" 
+               class="flex gap-3 px-5 py-3 transition-colors border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                 :class="activity.type === 'case' ? 'bg-purple-50 text-purple-500' : 'bg-slate-100 text-slate-500'">
               {{ activity.icon }}
             </div>
-            <div class="activity-content">
-              <div class="activity-header">
-                <span class="activity-type-badge" :class="activity.type">{{ activity.typeLabel }}</span>
-                <span class="activity-time">{{ activity.time }}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase"
+                      :class="activity.type === 'case' ? 'bg-purple-50 text-purple-500' : 'bg-slate-100 text-slate-500'">
+                  {{ activity.typeLabel }}
+                </span>
+                <span class="text-[11px] text-slate-400">{{ activity.time }}</span>
               </div>
-              <p class="activity-text">
-                <strong class="activity-user">{{ activity.userName }}</strong>
+              <p class="text-xs text-slate-700 mb-1.5 leading-relaxed m-0">
+                <strong class="text-[#1a4972] font-semibold">{{ activity.userName }}</strong>
                 {{ activity.action }}
-                <span v-if="activity.target" class="activity-target">{{ activity.target }}</span>
+                <span v-if="activity.target" class="text-slate-500 font-medium ml-1">{{ activity.target }}</span>
               </p>
-              <div v-if="activity.details" class="activity-details">
-                <span v-if="activity.details.from !== undefined" class="change-badge">
-                  <span class="from-value">{{ formatValue(activity.details.from) }}</span>
-                  <svg class="arrow-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+              <div v-if="activity.details" class="mt-1.5">
+                <span v-if="activity.details.from !== undefined" 
+                      class="inline-flex items-center gap-1 bg-slate-100 rounded-2xl px-2 py-1 text-[11px]">
+                  <span class="text-red-500 line-through decoration-red-200">{{ formatValue(activity.details.from) }}</span>
+                  <svg class="w-3 h-3 text-slate-400" viewBox="0 0 16 16" fill="none" stroke="currentColor">
                     <path d="M5 12L10 8 5 4" stroke-width="1.5"/>
                   </svg>
-                  <span class="to-value">{{ formatValue(activity.details.to) }}</span>
+                  <span class="text-emerald-500 font-semibold">{{ formatValue(activity.details.to) }}</span>
                 </span>
-                <span v-else-if="activity.details.note" class="note">{{ activity.details.note }}</span>
+                <span v-else-if="activity.details.note" 
+                      class="text-[11px] text-slate-500 bg-slate-100 px-2 py-1 rounded-xl inline-block">
+                  {{ activity.details.note }}
+                </span>
               </div>
             </div>
           </div>
@@ -72,97 +87,124 @@
       </div>
 
       <!-- Schedules Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3 class="panel-title">Today's Schedules</h3>
-          <button class="panel-link" @click="viewAllSchedules">View all</button>
+      <div class="bg-white rounded-xl overflow-hidden shadow-sm">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+          <h3 class="text-sm font-semibold text-[#1a4972] m-0">Today's Schedules</h3>
+          <button @click="viewAllSchedules" 
+                  class="bg-transparent border border-slate-200 px-3 py-1 rounded-2xl text-xs text-slate-500 cursor-pointer transition-all hover:bg-slate-50 hover:text-[#1a4972]">
+            View all
+          </button>
         </div>
-        <div class="schedule-list">
-          <div v-if="schedules.length === 0" class="empty-state">
-            <p class="empty-text">No schedules for today</p>
+        <div class="py-2 max-h-96 overflow-y-auto">
+          <div v-if="schedules.length === 0" class="py-8 px-5 text-center">
+            <p class="text-xs text-slate-400 m-0">No schedules for today</p>
           </div>
-          <div v-for="schedule in schedules" :key="schedule.id" class="schedule-item">
-            <div class="schedule-time">
-              <span class="time-badge">{{ schedule.time }}</span>
+          <div v-for="schedule in schedules" :key="schedule.id" 
+               class="flex items-center gap-4 px-5 py-4 border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50">
+            <div class="min-w-[70px]">
+              <span class="inline-block px-2 py-1 bg-slate-100 rounded-md text-xs font-semibold text-[#1a4972]">{{ schedule.time }}</span>
             </div>
-            <div class="schedule-content">
-              <p class="schedule-title">{{ schedule.title }}</p>
-              <p class="schedule-meta">
-                <span class="schedule-type" :class="`type-${schedule.type}`">{{ schedule.type }}</span>
-                <span class="schedule-case">{{ schedule.case_no }}</span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium text-slate-700 mb-1 m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ schedule.title }}</p>
+              <p class="flex items-center gap-2 text-[11px] m-0">
+                <span class="px-1.5 py-0.5 rounded font-semibold uppercase"
+                      :class="{
+                        'bg-blue-50 text-blue-500': schedule.type === 'meeting',
+                        'bg-purple-50 text-purple-500': schedule.type === 'hearing',
+                        'bg-red-50 text-red-500': schedule.type === 'deadline'
+                      }">
+                  {{ schedule.type }}
+                </span>
+                <span class="text-slate-500">{{ schedule.case_no }}</span>
               </p>
             </div>
-            <div class="schedule-participant">
-              <div class="participant-avatar">{{ getInitials(schedule.participant) }}</div>
+            <div class="flex-shrink-0">
+              <div class="w-7 h-7 bg-[#1a4972] text-white flex items-center justify-center rounded-md text-[11px] font-semibold">
+                {{ getInitials(schedule.participant) }}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Cases Overview Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3 class="panel-title">Cases Overview</h3>
-          <button class="panel-link" @click="viewAllCases">View all</button>
+      <div class="bg-white rounded-xl overflow-hidden shadow-sm">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+          <h3 class="text-sm font-semibold text-[#1a4972] m-0">Cases Overview</h3>
+          <button @click="viewAllCases" 
+                  class="bg-transparent border border-slate-200 px-3 py-1 rounded-2xl text-xs text-slate-500 cursor-pointer transition-all hover:bg-slate-50 hover:text-[#1a4972]">
+            View all
+          </button>
         </div>
-        <div class="cases-overview">
-          <div class="case-stat-item">
-            <span class="case-stat-label">Active Cases</span>
-            <span class="case-stat-value">{{ caseStats.active }}</span>
+        <div class="grid grid-cols-2 gap-4 p-5">
+          <div class="text-center">
+            <span class="block text-xs text-slate-500 mb-1">Active Cases</span>
+            <span class="text-2xl font-bold text-slate-800">{{ caseStats.active }}</span>
           </div>
-          <div class="case-stat-item">
-            <span class="case-stat-label">Pending</span>
-            <span class="case-stat-value">{{ caseStats.pending }}</span>
+          <div class="text-center">
+            <span class="block text-xs text-slate-500 mb-1">Pending</span>
+            <span class="text-2xl font-bold text-slate-800">{{ caseStats.pending }}</span>
           </div>
-          <div class="case-stat-item">
-            <span class="case-stat-label">Closed</span>
-            <span class="case-stat-value">{{ caseStats.closed }}</span>
+          <div class="text-center">
+            <span class="block text-xs text-slate-500 mb-1">Closed</span>
+            <span class="text-2xl font-bold text-slate-800">{{ caseStats.closed }}</span>
           </div>
-          <div class="case-stat-item">
-            <span class="case-stat-label">Archived</span>
-            <span class="case-stat-value">{{ caseStats.archived }}</span>
+          <div class="text-center">
+            <span class="block text-xs text-slate-500 mb-1">Archived</span>
+            <span class="text-2xl font-bold text-slate-800">{{ caseStats.archived }}</span>
           </div>
         </div>
-        <div class="case-progress">
-          <div class="progress-label">
+        <div class="px-5 pb-5">
+          <div class="flex justify-between text-xs text-slate-500 mb-1.5">
             <span>Completion Rate</span>
             <span>{{ caseStats.completionRate }}%</span>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: caseStats.completionRate + '%' }"></div>
+          <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-[#1a4972] rounded-full transition-all duration-300" 
+                 :style="{ width: caseStats.completionRate + '%' }"></div>
           </div>
         </div>
       </div>
 
       <!-- Folder Movements Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3 class="panel-title">Folder Movements</h3>
-          <button class="panel-link" @click="viewAllMovements">View all</button>
+      <div class="bg-white rounded-xl overflow-hidden shadow-sm">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+          <h3 class="text-sm font-semibold text-[#1a4972] m-0">Folder Movements</h3>
+          <button @click="viewAllMovements" 
+                  class="bg-transparent border border-slate-200 px-3 py-1 rounded-2xl text-xs text-slate-500 cursor-pointer transition-all hover:bg-slate-50 hover:text-[#1a4972]">
+            View all
+          </button>
         </div>
-        <div class="movement-list">
-          <div v-if="folderMovements.length === 0" class="empty-state">
-            <p class="empty-text">No recent folder movements</p>
+        <div class="py-2 max-h-96 overflow-y-auto">
+          <div v-if="folderMovements.length === 0" class="py-8 px-5 text-center">
+            <p class="text-xs text-slate-400 m-0">No recent folder movements</p>
           </div>
-          <div v-for="movement in folderMovements" :key="movement.id" class="movement-item">
-            <div class="movement-icon" :class="movement.type.toLowerCase()">
-              <svg v-if="movement.type === 'OUT'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <div v-for="movement in folderMovements" :key="movement.id" 
+               class="flex items-center gap-3 px-5 py-3 border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50">
+            <div class="w-8 h-8 flex items-center justify-center rounded-lg flex-shrink-0"
+                 :class="movement.type === 'OUT' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-500'">
+              <svg v-if="movement.type === 'OUT'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
               </svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
             </div>
-            <div class="movement-content">
-              <p class="movement-text">
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-slate-700 mb-1 m-0 whitespace-nowrap overflow-hidden text-ellipsis">
                 <strong>{{ movement.case_code || movement.case_no }}</strong> 
-                <span class="movement-purpose">{{ movement.purpose || movement.task || 'Folder movement' }}</span>
+                <span class="text-slate-500 ml-1 font-normal">{{ movement.purpose || movement.task || 'Folder movement' }}</span>
               </p>
-              <span class="movement-meta">
-                <span class="handler">{{ movement.handled_by || movement.recorder?.full_name }}</span>
-                <span class="dot">•</span>
-                <span class="date">{{ formatMovementDate(movement.date) }}</span>
-                <span class="approval-badge" :class="`approval-${(movement.approval_status || 'pending').toLowerCase()}`">
+              <span class="flex items-center gap-1.5 text-[11px] text-slate-400 flex-wrap">
+                <span class="font-medium text-slate-600">{{ movement.handled_by || movement.recorder?.full_name }}</span>
+                <span class="text-slate-300">•</span>
+                <span>{{ formatMovementDate(movement.date) }}</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase"
+                      :class="{
+                        'bg-amber-50 text-amber-500': (movement.approval_status || 'pending').toLowerCase() === 'pending',
+                        'bg-emerald-50 text-emerald-500': (movement.approval_status || '').toLowerCase() === 'approved',
+                        'bg-red-50 text-red-500': (movement.approval_status || '').toLowerCase() === 'rejected'
+                      }">
                   {{ movement.approval_status || 'PENDING' }}
                 </span>
               </span>
@@ -173,12 +215,12 @@
     </div>
 
     <!-- Users Table -->
-    <div class="panel users-panel">
-      <div class="panel-header">
-        <h3 class="panel-title">System Users</h3>
-        <div class="table-controls">
-          <div class="search-box">
-            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <div class="bg-white rounded-xl overflow-hidden shadow-sm mt-6">
+      <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+        <h3 class="text-sm font-semibold text-[#1a4972] m-0">System Users</h3>
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -186,47 +228,59 @@
               v-model="searchQuery" 
               type="text" 
               placeholder="Search users..." 
-              class="search-input"
+              class="pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-xs w-48 outline-none transition-colors focus:border-[#1a4972]"
             />
           </div>
         </div>
       </div>
 
-      <div class="table-responsive">
-        <table class="data-table">
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Last Login</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200">Name</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200">Role</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200">Last Login</th>
             </tr>
           </thead>
-          <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id" class="table-row">
-              <td>
-                <div class="user-cell">
-                  <div class="user-avatar">{{ getUserInitials(user.full_name || user.name) }}</div>
+          <tbody v-if="filteredUsers && filteredUsers.length > 0">
+            <tr v-for="user in filteredUsers" :key="user.id" class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 bg-[#1a4972] text-white flex items-center justify-center rounded-lg text-xs font-semibold flex-shrink-0">
+                    {{ getUserInitials(user?.full_name || user?.name) }}
+                  </div>
                   <div>
-                    <div class="user-name">{{ user.full_name || user.name }}</div>
-                    <div class="user-email">{{ user.email }}</div>
+                    <div class="font-semibold mb-0.5 whitespace-nowrap text-xs">{{ user?.full_name || user?.name || '—' }}</div>
+                    <div class="text-[11px] text-slate-400 whitespace-nowrap">{{ user?.email || '—' }}</div>
                   </div>
                 </div>
               </td>
-              <td>
-                <span class="role-badge" :class="`role-${(user.role?.name || user.role || '').toLowerCase()}`">
-                  {{ user.role?.name || user.role || '—' }}
+              <td class="px-5 py-3 text-xs">
+                <span class="text-[11px] font-semibold px-2 py-1 rounded-xl whitespace-nowrap"
+                      :class="{
+                        'bg-[#1a497214] text-[#1a4972]': (user?.role?.name || user?.role || '').toLowerCase() === 'admin',
+                        'bg-blue-50 text-blue-500': (user?.role?.name || user?.role || '').toLowerCase() === 'lawyer',
+                        'bg-emerald-50 text-emerald-500': (user?.role?.name || user?.role || '').toLowerCase() === 'clerk',
+                        'bg-purple-50 text-purple-500': (user?.role?.name || user?.role || '').toLowerCase() === 'intern',
+                        'bg-amber-50 text-amber-500': (user?.role?.name || user?.role || '').toLowerCase() === 'secretary'
+                      }">
+                  {{ user?.role?.name || user?.role || '—' }}
                 </span>
               </td>
-              <td>
-                <span class="status-badge" :class="`status-${user.is_active ? 'active' : 'inactive'}`">
-                  {{ user.is_active ? 'Active' : 'Inactive' }}
+              <td class="px-5 py-3 text-xs">
+                <span class="text-[11px] font-semibold px-2 py-1 rounded-xl whitespace-nowrap"
+                      :class="user?.is_active ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-500'">
+                  {{ user?.is_active ? 'Active' : 'Inactive' }}
                 </span>
               </td>
-              <td class="text-muted">{{ formatLastLogin(user.last_login) }}</td>
+              <td class="px-5 py-3 text-slate-400 text-xs whitespace-nowrap">{{ formatLastLogin(user?.last_login) }}</td>
             </tr>
-            <tr v-if="filteredUsers.length === 0">
-              <td colspan="4" class="text-center text-muted py-4">No users found</td>
+          </tbody>
+          <tbody v-else>
+            <tr>
+              <td colspan="4" class="text-center text-slate-400 py-4 text-xs">No users found</td>
             </tr>
           </tbody>
         </table>
@@ -234,7 +288,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="footer">
+    <div class="mt-8 pt-4 border-t border-slate-200 flex justify-between text-xs text-slate-400">
       <p>© {{ currentYear }} Pineda Law Office. All rights reserved.</p>
       <p>Document Management System</p>
     </div>
@@ -242,52 +296,229 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import store from '@/store'
+import { ref, computed, onMounted, onUnmounted, watch, onActivated, onDeactivated } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import UserService from '@/services/userServices'
+import { getCases } from '@/services/caseService'
+import { auditLogService } from '@/services/auditLogService'
+import { getAllMovements } from '@/services/approvalService'
 
 const router = useRouter()
-const { isAdmin, isLawyer, userRole } = useAuth()
+const route = useRoute()
+const { userName, isAdmin, isLawyer } = useAuth()
 
-// Global Store Integration
-const users = computed(() => store.state.users || [])
-const cases = computed(() => store.state.cases || [])
-const activityLogs = computed(() => store.state.activityLogs || [])
-const approvals = computed(() => store.state.approvals || [])
-const folders = computed(() => store.state.folders || [])
-const documents = computed(() => store.state.documents || [])
+const CACHE_KEYS = {
+  USERS: 'dashboard_users_cache',
+  CASES: 'dashboard_cases_cache',
+  LOGS: 'dashboard_logs_cache',
+  APPROVALS: 'dashboard_approvals_cache'
+}
+const CACHE_DURATION = 30000; // 30 seconds
 
-// Stats with Real Data
+// ==================== STATE ====================
+const users = ref([])
+const cases = ref([])
+const activityLogs = ref([])
+const approvals = ref([])
+const isRefreshing = ref(false)
+const lastRefreshTime = ref(Date.now())
+const isActive = ref(true) // Track if dashboard is currently active
+
+// Mock schedules
+const schedules = ref([
+  { id: 1, time: '09:00', title: 'Client Meeting - Smith vs. Jones', type: 'meeting', case_no: '2026-0001', participant: 'John Smith' },
+  { id: 2, time: '10:30', title: 'Court Hearing - Regional Trial Court', type: 'hearing', case_no: '2026-0002', participant: 'Judge Reyes' },
+  { id: 3, time: '14:00', title: 'Document Review Deadline', type: 'deadline', case_no: '2026-0003', participant: 'Maria Santos' }
+])
+
+const searchQuery = ref('')
+
+// Polling timer
+let pollTimer = null
+
+// ==================== CACHE FUNCTIONS ====================
+const loadFromCache = () => {
+  try {
+    const cachedUsers = sessionStorage.getItem(CACHE_KEYS.USERS)
+    if (cachedUsers) {
+      const { data, timestamp } = JSON.parse(cachedUsers)
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        users.value = data || []
+      }
+    }
+
+    const cachedCases = sessionStorage.getItem(CACHE_KEYS.CASES)
+    if (cachedCases) {
+      const { data, timestamp } = JSON.parse(cachedCases)
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        cases.value = data || []
+      }
+    }
+
+    const cachedLogs = sessionStorage.getItem(CACHE_KEYS.LOGS)
+    if (cachedLogs) {
+      const { data, timestamp } = JSON.parse(cachedLogs)
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        activityLogs.value = data || []
+      }
+    }
+
+    const cachedApprovals = sessionStorage.getItem(CACHE_KEYS.APPROVALS)
+    if (cachedApprovals) {
+      const { data, timestamp } = JSON.parse(cachedApprovals)
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        approvals.value = data || []
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load from cache:', error)
+  }
+}
+
+const saveToCache = () => {
+  try {
+    sessionStorage.setItem(CACHE_KEYS.USERS, JSON.stringify({
+      data: users.value,
+      timestamp: Date.now()
+    }))
+    
+    sessionStorage.setItem(CACHE_KEYS.CASES, JSON.stringify({
+      data: cases.value,
+      timestamp: Date.now()
+    }))
+    
+    sessionStorage.setItem(CACHE_KEYS.LOGS, JSON.stringify({
+      data: activityLogs.value,
+      timestamp: Date.now()
+    }))
+    
+    sessionStorage.setItem(CACHE_KEYS.APPROVALS, JSON.stringify({
+      data: approvals.value,
+      timestamp: Date.now()
+    }))
+  } catch (error) {
+    console.error('Failed to save to cache:', error)
+  }
+}
+
+// ==================== DATA FETCHING ====================
+const fetchDashboardData = async (showRefreshing = false) => {
+  // Don't fetch if dashboard is not active
+  if (!isActive.value) {
+    console.log('Dashboard not active, skipping refresh')
+    return
+  }
+  
+  if (showRefreshing) isRefreshing.value = true
+  
+  try {
+    // Add timestamp to bust browser cache
+    const timestamp = Date.now()
+    
+    const [usersResponse, casesResponse, logsResponse, approvalsResponse] = await Promise.all([
+      UserService.getUsers({ per_page: 10, _t: timestamp }).catch(() => ({ data: [] })),
+      getCases({ per_page: 10, _t: timestamp }).catch(() => ({ data: { data: [] } })),
+      auditLogService.getLogs({ per_page: 20, _t: timestamp }).catch(() => ({ data: [] })),
+      getAllMovements({ limit: 10, _t: timestamp }).catch(() => ({ data: [] }))
+    ])
+    
+    // Check if data actually changed before updating
+    const newUsers = usersResponse.data || []
+    const newCases = casesResponse.data?.data || []
+    const newLogs = logsResponse.data || []
+    const newApprovals = approvalsResponse.data || []
+    
+    // Only update if data changed (prevents unnecessary re-renders)
+    if (JSON.stringify(users.value) !== JSON.stringify(newUsers)) {
+      users.value = newUsers
+    }
+    if (JSON.stringify(cases.value) !== JSON.stringify(newCases)) {
+      cases.value = newCases
+    }
+    if (JSON.stringify(activityLogs.value) !== JSON.stringify(newLogs)) {
+      activityLogs.value = newLogs
+    }
+    if (JSON.stringify(approvals.value) !== JSON.stringify(newApprovals)) {
+      approvals.value = newApprovals
+    }
+    
+    saveToCache()
+    lastRefreshTime.value = Date.now()
+    
+  } catch (error) {
+    console.error('Dashboard data fetch failed:', error)
+  } finally {
+    if (showRefreshing) {
+      setTimeout(() => {
+        isRefreshing.value = false
+      }, 500)
+    }
+  }
+}
+
+// ==================== POLLING CONTROL ====================
+const startPolling = () => {
+  stopPolling()
+  
+  // Only start polling if dashboard is active
+  if (!isActive.value) return
+  
+  console.log('Starting dashboard polling')
+  
+  // Poll every 10 seconds
+  pollTimer = setInterval(() => {
+    // Only refresh if page is visible and dashboard is active
+    if (document.visibilityState === 'visible' && isActive.value) {
+      console.log('Background refresh at:', new Date().toLocaleTimeString())
+      fetchDashboardData(true)
+    }
+  }, 10000) // 10 seconds
+}
+
+const stopPolling = () => { 
+  if (pollTimer) { 
+    console.log('Stopping dashboard polling')
+    clearInterval(pollTimer)
+    pollTimer = null 
+  } 
+}
+
+// ==================== ROUTE ACTIVATION ====================
+// This runs when component is activated (when navigating back to dashboard)
+onActivated(() => {
+  console.log('Dashboard activated - resuming')
+  isActive.value = true
+  
+  // Load from cache first (instant)
+  loadFromCache()
+  
+  // Then fetch fresh data
+  fetchDashboardData(true)
+  
+  // Restart polling
+  startPolling()
+})
+
+// This runs when component is deactivated (when navigating away)
+onDeactivated(() => {
+  console.log('Dashboard deactivated - pausing')
+  isActive.value = false
+  stopPolling()
+  isRefreshing.value = false // Hide any ongoing refresh indicator
+})
+
+// ==================== STATS COMPUTED ====================
 const stats = computed(() => {
   const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
   
-  // Real login count for today
-  const todayLogins = activityLogs.value.filter(l => 
-    l.action === 'login' && 
-    l.status === 'success' && 
-    l.created_at?.startsWith(today)
-  ).length
+  const loginLogs = activityLogs.value.filter(l => l.action === 'login' && l.status === 'success')
+  const todayLogins = loginLogs.filter(l => l.created_at?.startsWith(today)).length
+  const yesterdayLogins = loginLogs.filter(l => l.created_at?.startsWith(yesterday)).length
 
-  // Real document count (folders + checklist items)
-  const folderCount = approvals.value.filter(a => a._source === 'folder').length
-  const checklistCount = approvals.value.filter(a => a._source === 'checklist').length
-  const totalDocuments = folderCount + checklistCount
-
-  console.log('folderCount:', folderCount)
-  console.log('checklistCount:', checklistCount)
-  console.log('totalDocuments:', totalDocuments)
-  console.log('todayLogins:', todayLogins)
-
-  // Calculate trends (compare with yesterday's data)
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
-  
-  const yesterdayLogins = activityLogs.value.filter(l => 
-    l.action === 'login' && 
-    l.status === 'success' && 
-    l.created_at?.startsWith(yesterdayStr)
+  const totalDocuments = approvals.value.filter(a => 
+    a._source === 'folder' || a._source === 'checklist'
   ).length
 
   const loginTrend = yesterdayLogins > 0 
@@ -295,38 +526,10 @@ const stats = computed(() => {
     : todayLogins > 0 ? 100 : 0
 
   return [
-    { 
-      label: 'Total Users', 
-      value: users.value.length, 
-      trend: 12, // You can calculate this from user creation logs
-      progress: 100, 
-      color: '#1a4972', 
-      icon: '👥' 
-    },
-    { 
-      label: 'Active Cases', 
-      value: cases.value.filter(c => c.case_status === 'active').length, 
-      trend: 8, 
-      progress: 72, 
-      color: '#3b82f6', 
-      icon: '💼' 
-    },
-    { 
-      label: 'Documents', 
-      value: totalDocuments, 
-      trend: 23, 
-      progress: 88, 
-      color: '#10b981', 
-      icon: '📄' 
-    },
-    { 
-      label: 'Logins Today', 
-      value: todayLogins, 
-      trend: loginTrend, 
-      progress: todayLogins > 0 ? Math.min(100, todayLogins * 10) : 0, 
-      color: '#f97316', 
-      icon: '🔓' 
-    }
+    { label: 'Total Users', value: users.value.length, trend: 12, progress: 100, color: '#1a4972', icon: '👥' },
+    { label: 'Active Cases', value: cases.value.filter(c => c.case_status === 'active').length, trend: 8, progress: 72, color: '#3b82f6', icon: '💼' },
+    { label: 'Documents', value: totalDocuments, trend: 23, progress: 88, color: '#10b981', icon: '📄' },
+    { label: 'Logins Today', value: todayLogins, trend: loginTrend, progress: todayLogins > 0 ? Math.min(100, todayLogins * 10) : 0, color: '#f97316', icon: '🔓' }
   ]
 })
 
@@ -338,259 +541,92 @@ const caseStats = computed(() => {
   const archived = c.filter(x => x.case_status === 'archived').length
   const total = c.length || 1
   
-  return {
-    active,
-    pending,
-    closed,
-    archived,
-    completionRate: Math.round((closed / total) * 100)
-  }
+  return { active, pending, closed, archived, completionRate: Math.round((closed / total) * 100) }
 })
 
-// Recent Activities with Proper User Names
 const recentActivities = computed(() => {
-  // Create a map of emails to user names for quick lookup
   const userMap = new Map()
   users.value.forEach(user => {
-    if (user.email) {
-      userMap.set(user.email.toLowerCase(), user.full_name || user.name || user.email.split('@')[0])
-    }
+    if (user.email) userMap.set(user.email.toLowerCase(), user.full_name || user.name || user.email.split('@')[0])
   })
 
-  return activityLogs.value.slice(0, 8).map(log => {
-    // Find user name from various sources
+  return (activityLogs.value || []).slice(0, 8).map(log => {
     let userName = 'System'
-    let userEmail = ''
-
-    if (log.user?.name) {
-      userName = log.user.name
-      userEmail = log.user.email
-    } else if (log.email_attempted) {
-      userEmail = log.email_attempted
-      // Try to find user by email
+    
+    if (log.user?.name) userName = log.user.name
+    else if (log.email_attempted) {
       const mappedName = userMap.get(log.email_attempted.toLowerCase())
-      if (mappedName) {
-        userName = mappedName
-      } else {
-        // Extract name from email
-        const namePart = log.email_attempted.split('@')[0]
-        userName = namePart.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
-      }
-    } else if (log.actor) {
-      userName = log.actor
-    }
+      userName = mappedName || log.email_attempted.split('@')[0].split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+    } else if (log.actor) userName = log.actor
 
-    // Format action text and determine type
-    let type = 'system'
-    let typeLabel = 'System'
-    let icon = '⚙️'
-    let action = ''
-    let target = ''
-    let details = null
+    let type = 'system', typeLabel = 'System', icon = '⚙️', action = '', target = '', details = null
 
     if (log._type === 'case' || log.case_code) {
-      type = 'case'
-      typeLabel = 'Case'
-      icon = '📁'
-      
-      // Parse case action
-      if (log.action?.includes('status')) {
-        action = 'updated case status'
-      } else if (log.action?.includes('stage')) {
-        action = 'changed stage'
-      } else if (log.action?.includes('create')) {
-        action = 'created case'
-      } else if (log.action?.includes('update')) {
-        action = 'updated case'
-      } else {
-        action = log.action || 'performed action'
-      }
-      
+      type = 'case'; typeLabel = 'Case'; icon = '📁'
+      action = log.action?.includes('status') ? 'updated case status' :
+               log.action?.includes('stage') ? 'changed stage' :
+               log.action?.includes('create') ? 'created case' :
+               log.action?.includes('update') ? 'updated case' : log.action || 'performed action'
       target = log.case_code || ''
       
-      // Parse details for before/after
       if (log.details) {
         if (typeof log.details === 'string') {
-          try {
-            details = JSON.parse(log.details)
-          } catch {
-            details = { note: log.details }
-          }
-        } else {
-          details = log.details
-        }
+          try { details = JSON.parse(log.details) } catch { details = { note: log.details } }
+        } else details = log.details
       }
     } else {
-      // System actions
       const actionMap = {
-        login: { action: 'logged in', icon: '→' },
-        logout: { action: 'logged out', icon: '←' },
-        password_change: { action: 'changed password', icon: '🔑' },
-        user_create: { action: 'created new user', icon: '➕' },
-        user_update: { action: 'updated user', icon: '✏️' },
-        user_delete: { action: 'deleted user', icon: '🗑️' },
-        activated: { action: 'activated account', icon: '✅' },
-        deactivated: { action: 'deactivated account', icon: '⛔' }
+        login: { action: 'logged in', icon: '→' }, logout: { action: 'logged out', icon: '←' },
+        password_change: { action: 'changed password', icon: '🔑' }, user_create: { action: 'created new user', icon: '➕' },
+        user_update: { action: 'updated user', icon: '✏️' }, user_delete: { action: 'deleted user', icon: '🗑️' },
+        activated: { action: 'activated account', icon: '✅' }, deactivated: { action: 'deactivated account', icon: '⛔' }
       }
-      
       const mapped = actionMap[log.action] || { action: log.action || 'performed action', icon: '•' }
-      action = mapped.action
-      icon = mapped.icon
-      
-      if (log.details && typeof log.details === 'string') {
-        details = { note: log.details }
-      }
+      action = mapped.action; icon = mapped.icon
+      if (log.details && typeof log.details === 'string') details = { note: log.details }
     }
 
     return {
-      id: log.id,
-      userName,
-      userEmail,
-      action,
-      target,
-      details,
-      time: formatRelativeTime(log.created_at),
-      type,
-      typeLabel,
-      icon,
-      status: log.status
+      id: log.id, userName, action, target, details,
+      time: formatRelativeTime(log.created_at), type, typeLabel, icon, status: log.status
     }
   })
 })
 
-// Folder Movements from Approvals
 const folderMovements = computed(() => {
-  return approvals.value
+  return (approvals.value || [])
     .filter(m => m._source === 'folder' || m._source === 'checklist')
     .slice(0, 5)
     .map(m => ({
-      id: m.id,
-      case_code: m.case_code,
-      case_no: m.case_id,
-      type: m.type,
-      purpose: m.purpose,
-      task: m.checklist?.task,
-      handled_by: m.handled_by || m.recorder?.full_name,
-      recorder: m.recorder,
-      date: m.date || m.created_at,
-      approval_status: m.approval_status
+      id: m.id, case_code: m.case_code, case_no: m.case_id, type: m.type,
+      purpose: m.purpose, task: m.checklist?.task,
+      handled_by: m.handled_by || m.recorder?.full_name, recorder: m.recorder,
+      date: m.date || m.created_at, approval_status: m.approval_status
     }))
 })
 
-// Schedules (mock data - replace with actual schedules)
-const schedules = ref([
-  { 
-    id: 1, 
-    time: '09:00', 
-    title: 'Client Meeting - Smith vs. Jones', 
-    type: 'meeting',
-    case_no: '2026-0001',
-    participant: 'John Smith'
-  },
-  { 
-    id: 2, 
-    time: '10:30', 
-    title: 'Court Hearing - Regional Trial Court', 
-    type: 'hearing',
-    case_no: '2026-0002',
-    participant: 'Judge Reyes'
-  },
-  { 
-    id: 3, 
-    time: '14:00', 
-    title: 'Document Review Deadline', 
-    type: 'deadline',
-    case_no: '2026-0003',
-    participant: 'Maria Santos'
-  }
-])
-
-// UI State
-const searchQuery = ref('')
-
-// Polling for real-time updates
-let pollTimer = null
-let bc = null
-
-const openChannel = () => {
-  closeChannel()
-  bc = new BroadcastChannel('dashboard_sync')
-  bc.onmessage = () => {
-    refreshData()
-  }
-}
-
-const closeChannel = () => {
-  if (bc) bc.close()
-  bc = null
-}
-
-const startPolling = () => {
-  stopPolling()
-  pollTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') {
-      refreshData()
-    }
-  }, 30000)
-}
-
-const stopPolling = () => {
-  if (pollTimer) clearInterval(pollTimer)
-  pollTimer = null
-}
-
-const refreshData = () => {
-  store.actions.refreshApprovals({ limit: 10 })
-  store.actions.refreshLogs({ limit: 20 })
-  store.actions.refreshCases({ limit: 10 })
-}
-
-// Computed
-const currentDate = computed(() => {
-  return new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })
-})
-
-const currentYear = computed(() => new Date().getFullYear())
-
 const filteredUsers = computed(() => {
-  const u = users.value
+  const u = users.value || []
   if (!searchQuery.value) return u.slice(0, 10)
   const query = searchQuery.value.toLowerCase()
   return u.filter(user => 
-    (user.full_name || user.name || '').toLowerCase().includes(query) ||
-    (user.email || '').toLowerCase().includes(query) ||
-    (user.role?.name || user.role || '').toLowerCase().includes(query)
+    (user?.full_name || user?.name || '').toLowerCase().includes(query) ||
+    (user?.email || '').toLowerCase().includes(query) ||
+    (user?.role?.name || user?.role || '').toLowerCase().includes(query)
   ).slice(0, 10)
 })
 
-// Helper Methods
+// ==================== HELPER FUNCTIONS ====================
 const getUserInitials = (name) => {
   if (!name) return '??'
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(' ').filter(Boolean).map(word => word[0]).join('').toUpperCase().slice(0, 2)
 }
 
-const getInitials = (name) => {
-  return getUserInitials(name)
-}
+const getInitials = getUserInitials
 
 const formatRelativeTime = (date) => {
   if (!date) return '—'
-  const now = new Date()
-  const past = new Date(date)
-  const diffMs = now - past
-  const diffMins = Math.floor(diffMs / 60000)
-  
+  const now = new Date(); const past = new Date(date); const diffMs = now - past; const diffMins = Math.floor(diffMs / 60000)
   if (diffMins < 1) return 'just now'
   if (diffMins < 60) return `${diffMins}m ago`
   const diffHours = Math.floor(diffMins / 60)
@@ -604,36 +640,21 @@ const formatDate = (date) => {
   if (!date) return '—'
   const d = new Date(date)
   if (isNaN(d.getTime())) return date
-  return d.toLocaleDateString('en-US', { 
-    month: '2-digit', 
-    day: '2-digit',
-    year: 'numeric'
-  })
+  return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
 }
 
 const formatMovementDate = (date) => {
   if (!date) return '—'
   const d = new Date(date)
   if (isNaN(d.getTime())) return date
-  return d.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 const formatLastLogin = (date) => {
   if (!date) return 'Never'
   const d = new Date(date)
   if (isNaN(d.getTime())) return date
-  return d.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: '2-digit', 
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 const formatValue = (val) => {
@@ -641,837 +662,66 @@ const formatValue = (val) => {
   return String(val)
 }
 
-// Navigation handlers
-const viewAllActivities = () => router.push('/logs')
+const currentDate = computed(() => {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+})
+
+const currentYear = computed(() => new Date().getFullYear())
+
+// ==================== NAVIGATION ====================
+const viewAllActivities = () => router.push('/audittrail')
 const viewAllSchedules = () => router.push('/schedules')
-const viewAllCases = () => router.push('/cases')
+const viewAllCases = () => router.push('/casemaster')
 const viewAllMovements = () => router.push('/approvals')
 
-// Lifecycle
+// ==================== LIFECYCLE ====================
 onMounted(() => {
   if (!isAdmin.value && !isLawyer.value) {
     router.push('/dashboard')
     return
   }
-
-  // initialize() already fetches initial logs, approvals, and cases.
-  // We only need to trigger it if it hasn't run yet.
-  if (!store.state.isInitialized) {
-    store.actions.initialize(userRole.value);
-  }
   
-  openChannel()
+  console.log('Dashboard mounted')
+  isActive.value = true
+  
+  // Load from cache FIRST (instant display)
+  loadFromCache()
+  
+  // Then fetch fresh data in background
+  fetchDashboardData(true)
+  
+  // Start background polling
   startPolling()
 })
 
 onUnmounted(() => {
+  console.log('Dashboard unmounted - cleaning up')
+  isActive.value = false
   stopPolling()
-  closeChannel()
+})
+
+// Watch for page focus
+watch(() => document.visibilityState, () => {
+  if (document.visibilityState === 'visible' && isActive.value) {
+    // Only refresh if it's been more than 5 seconds since last refresh
+    if (Date.now() - lastRefreshTime.value > 5000) {
+      console.log('Page focused, refreshing dashboard')
+      fetchDashboardData(true)
+    }
+  }
 })
 </script>
 
-<style scoped>
-.dashboard-container {
-  min-height: 100vh;
-  padding: 24px;
-  background: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-/* Top Bar */
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.welcome-section {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a4972;
-  margin: 0 0 4px 0;
-}
-
-.welcome-text {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-.top-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.date-badge {
-  padding: 6px 14px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #475569;
-}
-
-.live-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #10b981;
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.stat-icon {
-  font-size: 24px;
-  margin-bottom: 12px;
-}
-
-.stat-content {
-  margin-bottom: 8px;
-}
-
-.stat-label {
-  display: block;
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.stat-trend {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.trend-up {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.trend-down {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.stat-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  transition: width 0.3s ease;
-}
-
-/* Main Grid */
-.main-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-/* Panels */
-.panel {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.panel-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a4972;
-  margin: 0;
-}
-
-.panel-link {
-  background: none;
-  border: 1px solid #e2e8f0;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.panel-link:hover {
-  background: #f8fafc;
-  color: #1a4972;
-}
-
-/* Empty State */
-.empty-state {
-  padding: 32px 20px;
-  text-align: center;
-}
-
-.empty-text {
-  font-size: 13px;
-  color: #94a3b8;
-  margin: 0;
-}
-
-/* Activity List */
-.activity-list {
-  padding: 8px 0;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.activity-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  transition: background 0.2s;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.activity-item:hover {
-  background: #f8fafc;
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.activity-icon.case {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
-}
-
-.activity-icon.system {
-  background: rgba(100, 116, 139, 0.1);
-  color: #64748b;
-}
-
-.activity-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.activity-type-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-
-.activity-type-badge.case {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
-}
-
-.activity-type-badge.system {
-  background: rgba(100, 116, 139, 0.1);
-  color: #64748b;
-}
-
-.activity-time {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.activity-text {
-  font-size: 13px;
-  color: #334155;
-  margin: 0 0 6px 0;
-  line-height: 1.4;
-}
-
-.activity-user {
-  color: #1a4972;
-  font-weight: 600;
-}
-
-.activity-target {
-  color: #64748b;
-  font-weight: 500;
-  margin-left: 4px;
-}
-
-.activity-details {
-  margin-top: 6px;
-}
-
-.change-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #f1f5f9;
-  border-radius: 16px;
-  padding: 4px 8px;
-  font-size: 11px;
-}
-
-.from-value {
-  color: #ef4444;
-  text-decoration: line-through;
-  text-decoration-color: rgba(239, 68, 68, 0.3);
-}
-
-.arrow-icon {
-  width: 12px;
-  height: 12px;
-  color: #94a3b8;
-}
-
-.to-value {
-  color: #10b981;
-  font-weight: 600;
-}
-
-.note {
-  font-size: 11px;
-  color: #64748b;
-  background: #f1f5f9;
-  padding: 4px 8px;
-  border-radius: 12px;
-  display: inline-block;
-}
-
-/* Schedule List */
-.schedule-list {
-  padding: 8px 0;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.schedule-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.2s;
-}
-
-.schedule-item:hover {
-  background: #f8fafc;
-}
-
-.schedule-item:last-child {
-  border-bottom: none;
-}
-
-.schedule-time {
-  min-width: 70px;
-}
-
-.time-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  background: #f1f5f9;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #1a4972;
-}
-
-.schedule-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.schedule-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: #334155;
-  margin: 0 0 4px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.schedule-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.schedule-type {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.type-meeting { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.type-hearing { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-.type-deadline { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-.schedule-case {
-  color: #64748b;
-}
-
-.schedule-participant {
-  flex-shrink: 0;
-}
-
-.participant-avatar {
-  width: 28px;
-  height: 28px;
-  background: #1a4972;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* Cases Overview */
-.cases-overview {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 20px;
-}
-
-.case-stat-item {
-  text-align: center;
-}
-
-.case-stat-label {
-  display: block;
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-
-.case-stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.case-progress {
-  padding: 0 20px 20px 20px;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 6px;
-}
-
-.progress-bar {
-  height: 6px;
-  background: #f1f5f9;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #1a4972;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-/* Movement List */
-.movement-list {
-  padding: 8px 0;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.movement-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.2s;
-}
-
-.movement-item:hover {
-  background: #f8fafc;
-}
-
-.movement-item:last-child {
-  border-bottom: none;
-}
-
-.movement-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-
-.movement-icon.out {
-  background: rgba(249, 115, 22, 0.1);
-  color: #f97316;
-}
-
-.movement-icon.in {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.movement-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.movement-text {
-  font-size: 13px;
-  color: #334155;
-  margin: 0 0 4px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.movement-purpose {
-  color: #64748b;
-  margin-left: 4px;
-  font-weight: normal;
-}
-
-.movement-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #94a3b8;
-  flex-wrap: wrap;
-}
-
-.handler {
-  font-weight: 500;
-  color: #475569;
-}
-
-.dot {
-  color: #cbd5e1;
-}
-
-.approval-badge {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.approval-pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.approval-approved {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.approval-rejected {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-/* Users Panel */
-.users-panel {
-  margin-top: 24px;
-}
-
-.table-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.search-box {
-  position: relative;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-}
-
-.search-input {
-  padding: 8px 12px 8px 32px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  width: 200px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  border-color: #1a4972;
-}
-
-/* Table */
-.table-responsive {
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 12px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.table-row {
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.table-row:hover {
-  background: #f8fafc;
-}
-
-.data-table td {
-  padding: 12px 20px;
-  font-size: 13px;
-  color: #334155;
-}
-
-.user-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  background: #1a4972;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.user-name {
-  font-weight: 600;
-  margin-bottom: 2px;
-  white-space: nowrap;
-}
-
-.user-email {
-  font-size: 11px;
-  color: #94a3b8;
-  white-space: nowrap;
-}
-
-.role-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 12px;
-  white-space: nowrap;
-}
-
-.role-admin { background: rgba(26, 73, 114, 0.1); color: #1a4972; }
-.role-lawyer { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.role-clerk { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.role-intern { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-.role-secretary { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-
-.status-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 12px;
-  white-space: nowrap;
-}
-
-.status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.status-inactive { background: rgba(100, 116, 139, 0.1); color: #64748b; }
-
-.text-muted {
-  color: #94a3b8;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.py-4 {
-  padding-top: 16px;
-  padding-bottom: 16px;
-}
-
-/* Footer */
-.footer {
-  margin-top: 32px;
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-/* Scrollbar Styling */
-.activity-list::-webkit-scrollbar,
-.movement-list::-webkit-scrollbar,
-.schedule-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.activity-list::-webkit-scrollbar-track,
-.movement-list::-webkit-scrollbar-track,
-.schedule-list::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.activity-list::-webkit-scrollbar-thumb,
-.movement-list::-webkit-scrollbar-thumb,
-.schedule-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+<style>
+/* Only custom animation needed */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  
-  .main-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 16px;
-  }
-  
-  .top-bar {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .table-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .search-box {
-    width: 100%;
-  }
-  
-  .search-input {
-    width: 100%;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

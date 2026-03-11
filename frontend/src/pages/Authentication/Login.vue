@@ -362,21 +362,13 @@ import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { login, changePassword } from "@/services/auth";
 import backgroundImg from "../../assets/images/bg.jpg";
-import { useAuth } from "@/composables/useAuth";
-import store from "@/store";
 
-const { refreshUser } = useAuth();
 const router = useRouter();
 const backgroundImage = ref(backgroundImg);
 
-// ── Fade-in on every route visit ─────────────────────────────────────────────
-// Starts invisible (opacity-0 + slight upward offset) and animates to
-// opacity-100 + translate-y-0 via Tailwind transition classes on the root div.
+// ── Fade-in animation ─────────────────────────────────────────────────────
 const visible = ref(false);
 onMounted(() => {
-  // nextTick is not needed — a one-frame delay via setTimeout(0)
-  // is enough for the browser to paint the initial opacity-0 state
-  // before we flip to opacity-100 so the transition is visible.
   setTimeout(() => { visible.value = true; }, 0);
 });
 
@@ -397,7 +389,7 @@ const resetLoading = ref(false);
 const showSuccessMessage = ref(false);
 const successMessage = ref("");
 
-// Password visibility toggles for modal
+// Password visibility toggles
 const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
@@ -406,109 +398,39 @@ const showConfirmPassword = ref(false);
 const errors = reactive({ email: "", password: "", general: "" });
 const resetErrors = reactive({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
-// ─── Modal helpers ────────────────────────────────────────────────────────────
-
-const openResetModal = (userEmail) => {
-  resetEmail.value = userEmail;
-  currentPassword.value = "";
-  newPassword.value = "";
-  confirmPassword.value = "";
-  resetErrors.currentPassword = "";
-  resetErrors.newPassword = "";
-  resetErrors.confirmPassword = "";
-  showSuccessMessage.value = false;
-  successMessage.value = "";
-  showResetModal.value = true;
-};
-
-const closeResetModal = () => {
-  showResetModal.value = false;
-  resetEmail.value = "";
-  currentPassword.value = "";
-  newPassword.value = "";
-  confirmPassword.value = "";
-  resetErrors.currentPassword = "";
-  resetErrors.newPassword = "";
-  resetErrors.confirmPassword = "";
-  showSuccessMessage.value = false;
-  successMessage.value = "";
-};
-
-// ─── Input focus handlers ─────────────────────────────────────────────────────
-
-const handleFocus = (e) => {
-  e.target.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
-  e.target.style.borderColor = "rgba(255, 255, 255, 0.5)";
-};
-const handleBlur = (e) => {
-  e.target.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-  e.target.style.borderColor = "rgba(255, 255, 255, 0.3)";
-};
-const handleModalFocus = handleFocus;
-const handleModalBlur = handleBlur;
-
-const clearFieldError = (field) => {
-  errors[field] = "";
-  errors.general = "";
-};
-
-// ─── Login form validation ────────────────────────────────────────────────────
-
-const validateForm = () => {
+// ─── LOGIN HANDLER ────────────────────────────────────────────────────────
+async function handleLogin() {
+  if (!email.value || !password.value) {
+    if (!email.value) errors.email = "Email is required";
+    if (!password.value) errors.password = "Password is required";
+    return;
+  }
+  
+  loading.value = true;
   errors.email = "";
   errors.password = "";
-  errors.general = "";
-  let isValid = true;
-
-  if (!email.value) {
-    errors.email = "Email is required";
-    isValid = false;
-  } else if (!/\S+@\S+\.\S+/.test(email.value)) {
-    errors.email = "Please enter a valid email address";
-    isValid = false;
-  }
-
-  if (!password.value) {
-    errors.password = "Password is required";
-    isValid = false;
-  } else if (password.value.length < 6) {
-    errors.password = "Password must be at least 6 characters";
-    isValid = false;
-  }
-
-  return isValid;
-};
-
-// ─── Login handler ────────────────────────────────────────────────────────────
-
-async function handleLogin() {
-  if (!validateForm()) return;
-  loading.value = true;
 
   try {
     const response = await login({ email: email.value, password: password.value });
     const user = response.user;
 
-    if (user.must_change_password) {
-      openResetModal(user.email);
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
+    if (user?.must_change_password) {
+      resetEmail.value = user.email;
+      showResetModal.value = true;
       return;
     }
 
-    refreshUser();
-    // Pre-initialize global store to avoid any data fetching delay after landing
-    // Pass user role for role-based data fetching (Logs for Admin, Approvals for Admin/Lawyer)
-    const userRole = user.role?.name ?? (typeof user.role === 'string' ? user.role : '');
-    await store.actions.initialize(userRole);
+    // Direct navigation - no store initialization needed
     router.push("/dashboard");
+    
   } catch (err) {
-    const msg = err.message || "An error occurred during login";
-    if (msg === "Your account is inactive. Please contact the administrator.") {
-      errors.email = msg;
-    } else if (msg === "Invalid credentials or inactive account") {
-      errors.email = "Please check your email";
-      errors.password = "Please check your password";
+    const msg = err.message || "";
+    
+    if (msg.includes("inactive")) {
+      errors.email = "Account inactive. Contact administrator.";
+    } else if (msg.includes("credentials")) {
+      errors.email = "Invalid email or password";
+      errors.password = "Invalid email or password";
     } else {
       errors.email = msg;
     }
@@ -517,30 +439,31 @@ async function handleLogin() {
   }
 }
 
-// ─── Password change handler ──────────────────────────────────────────────────
-
+// ─── PASSWORD CHANGE HANDLER ──────────────────────────────────────────────
 const handleResetPassword = async () => {
-  if (resetLoading.value) return;
-
   resetErrors.currentPassword = "";
   resetErrors.newPassword = "";
   resetErrors.confirmPassword = "";
-  showSuccessMessage.value = false;
-  successMessage.value = "";
 
-  if (!currentPassword.value) resetErrors.currentPassword = "Current password is required";
+  if (!currentPassword.value) {
+    resetErrors.currentPassword = "Current password required";
+    return;
+  }
+  
   if (!newPassword.value) {
-    resetErrors.newPassword = "New password is required";
-  } else if (newPassword.value.length < 6) {
-    resetErrors.newPassword = "Password must be at least 6 characters";
+    resetErrors.newPassword = "New password required";
+    return;
   }
-  if (!confirmPassword.value) {
-    resetErrors.confirmPassword = "Please confirm your new password";
-  } else if (newPassword.value && newPassword.value !== confirmPassword.value) {
-    resetErrors.confirmPassword = "Passwords do not match";
+  
+  if (newPassword.value.length < 6) {
+    resetErrors.newPassword = "Minimum 6 characters";
+    return;
   }
-
-  if (resetErrors.currentPassword || resetErrors.newPassword || resetErrors.confirmPassword) return;
+  
+  if (newPassword.value !== confirmPassword.value) {
+    resetErrors.confirmPassword = "Passwords don't match";
+    return;
+  }
 
   resetLoading.value = true;
 
@@ -553,29 +476,23 @@ const handleResetPassword = async () => {
     });
 
     showSuccessMessage.value = true;
-    successMessage.value = response.message || "Password updated successfully! Please login with your new password.";
+    successMessage.value = response.message || "Password updated!";
 
-    const savedEmail = resetEmail.value;
+    setTimeout(() => {
+      showResetModal.value = false;
+      showSuccessMessage.value = false;
+      currentPassword.value = "";
+      newPassword.value = "";
+      confirmPassword.value = "";
+      email.value = resetEmail.value;
+      password.value = "";
+    }, 2000);
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    showResetModal.value = false;
-    email.value = savedEmail;
-    password.value = "";
-    currentPassword.value = "";
-    newPassword.value = "";
-    confirmPassword.value = "";
-    showSuccessMessage.value = false;
-    successMessage.value = "";
   } catch (err) {
-    const msg = err.message || "An error occurred";
-
-    if (msg.includes("Current password is incorrect") || msg.includes("password is incorrect")) {
-      resetErrors.currentPassword = "Current password is incorrect";
-    } else if (msg.includes("User not found")) {
-      resetErrors.currentPassword = "User not found";
-    } else if (msg.includes("validation")) {
-      resetErrors.newPassword = msg;
+    const msg = err.message || "";
+    
+    if (msg.includes("Current password is incorrect")) {
+      resetErrors.currentPassword = "Incorrect password";
     } else {
       resetErrors.newPassword = msg;
     }
@@ -583,7 +500,36 @@ const handleResetPassword = async () => {
     resetLoading.value = false;
   }
 };
+
+const closeResetModal = () => {
+  showResetModal.value = false;
+  currentPassword.value = "";
+  newPassword.value = "";
+  confirmPassword.value = "";
+  showSuccessMessage.value = false;
+};
+
+// Input focus handlers
+const handleFocus = (e) => {
+  e.target.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
+  e.target.style.borderColor = "rgba(255, 255, 255, 0.5)";
+};
+
+const handleBlur = (e) => {
+  e.target.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+  e.target.style.borderColor = "rgba(255, 255, 255, 0.3)";
+};
+
+const handleModalFocus = handleFocus;
+const handleModalBlur = handleBlur;
+const clearFieldError = (field) => {
+  errors[field] = "";
+};
 </script>
+
+<!-- Keep your template exactly the same -->
+
+<!-- Keep your entire template exactly the same - no changes needed -->
 
 <style scoped>
 .min-h-screen::before {

@@ -1,6 +1,6 @@
 <template>
   <div class="layout">
-    <!-- Mobile Overlay (backdrop) -->
+    <!-- Mobile Overlay -->
     <Transition name="overlay">
       <div v-if="sidebarOpen && isMobile" class="sidebar-overlay" @click="closeSidebar"></div>
     </Transition>
@@ -33,10 +33,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import Sidebar from "@/components/Sidebar.vue";
 import Header from "@/components/Header.vue";
 import Footer from "@/components/Footer.vue";
-import store from "@/store";
-import { useAuth } from "@/composables/useAuth";
 
-const { userRole } = useAuth();
 const sidebarOpen = ref(false);
 const isMobile = ref(false);
 
@@ -51,14 +48,8 @@ const closeSidebar = () => {
 };
 
 const handleResize = () => {
-  const wasMobile = isMobile.value;
   isMobile.value = window.innerWidth < 768;
-  
-  if (isMobile.value && !wasMobile) {
-    sidebarOpen.value = false;
-  }
-  
-  if (!isMobile.value && wasMobile) {
+  if (!isMobile.value) {
     sidebarOpen.value = false;
   }
 };
@@ -69,13 +60,8 @@ const handleEscape = (e) => {
   }
 };
 
-onMounted(async () => {
-  const token = sessionStorage.getItem('token');
-  if (!token) return;
-
+onMounted(() => {
   handleResize();
-  await store.actions.initialize(userRole.value);
-  
   window.addEventListener('resize', handleResize);
   document.addEventListener('keydown', handleEscape);
 });

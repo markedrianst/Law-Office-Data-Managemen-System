@@ -1,106 +1,91 @@
 <template>
-  <AdminDashboard v-if="userRole === 'admin'" />
-  <LawyerDashboard v-else-if="userRole === 'lawyer'" />
-  <ClerksDashboard v-else-if="userRole === 'clerk'" />
-
-  <!-- Fallback: role not recognized -->
-  <div v-else class="error">
-    <p>Access denied. Your role is not recognized.</p>
-    <button @click="logout">Logout</button>
-  </div>
+  <Suspense>
+    <template #default>
+      <component :is="dashboardComponent" />
+    </template>
+    <template #fallback>
+      <div class="dashboard-loading">
+        <div class="loading-spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+    </template>
+  </Suspense>
 </template>
 
 <script setup>
-import { useRouter } from "vue-router";
-import { useAuth } from "@/composables/useAuth";
-import AdminDashboard from "@/pages/Admin/AdminDashboard.vue";
-import LawyerDashboard from "@/pages/Lawyer/LawyerDashboard.vue";
-import ClerksDashboard from "@/pages/Clerks/ClerksDashboard.vue";
+import { ref, computed, defineAsyncComponent } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
-const router = useRouter();
-const { userRole, clearSession } = useAuth();
+const router = useRouter()
+const { userRole, clearSession } = useAuth()
 
-function logout() {
-  clearSession();
-  router.push("/");
+// Lazy load dashboards based on role
+const dashboardComponent = computed(() => {
+  const role = userRole.value?.toLowerCase()
+  
+  switch(role) {
+    case 'admin':
+      return defineAsyncComponent(() => import('@/pages/Admin/AdminDashboard.vue'))
+    case 'lawyer':
+      return defineAsyncComponent(() => import('@/pages/Lawyer/LawyerDashboard.vue'))
+    case 'clerk':
+      return defineAsyncComponent(() => import('@/pages/Clerks/ClerksDashboard.vue'))
+    default:
+      return null
+  }
+})
+
+// Handle logout if role not recognized
+const logout = () => {
+  clearSession()
+  router.push('/')
 }
 </script>
 
 <style scoped>
-.error {
+.dashboard-loading {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f0f4f8;
+  background: #f8fafc;
   font-family: 'Segoe UI', sans-serif;
-  padding: 20px;
-  text-align: center;
 }
 
-.error p {
-  color: #1e293b;
-  font-size: 16px;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #1a4972;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
   margin-bottom: 16px;
-  line-height: 1.5;
 }
 
-.error button {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #1a4972, #0f2f4a);
-  color: white;
-  border: none;
-  border-radius: 8px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.dashboard-loading p {
+  color: #64748b;
   font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(26, 73, 114, 0.2);
+  margin: 0;
 }
 
-.error button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(26, 73, 114, 0.3);
-}
-
-.error button:active {
-  transform: translateY(0);
-}
-
-/* Tablet responsiveness */
 @media (max-width: 768px) {
-  .error {
+  .dashboard-loading {
     padding: 16px;
   }
-
-  .error p {
-    font-size: 15px;
+  
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
   }
-
-  .error button {
+  
+  .dashboard-loading p {
     font-size: 13px;
-    padding: 9px 18px;
-  }
-}
-
-/* Mobile responsiveness */
-@media (max-width: 480px) {
-  .error {
-    padding: 12px;
-    min-height: auto;
-  }
-
-  .error p {
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-
-  .error button {
-    font-size: 12px;
-    padding: 8px 16px;
-    width: 100%;
-    max-width: 200px;
   }
 }
 </style>

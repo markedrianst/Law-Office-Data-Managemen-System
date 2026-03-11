@@ -261,7 +261,13 @@ const allNav = [
 
 const visibleNav = computed(() => {
   const role = userRole.value?.toLowerCase() ?? ''
-  return allNav.filter(item => !item.roles?.length || item.roles.includes(role))
+  console.log('Sidebar - Current user role:', role) // For debugging
+  
+  return allNav.filter(item => {
+    if (!item.roles || item.roles.length === 0) return true
+    
+    return item.roles.some(r => r.toLowerCase() === role)
+  })
 })
 
 const isDropdownActive = (item) => item.children?.some(c => route.path === c.path) ?? false

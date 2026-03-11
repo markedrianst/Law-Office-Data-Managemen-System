@@ -448,26 +448,60 @@
     </div>
   </Transition>
 
-  <!-- ══ ALERT MODAL ══════════════════════════════════════════════════════ -->
+  <!-- ══ SUCCESS TOAST CONFIRMATION ════════════════════════════════════════ -->
   <Transition name="toast">
-    <div v-if="toast.show" class="fixed inset-0 z-[110] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.35);backdrop-filter:blur(2px)" @click.self="toast.show = false">
+    <div v-if="toast.show" class="fixed bottom-6 right-6 z-[100] max-w-sm" @click.self="toast.show = false">
+      <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border-l-4" :class="toast.type === 'success' ? 'border-emerald-500' : 'border-red-500'">
+        <div class="flex items-start gap-3 p-4">
+          <div class="flex-shrink-0">
+            <div v-if="toast.type === 'success'" class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div v-else class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-sm font-bold text-gray-900">{{ toast.title }}</h3>
+            <p class="text-xs text-gray-500 mt-0.5">{{ toast.message }}</p>
+          </div>
+          <button @click="toast.show = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="h-1 w-full bg-gray-100">
+          <div class="h-full bg-emerald-500 transition-all duration-[4000ms] ease-linear" :style="{ width: toast.progressWidth }"></div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+
+  <!-- ══ ALERT MODAL ══════════════════════════════════════════════════════ -->
+  <Transition name="modal">
+    <div v-if="alert.show" class="fixed inset-0 z-[110] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.35);backdrop-filter:blur(2px)" @click.self="alert.show = false">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        <div :class="toast.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'" class="px-6 py-5 flex items-center gap-4">
+        <div :class="alert.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'" class="px-6 py-5 flex items-center gap-4">
           <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-            <svg v-if="toast.type === 'error'" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            <svg v-if="alert.type === 'error'" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
             <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
           <div class="flex-1">
-            <p class="text-white font-bold text-base">{{ toast.type === 'error' ? 'Action Not Allowed' : 'Nothing to Do' }}</p>
+            <p class="text-white font-bold text-base">{{ alert.type === 'error' ? 'Action Not Allowed' : 'Nothing to Do' }}</p>
             <p class="text-white/70 text-xs mt-0.5">Folder tracker guard</p>
           </div>
-          <button @click="toast.show = false" class="text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
+          <button @click="alert.show = false" class="text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="px-6 py-5"><p class="text-sm text-gray-700 leading-relaxed">{{ toast.message }}</p></div>
+        <div class="px-6 py-5"><p class="text-sm text-gray-700 leading-relaxed">{{ alert.message }}</p></div>
         <div class="px-6 pb-5">
-          <button @click="toast.show = false" :class="toast.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'" class="w-full py-2.5 text-sm font-bold text-white rounded-xl transition active:scale-95">Got it</button>
+          <button @click="alert.show = false" :class="alert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'" class="w-full py-2.5 text-sm font-bold text-white rounded-xl transition active:scale-95">Got it</button>
         </div>
       </div>
     </div>
@@ -590,7 +624,6 @@
   </Transition>
 </template>
 
-
 <script setup>
 import { ref, computed, reactive, watch, onUnmounted } from 'vue';
 import CaseTaskModal from './CaseTaskModal.vue';
@@ -615,21 +648,6 @@ const clerks = computed(() => store.state.users.filter(u => u?.role?.name?.toLow
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SMART SYNC LAYER
-//
-// Three-layer approach (no third-party service needed):
-//
-//  Layer 1 — BroadcastChannel (instant, same browser, any role/tab)
-//    When User A adds a task in Tab 1, Tab 2 receives the message in <1 ms
-//    and re-fetches only that slice. Zero delay, zero extra server load.
-//
-//  Layer 2 — Visibility revalidation (same machine, tab regains focus)
-//    Catches changes made while this tab was in the background.
-//    Only re-fetches slices that were mutated (dirty flags).
-//
-//  Layer 3 — 15-second poll (cross-machine, different browsers/roles)
-//    Catches changes by users on completely different devices.
-//    Only runs while the modal is open and the tab is visible.
-//    15 s is a comfortable balance: feels near-real-time, minimal server load.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const unwrap = (res) => res?.data?.data ?? res?.data ?? res ?? [];
@@ -714,9 +732,6 @@ async function revalidateDirty(id) {
 }
 
 // ─── LAYER 1: BroadcastChannel — instant cross-tab sync ───────────────────
-// A unique channel ID per session prevents self-echo: messages sent by THIS
-// tab are ignored (BroadcastChannel does not deliver to the sender by spec,
-// but the guard on _fetching provides a second layer of protection).
 let bc = null;
 
 function openChannel(caseId) {
@@ -735,8 +750,6 @@ function closeChannel() { bc?.close(); bc = null; }
 function broadcast(slice) { bc?.postMessage({ slice }); }
 
 // ─── LAYER 2: Visibility revalidation ─────────────────────────────────────
-// Uses dirty flags — only re-fetches slices that were mutated while hidden.
-// Guarded by initialLoadDone so it never fires during the initial open.
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return;
   const id = props.viewCase?.id;
@@ -745,9 +758,6 @@ function onVisibilityChange() {
 document.addEventListener('visibilitychange', onVisibilityChange);
 
 // ─── LAYER 3: 30-second poll (cross-machine sync) ─────────────────────────
-// Increased to 30 s (was 15 s) — halves background request count.
-// Poll only starts AFTER loadAll() completes to prevent overlap.
-// Skipped entirely if tab is hidden.
 let pollTimer = null;
 
 function startPolling(id) {
@@ -779,15 +789,11 @@ onUnmounted(() => {
 });
 
 // ── Expose for parent ──────────────────────────────────────────────────────
-// open(id) replaces watch([show, viewCase.id]) — called directly from openView()
-// in CaseMaster. Zero watcher overhead, instant response.
 const stageUpdating = ref(false);
 const finishStageUpdate = () => { stageUpdating.value = false; };
 
 const openModal = (id) => {
   resetState();
-  // Start polling only after initial load completes — prevents poll from
-  // firing concurrently with the initial 3 requests on modal open.
   loadAll(id).then(() => startPolling(id));
   openChannel(id);
 };
@@ -821,12 +827,49 @@ const inDropdownOpen          = ref(false);
 const inChecklistDropdownOpen = ref(false);
 const closeDropdowns = () => { inDropdownOpen.value = false; inChecklistDropdownOpen.value = false; };
 
-// ── Toast ──────────────────────────────────────────────────────────────────
-const toast = reactive({ show: false, message: '', type: 'error', timer: null });
-const showToast = (msg, type = 'error') => {
+// ── Success Toast ──────────────────────────────────────────────────────────
+const toast = reactive({ 
+  show: false, 
+  title: '', 
+  message: '', 
+  type: 'success', 
+  progressWidth: '100%',
+  timer: null,
+  progressTimer: null 
+});
+
+const showSuccessToast = (title, message) => {
   if (toast.timer) clearTimeout(toast.timer);
-  Object.assign(toast, { message: msg, type, show: true });
-  toast.timer = setTimeout(() => { toast.show = false; }, 4000);
+  if (toast.progressTimer) clearInterval(toast.progressTimer);
+  
+  toast.title = title;
+  toast.message = message;
+  toast.type = 'success';
+  toast.show = true;
+  toast.progressWidth = '100%';
+  
+  // Animate progress bar
+  let width = 100;
+  toast.progressTimer = setInterval(() => {
+    width -= 1;
+    toast.progressWidth = width + '%';
+    if (width <= 0) {
+      clearInterval(toast.progressTimer);
+    }
+  }, 40); // 4000ms / 100 = 40ms per percent
+  
+  toast.timer = setTimeout(() => { 
+    toast.show = false; 
+    clearInterval(toast.progressTimer);
+  }, 4000);
+};
+
+// ── Alert Modal (for errors/warnings) ─────────────────────────────────────
+const alert = reactive({ show: false, message: '', type: 'error', timer: null });
+const showAlert = (msg, type = 'error') => {
+  if (alert.timer) clearTimeout(alert.timer);
+  Object.assign(alert, { message: msg, type, show: true });
+  alert.timer = setTimeout(() => { alert.show = false; }, 4000);
 };
 
 // ── Stage ──────────────────────────────────────────────────────────────────
@@ -846,9 +889,13 @@ const onTaskSave = ({ mode, data }) => {
   if (mode === 'edit') emit('update-task', data);
   tm.show = false;
   dirty.checklist = true;
-  // Fetch immediately — in-flight guard prevents any duplicate call.
-  // broadcast() notifies other tabs after the local fetch settles.
-  fetchChecklist(props.viewCase.id).then(() => broadcast('checklist'));
+  fetchChecklist(props.viewCase.id).then(() => {
+    broadcast('checklist');
+    showSuccessToast(
+      mode === 'add' ? 'Task Added' : 'Task Updated',
+      mode === 'add' ? 'New task has been added successfully.' : 'Task has been updated successfully.'
+    );
+  });
 };
 
 const toggleDone = (task) => {
@@ -859,6 +906,10 @@ const toggleDone = (task) => {
   if (idx !== -1) internalChecklist.value[idx] = { ...internalChecklist.value[idx], status: newStatus };
   dirty.checklist = true;
   broadcast('checklist');
+  showSuccessToast(
+    newStatus === 'done' ? 'Task Completed' : 'Task Reopened',
+    newStatus === 'done' ? 'Task marked as done.' : 'Task marked as to-do.'
+  );
 };
 
 // ── Folder modal ───────────────────────────────────────────────────────────
@@ -867,8 +918,8 @@ const fm = reactive({ show: false, type: 'out', form: { person: '', date: '', pu
 const openFolderModal = (type) => {
   type = type.toLowerCase();
   const isOut = !!props.viewCase?.is_out;
-  if (type === 'out' && isOut)  { showToast('The folder is already OUT. Receive it back IN first.'); return; }
-  if (type === 'in'  && !isOut) { showToast('The folder is already IN the office. Nothing to receive.', 'info'); return; }
+  if (type === 'out' && isOut)  { showAlert('The folder is already OUT. Receive it back IN first.'); return; }
+  if (type === 'in'  && !isOut) { showAlert('The folder is already IN the office. Nothing to receive.', 'info'); return; }
   const creator = props.currentUser?.full_name ?? props.currentUser?.name ?? '';
   fm.type = type;
   fm.form = { person: creator, date: new Date().toISOString().slice(0, 10), purpose: '', handledBy: props.viewCase?.clerk || creator };
@@ -881,7 +932,15 @@ const submitFolderModal = () => {
   emit('update:viewCase', { ...props.viewCase, is_out: fm.type === 'out' ? 1 : 0 });
   fm.show = false;
   dirty.folder = true;
-  fetchFolderTracker(props.viewCase.id).then(() => broadcast('folder'));
+  fetchFolderTracker(props.viewCase.id).then(() => {
+    broadcast('folder');
+    showSuccessToast(
+      fm.type === 'out' ? 'Folder Released' : 'Folder Received',
+      fm.type === 'out' 
+        ? `Folder has been released successfully.` 
+        : `Folder has been received successfully.`
+    );
+  });
 };
 
 // ── Checklist tracker modal ────────────────────────────────────────────────
@@ -889,11 +948,11 @@ const ctm = reactive({ show: false, type: 'out', task: null, form: { taskId: '',
 
 const openChecklistTracker = (type) => {
   type = type.toLowerCase();
-  if (type === 'out' && !!props.viewCase?.is_out) { showToast('Case folder is OUT. Receive it back IN before releasing checklist items.'); return; }
+  if (type === 'out' && !!props.viewCase?.is_out) { showAlert('Case folder is OUT. Receive it back IN before releasing checklist items.'); return; }
   const anyIn  = internalChecklist.value.some(t => !t.is_out);
   const anyOut = internalChecklist.value.some(t => !!t.is_out);
-  if (type === 'out' && !anyIn)  { showToast('All checklist items are already OUT. Nothing to release.'); return; }
-  if (type === 'in'  && !anyOut) { showToast('No checklist items are currently OUT. Nothing to receive.', 'info'); return; }
+  if (type === 'out' && !anyIn)  { showAlert('All checklist items are already OUT. Nothing to release.'); return; }
+  if (type === 'in'  && !anyOut) { showAlert('No checklist items are currently OUT. Nothing to receive.', 'info'); return; }
   const creator = props.currentUser?.full_name ?? props.currentUser?.name ?? '';
   ctm.type = type; ctm.task = null;
   ctm.form = { taskId: '', person: creator, date: new Date().toISOString().slice(0, 10), purpose: '', handledBy: '' };
@@ -912,7 +971,18 @@ const submitChecklistTracker = () => {
   emit('checklist-movement', { type: ctm.type, taskName, ...ctm.form });
   ctm.show = false;
   dirty.checklistTracker = true;
-  fetchChecklistTracker(props.viewCase.id).then(() => broadcast('checklistTracker'));
+  
+  // Determine success message based on selection
+  const itemType = ctm.form.taskId ? 'Checklist item' : 'All checklist items';
+  fetchChecklistTracker(props.viewCase.id).then(() => {
+    broadcast('checklistTracker');
+    showSuccessToast(
+      ctm.type === 'out' ? 'Checklist Released' : 'Checklist Received',
+      ctm.type === 'out' 
+        ? `${itemType} has been released successfully.` 
+        : `${itemType} has been received successfully.`
+    );
+  });
 };
 
 // ── Checklist filters ──────────────────────────────────────────────────────
@@ -978,7 +1048,6 @@ const taskStatusLabel  = (s) => ({ todo: 'To-Do', 'in-progress': 'In Progress', 
 const taskStatusClass  = (s) => ({ todo: 'bg-blue-100 text-blue-700 border border-blue-200', 'in-progress': 'bg-orange-100 text-orange-700 border border-orange-200', done: 'bg-emerald-100 text-emerald-700 border border-emerald-200' }[s] ?? 'bg-gray-100 text-gray-500');
 const taskStatusDot    = (s) => ({ todo: 'bg-blue-500', 'in-progress': 'bg-orange-500', done: 'bg-emerald-500' }[s] ?? 'bg-gray-400');
 </script>
-
 
 <style scoped>
 .modal-enter-active, .modal-leave-active { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }

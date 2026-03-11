@@ -36,9 +36,6 @@ class ChecklistTrackerController extends Controller
             'checklists' => $checklists,
         ]);
     }
-
-    // GET /admin/cases/{case}/checklist-tracker/pending
-    // Dedicated endpoint for the approval panel — returns only PENDING movements
     public function pending(Cases $case): JsonResponse
     {
         $records = ChecklistMovement::where('case_id', $case->id)

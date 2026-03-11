@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Cases;
 use App\Models\CaseActivityLog;
 use App\Models\CaseCategory;
-use App\Models\CaseRequest;
 use App\Models\CaseStage;
 use App\Models\CaseStageHistory;
 use App\Models\Client;
@@ -291,15 +290,6 @@ class CaseController extends Controller
             'summary'            => 'nullable|string|max:2000',
         ]);
 
-        if ($this->isClerk()) {
-            CaseRequest::create([
-                'request_type' => 'create',
-                'requested_by' => auth()->id(),
-                'request_data' => $validated,
-            ]);
-
-            return response()->json(['message' => 'Case creation request submitted for approval.'], 202);
-        }
 
         $case = DB::transaction(function () use ($validated) {
             $actorId = auth()->id();
@@ -382,16 +372,6 @@ class CaseController extends Controller
             'summary'            => 'nullable|string|max:2000',
         ]);
 
-        if ($this->isClerk()) {
-            CaseRequest::create([
-                'case_id'      => $id,
-                'request_type' => 'update',
-                'requested_by' => auth()->id(),
-                'request_data' => $validated,
-            ]);
-
-            return response()->json(['message' => 'Case update request submitted for approval.'], 202);
-        }
 
         try {
             DB::transaction(function () use ($case, $validated) {
@@ -480,17 +460,7 @@ class CaseController extends Controller
             return response()->json(['message' => 'Case not found.'], 404);
         }
 
-        if ($this->isClerk()) {
-            CaseRequest::create([
-                'case_id'      => $id,
-                'request_type' => 'archive',
-                'requested_by' => auth()->id(),
-                'request_data' => ['case_status' => 'archived'],
-            ]);
-
-            return response()->json(['message' => 'Case archive request submitted for approval.'], 202);
-        }
-
+       
         DB::transaction(function () use ($case) {
             $case->update(['case_status' => 'archived']);
 
@@ -539,4 +509,69 @@ class CaseController extends Controller
         Cache::forget("case_{$caseId}");
         Cache::forget('cases_total_count');
     }
+public function destroy(int $id): JsonResponse
+{
+    $case = Cases::find($id);
+
+    if (!$case) {
+        return response()->json(['message' => 'Case not found.'], 404);
+    }
+
+    try {
+        DB::transaction(function () use ($case) {
+            $actorId = auth()->id();
+            $now = now();
+
+            // Log the deletion activity first
+            CaseActivityLog::create([
+                'case_id'    => $case->id,
+                'user_id'    => $actorId,
+                'action'     => 'deleted the case',
+                'details'    => json_encode([
+                    'case_no'   => $case->case_no,
+                    'case_code' => $case->case_code,
+                    'title'     => $case->title,
+                ]),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            // Delete related records - USE CORRECT RELATIONSHIP NAMES
+            CaseStageHistory::where('case_id', $case->id)->delete();
+            CaseActivityLog::where('case_id', $case->id)->delete();
+            
+            // Delete checklist items - use checklists() not checklist()
+            if ($case->checklists()->exists()) {
+                $case->checklists()->delete();
+            }
+            
+            // Delete tracker records - use correct relationship names
+            if ($case->folderMovements()->exists()) {
+                $case->folderMovements()->delete();
+            }
+            
+            if ($case->checklistMovements()->exists()) {
+                $case->checklistMovements()->delete();
+            }
+
+            // Finally delete the case
+            $case->delete();
+
+            $this->clearCaseCache($case->id);
+        });
+
+        // Clear list cache
+        Cache::forget('cases_total_count');
+
+        return response()->json([
+            'message' => 'Case deleted successfully.',
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Error deleting case.',
+            'error'   => $e->getMessage()
+        ], 500);
+    }
+}
 }
